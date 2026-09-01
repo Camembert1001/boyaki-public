@@ -1,13 +1,18 @@
 <!doctype html>
-<html lang="ja" data-boyaki-content-id="cs-work-admin-v11" data-boyaki-campaign-id="owned-discovery-work-v11" data-boyaki-vertical="work_admin" data-boyaki-theme="jp_work_process_overhead">
+<html lang="en" data-boyaki-content-id="cs-work-admin-en-v12" data-boyaki-campaign-id="github-choreops-255-v12" data-boyaki-vertical="work_admin" data-boyaki-theme="manual_state_assignment_overhead">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="index,follow">
-<meta name="description" content="仕事そのものではない報告・二重入力・転記などの面倒を、BOYAKIに一言で残せます。">
-<title>報告・二重入力、何が面倒？ — BOYAKI</title>
-<style>body{font-family:system-ui,-apple-system,sans-serif;background:#f5f5f5;color:#111;margin:0}.wrap{max-width:680px;margin:0 auto;padding:28px 18px}.card{background:#fff;border-radius:18px;padding:24px;box-shadow:0 4px 24px #0001}a{color:inherit}.eyebrow{font-size:13px;font-weight:700}.lead{font-size:18px;line-height:1.7}.row{display:flex;gap:8px;margin-top:20px}input{flex:1;font-size:16px;padding:14px;border:1px solid #bbb;border-radius:12px}button{padding:14px 18px;border:0;border-radius:12px;background:#111827;color:white;font-weight:700}.hint{font-size:13px;color:#555;line-height:1.6}#discovery-status{margin-top:12px}</style>
+<meta name="description" content="Describe recurring admin work where status reset, assignment rotation, reporting, duplicate entry, or handoff rules create manual corrections.">
+<title>Manual status, assignment, or reporting overhead — BOYAKI</title>
+<style>body{font-family:system-ui,-apple-system,sans-serif;background:#f5f5f5;color:#111;margin:0}.wrap{max-width:720px;margin:0 auto;padding:28px 18px}.card{background:#fff;border-radius:18px;padding:24px;box-shadow:0 4px 24px #0001}a{color:inherit}.eyebrow{font-size:13px;font-weight:700}.lead{font-size:18px;line-height:1.7}.row{display:flex;gap:8px;margin-top:20px}.row input{flex:1}input{font-size:16px;padding:14px;border:1px solid #bbb;border-radius:12px}button{padding:14px 18px;border:0;border-radius:12px;background:#111827;color:white;font-weight:700}.hint,.small{font-size:13px;color:#555;line-height:1.6}.roles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:18px 0}.role{border:1px solid #ddd;border-radius:12px;padding:12px}.role strong{display:block;margin-bottom:4px}#discovery-status{margin-top:12px}.source{margin-top:18px;padding-top:16px;border-top:1px solid #eee}@media(max-width:640px){.row{display:block}.row input,.row button{width:100%;box-sizing:border-box}.row button{margin-top:8px}.roles{grid-template-columns:1fr}}</style>
 </head><body><main class="wrap"><p><a href="../">← BOYAKI</a></p><section class="card">
-<p class="eyebrow">仕事そのもの以外の面倒も、原材料になる。</p><h1>報告や二重入力、何が面倒？</h1>
-<p class="lead">転記、日報、同じ数字の再入力、承認のためだけの作業。今いちばん「これ要る？」と思うことを一言で。</p>
-<form id="discovery-raw-form"><div class="row"><input id="discovery-raw" maxlength="180" autocomplete="off" placeholder="例：同じ実績をExcelとシステムに二回入力してる" required><button>BOYAKI</button></div></form>
-<p class="hint">タイトル・カテゴリ・予算は不要。ここに書いた内容はあなた自身のBOYAKIとして公開されます。勤務先や個人を特定できる秘密情報は書かないでください。</p><div id="discovery-status" role="status"></div>
+<p class="eyebrow">Problem-first public workspace</p><h1>Do status, assignment, or reporting rules force you to correct things manually?</h1>
+<p class="lead">Examples include resetting a recurring item back to due, rotating the next assignee on a different schedule, duplicate entry, handoff corrections, or other work that exists only because two rules are coupled.</p>
+<div class="roles"><div class="role"><strong>Problem owner</strong><span class="small">You experience the problem and describe it in your own words.</span></div><div class="role"><strong>Tester</strong><span class="small">You can try a candidate solution in a real environment.</span></div><div class="role"><strong>Maker</strong><span class="small">You can build or improve a candidate solution.</span></div></div>
+<form id="discovery-raw-form"><div class="row"><input id="discovery-raw" maxlength="180" autocomplete="off" placeholder="Example: due-state reset and assignee rotation follow different schedules, so I correct both manually" required><button>Post my problem</button></div></form>
+<p class="hint">Write only your own underlying problem. BOYAKI does not automatically copy text from an external issue or support thread. What you submit here is published as your own BOYAKI. Do not include secrets, private workplace data, or personal information.</p>
+<p class="hint">After a problem attracts a Solution Candidate, people with the same problem can participate as Problem owners, Testers, or Makers. BOYAKI is not a replacement support channel for the product where you found this link.</p>
+<div class="source"><label class="small" for="external-source">Optional source/provenance URL</label><input id="external-source" type="url" inputmode="url" placeholder="https://github.com/.../issues/..." style="width:100%;box-sizing:border-box;margin-top:6px"></div>
+<div id="discovery-status" role="status"></div>
+<p class="small">日本語でもそのまま投稿できます。</p>
 </section></main><script type="module" src="./discovery-post.js"></script></body></html>
