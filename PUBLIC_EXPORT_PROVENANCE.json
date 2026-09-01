@@ -1,0 +1,25 @@
+{
+  "schema": "boyaki-public-export-provenance-v1",
+  "source_repository": "Camembert1001/ai-distribution-company",
+  "source_commit": "009ca1dac7105883ce385bcddaa9093f746ad4a4",
+  "target_repository": "Camembert1001/boyaki-public",
+  "generated_at": "2026-09-01T03:38:41.458Z",
+  "allowlist": [
+    ".nojekyll",
+    "index.html",
+    "styles.css",
+    "app.js",
+    "chat-first-v53.js",
+    "external-attestation.js",
+    "quality-index-gate.js",
+    "manifest.webmanifest",
+    "sw.js",
+    "makers.html",
+    "maker-space.js",
+    "solution-candidates.json",
+    "discover/index.html",
+    "discover/discovery-post.js",
+    "discover/train-ticketing.html",
+    "discover/work-admin.html"
+  ]
+}

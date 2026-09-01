@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#111827" />
+  <meta name="description" content="BOYAKI Maker Space — real unresolved problems, solution candidates, testers and makers working in public." />
+  <meta name="robots" content="index,follow" />
+  <link rel="stylesheet" href="./styles.css" />
+  <title>BOYAKI Maker Space — 活動する場所</title>
+</head>
+<body>
+  <header class="shell topbar">
+    <a class="brand" href="./">BOYAKI</a>
+    <nav>
+      <a class="nav-link" href="./">困りごと</a>
+      <a class="nav-link active" href="./makers.html">Maker Space</a>
+    </nav>
+  </header>
+
+  <main class="shell maker-space">
+    <section class="card hero maker-hero">
+      <p class="eyebrow">BOYAKI Maker Space</p>
+      <h1>ここが、BOYAKIで活動する場所。</h1>
+      <p class="lead">困っている人、実機で試せるTester、作れるMakerが、同じSolution Candidateを見ながら次の一手を進めます。</p>
+      <p class="hint"><strong>This is the public participation surface for BOYAKI.</strong><br>See active solution candidates, join as a tester or maker, and leave public work/test updates. No BOYAKI account is required for this first version.</p>
+      <div class="principles-grid">
+        <div><strong>Problem first</strong><span>先に商品を決めず、本物の未解決問題から始める。</span></div>
+        <div><strong>Consent bound</strong><span>本人の許可なく問題や関係を勝手に広げない。</span></div>
+        <div><strong>Evidence over claims</strong><span>動いた範囲と未解決部分を同時に残す。</span></div>
+        <div><strong>Contributors matter</strong><span>誰が試し、作り、運んだかを活動履歴として残す。</span></div>
+      </div>
+    </section>
+
+    <section class="section-head">
+      <div>
+        <p class="eyebrow">Active work</p>
+        <h2>Solution Candidates</h2>
+      </div>
+      <button id="maker-refresh" type="button">更新</button>
+    </section>
+    <div id="candidate-list" class="stack"></div>
+
+    <section id="join-panel" class="card participation-panel" hidden>
+      <p class="eyebrow">Join this candidate</p>
+      <h2 id="join-title">参加する</h2>
+      <p class="hint">この参加情報と作業メモは公開されます。表示名は任意です。個人情報・秘密・認証情報は書かないでください。</p>
+      <form id="join-form" class="maker-form">
+        <label>役割 / Role
+          <select id="join-role" required>
+            <option value="tester">Tester — 実環境で試す</option>
+            <option value="maker">Maker — 解決を作る</option>
+            <option value="contributor">Contributor — 調査・レビュー等</option>
+            <option value="problem-owner">Problem owner — 同じ問題を持つ</option>
+          </select>
+        </label>
+        <label>公開表示名 / Public display name (optional)
+          <input id="join-name" maxlength="60" autocomplete="off" placeholder="例: @username / Nicolas" />
+        </label>
+        <label>できること / What can you help with? (optional)
+          <textarea id="join-note" maxlength="400" rows="4" placeholder="例: BL-IP実機でirrigation/write pathを確認できます"></textarea>
+        </label>
+        <div class="actions">
+          <button type="submit">この候補に参加する</button>
+          <button id="join-cancel" type="button">閉じる</button>
+        </div>
+      </form>
+      <div id="join-status" class="hint" role="status" aria-live="polite"></div>
+    </section>
+
+    <section id="activity-panel" class="card participation-panel" hidden>
+      <p class="eyebrow">Public work log</p>
+      <h2 id="activity-title">活動を記録する</h2>
+      <form id="activity-form" class="maker-form">
+        <label>活動 / Activity
+          <select id="activity-type" required>
+            <option value="test-result">Test result</option>
+            <option value="build-progress">Build progress</option>
+            <option value="research">Research</option>
+            <option value="review">Review / feedback</option>
+            <option value="blocked">Blocked / limitation</option>
+          </select>
+        </label>
+        <label>公開表示名 / Public display name (optional)
+          <input id="activity-name" maxlength="60" autocomplete="off" />
+        </label>
+        <label>公開メモ / Public note
+          <textarea id="activity-note" maxlength="700" rows="5" required placeholder="何を試したか、何が分かったか、次に何が必要か"></textarea>
+        </label>
+        <div class="actions">
+          <button type="submit">活動を追加</button>
+          <button id="activity-cancel" type="button">閉じる</button>
+        </div>
+      </form>
+      <div id="activity-status" class="hint" role="status" aria-live="polite"></div>
+    </section>
+
+    <section class="card identity-card">
+      <p class="eyebrow">Your BOYAKI device identity</p>
+      <h2>アカウントなしで、まず活動できる。</h2>
+      <p class="hint">この初期版では、このブラウザ内に生成される仮IDで署名して公開します。別ブラウザ・端末では別IDになります。将来の正式プロフィール/報酬機能へ移行できるよう、公開活動ログ自体はcandidate単位で残します。</p>
+      <code id="device-id">loading…</code>
+    </section>
+  </main>
+
+  <template id="candidate-template">
+    <article class="card candidate-card">
+      <div class="candidate-topline">
+        <div><p class="eyebrow candidate-status"></p><h2 class="candidate-title"></h2></div>
+        <span class="candidate-id chip"></span>
+      </div>
+      <p class="candidate-summary"></p>
+      <div class="candidate-block"><strong>Current solution candidate</strong><p class="candidate-current"></p></div>
+      <div class="candidate-block verified"><strong>Verified</strong><p class="candidate-verified"></p></div>
+      <div class="candidate-block limitation"><strong>Known limitation</strong><p class="candidate-limitations"></p></div>
+      <div class="candidate-block"><strong>Help wanted</strong><div class="candidate-help chips"></div></div>
+      <div class="candidate-stats"></div>
+      <div class="actions candidate-actions">
+        <button data-action="join" type="button">参加する / Join</button>
+        <button data-action="activity" type="button">活動を記録 / Add update</button>
+        <a data-action="source" class="button-link" target="_blank" rel="noopener noreferrer">元のIssue</a>
+      </div>
+      <div class="candidate-people"></div>
+      <div class="candidate-activity"></div>
+    </article>
+  </template>
+
+  <script type="module" src="./maker-space.js"></script>
+</body>
+</html>
