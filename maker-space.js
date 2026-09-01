@@ -171,11 +171,21 @@ function render(){
   if(!registry.length){list.innerHTML='<div class="card">公開中のSolution Candidateはまだありません。</div>';return}
   for(const c of registry)list.append(renderCandidate(c));
 }
+function revealPanel(panel){
+  panel.hidden=false;
+  requestAnimationFrame(()=>{
+    requestAnimationFrame(()=>{
+      panel.scrollIntoView({behavior:'smooth',block:'center'});
+      const focusable=panel.querySelector('textarea,input:not([type="hidden"]),select');
+      if(focusable)focusable.focus({preventScroll:true});
+    });
+  });
+}
 function openJoin(candidate){
-  selectedCandidate=candidate; $('#join-title').textContent=`${candidate.title} に参加`; $('#join-panel').hidden=false; $('#activity-panel').hidden=true; $('#join-status').textContent=''; $('#join-panel').scrollIntoView({behavior:'smooth',block:'center'});
+  selectedCandidate=candidate; $('#join-title').textContent=`${candidate.title} に参加`; $('#activity-panel').hidden=true; $('#join-status').textContent=''; revealPanel($('#join-panel'));
 }
 function openActivity(candidate){
-  selectedCandidate=candidate; $('#activity-title').textContent=`${candidate.title} — 活動を記録`; $('#activity-panel').hidden=false; $('#join-panel').hidden=true; $('#activity-status').textContent=''; $('#activity-panel').scrollIntoView({behavior:'smooth',block:'center'});
+  selectedCandidate=candidate; $('#activity-title').textContent=`${candidate.title} — 活動を記録`; $('#join-panel').hidden=true; $('#activity-status').textContent=''; revealPanel($('#activity-panel'));
 }
 $('#join-cancel').addEventListener('click',()=>{$('#join-panel').hidden=true});
 $('#activity-cancel').addEventListener('click',()=>{$('#activity-panel').hidden=true});
@@ -190,7 +200,7 @@ $('#join-form').addEventListener('submit',async e=>{
 });
 $('#activity-form').addEventListener('submit',async e=>{
   e.preventDefault(); if(!selectedCandidate)return;
-  const button=e.submitter,activityType=$('#activity-type').value,displayName=$('#activity-name').value.trim(),note=$('#activity-note').value.trim(); if(!note)return;
+  const button=e.submitter,activityType=$('#activity-type').value,displayName=$('#activity-name').value.trim(),note=$('#activity-note').value.trim(); if(!note){$('#activity-status').textContent='公開メモを書いてから送ってください。進捗・検証・詰まりのどれかを一言で。';return;}
   button.disabled=true; $('#activity-status').textContent='公開しています…';
   try{
     await publish({kind:1,content:JSON.stringify({displayName,activityType,note}),tags:[['t','boyaki-candidate-activity'],['candidate_id',selectedCandidate.id],['activity_type',activityType],['app','boyaki-web'],['schema','candidate-activity-v1']]});
