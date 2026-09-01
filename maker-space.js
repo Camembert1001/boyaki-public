@@ -107,7 +107,18 @@ async function loadEvents(){
     const ownerDeletes=deletedByOwner.get(ev.pubkey);
     if(!ownerDeletes?.has(ev.id))dedupe.set(ev.id,ev);
   }
-  events=[...dedupe.values()];
+  const suppressed=new Set();
+  try{
+    const sr=await fetch('./public-surface-suppressions.json',{cache:'no-store'});
+    if(sr.ok){
+      const data=await sr.json();
+      for(const row of data.events||[]){
+        const id=row && row.event_id;
+        if(typeof id==='string' && id.length===64 && row.scope==='boyaki_public_surface_only') suppressed.add(id);
+      }
+    }
+  }catch{}
+  events=[...dedupe.values()].filter(ev=>!suppressed.has(ev.id));
 }
 
 function renderParticipants(card,candidate){

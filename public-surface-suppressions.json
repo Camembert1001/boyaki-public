@@ -1,0 +1,56 @@
+{
+  "schema": "boyaki-public-surface-suppressions-v1",
+  "scope": "boyaki_public_surface_only",
+  "notice": "These exact event IDs are omitted from the BOYAKI Maker Space public render after valid same-owner deletion handling. This is not Nostr relay deletion, not kind-5, and not author withdrawal.",
+  "reason": "synthetic_test_cleanup",
+  "candidate_id": "solem-ble-release-001",
+  "events": [
+    {
+      "event_id": "f343accb198878512cdcf0a9652db0f9dbfe9855fc3b1aa6a607e6063b6d825f",
+      "candidate_id": "solem-ble-release-001",
+      "class": "participation",
+      "role": "tester",
+      "pubkey_prefix": "b36dc47aa390",
+      "displayName": "",
+      "reason": "synthetic_test_cleanup",
+      "provenance": "Nicolas/Solem Activity readiness gate synthetic Tester participation; original boyaki-device-sk unavailable; public-surface suppression only",
+      "scope": "boyaki_public_surface_only"
+    },
+    {
+      "event_id": "e0ccfff4eb1e565cd7ddf35bbf112a4ee7b3cad8f8dcd7ad8b1abfc0924898c3",
+      "candidate_id": "solem-ble-release-001",
+      "class": "activity",
+      "activity_type": "test-result",
+      "displayName": "BOYAKI Synthetic Tester",
+      "note": "Synthetic E2E test: verified the single Activity submission flow.",
+      "pubkey_prefix": "b36dc47aa390",
+      "reason": "synthetic_test_cleanup",
+      "provenance": "readiness-test Activity residue; public-surface suppression only",
+      "scope": "boyaki_public_surface_only"
+    },
+    {
+      "event_id": "f1c4ac0db4d46c4889f56106dad2ee8ed1394551f109fe9803efde0bdd07f1a8",
+      "candidate_id": "solem-ble-release-001",
+      "class": "activity",
+      "activity_type": "research",
+      "displayName": "BOYAKI Synthetic Tester",
+      "note": "Synthetic E2E test #2: verified a second Activity can be added by the same Tester.",
+      "pubkey_prefix": "b36dc47aa390",
+      "reason": "synthetic_test_cleanup",
+      "provenance": "readiness-test Activity residue; public-surface suppression only",
+      "scope": "boyaki_public_surface_only"
+    },
+    {
+      "event_id": "c745b1fc16b0afb97cb9870489c048e1d34c1fdfd2c2f1f0de4b30ceb5c0398e",
+      "candidate_id": "solem-ble-release-001",
+      "class": "activity",
+      "activity_type": "review",
+      "displayName": "BOYAKI Synthetic Tester",
+      "note": "Synthetic E2E test #3: verified a third Activity can be added by the same Tester.",
+      "pubkey_prefix": "b36dc47aa390",
+      "reason": "synthetic_test_cleanup",
+      "provenance": "readiness-test Activity residue; public-surface suppression only",
+      "scope": "boyaki_public_surface_only"
+    }
+  ]
+}
