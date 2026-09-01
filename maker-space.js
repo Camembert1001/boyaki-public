@@ -48,6 +48,11 @@ function latestParticipants(id){
   return [...map.values()].sort((a,b)=>b.created_at-a.created_at);
 }
 function roleLabel(role){return ({tester:'Tester',maker:'Maker',contributor:'Contributor','problem-owner':'Problem owner'})[role]||role||'Contributor'}
+function participantRoles(id,pubkey){
+  const roles=new Set();
+  for(const ev of latestParticipants(id))if(ev.pubkey===pubkey)roles.add(roleLabel(tag(ev,'role')));
+  return [...roles];
+}
 function activityLabel(type){return ({'test-result':'Test result','build-progress':'Build progress',research:'Research',review:'Review / feedback',blocked:'Blocked / limitation'})[type]||type||'Update'}
 function bilingual(ja,en){
   return `${escapeHtml(ja||'')}<br><span class="hint">${escapeHtml(en||'')}</span>`;
@@ -129,7 +134,8 @@ function renderActivity(card,candidate){
   const list=document.createElement('div');list.className='activity-list';
   for(const ev of xs){
     const c=parseContent(ev),name=c.displayName?.trim()||short(ev.pubkey),mine=ev.pubkey===identity.pk,item=document.createElement('div');item.className='activity-item';
-    item.innerHTML=`<div class="activity-meta"><strong>${escapeHtml(activityLabel(c.activityType||tag(ev,'activity_type')))}</strong> · ${escapeHtml(name)} · ${escapeHtml(fmt(ev.created_at))}${mine?' · you':''}</div><p>${escapeHtml(c.note||'')}</p>`;
+    const roles=participantRoles(candidate.id,ev.pubkey),roleBadges=roles.length?roles.map(r=>` <span class="chip">${escapeHtml(r)}</span>`).join(''):' <span class="chip">role not recorded</span>';
+    item.innerHTML=`<div class="activity-meta"><strong>${escapeHtml(activityLabel(c.activityType||tag(ev,'activity_type')))}</strong> · ${escapeHtml(name)}${roleBadges} · ${escapeHtml(fmt(ev.created_at))}${mine?' · you':''}</div><p>${escapeHtml(c.note||'')}</p>`;
     if(mine){const b=document.createElement('button');b.type='button';b.textContent='取り下げ';b.addEventListener('click',()=>withdraw(ev));item.append(b)}
     list.append(item);
   }
