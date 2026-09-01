@@ -1,9 +1,9 @@
 {
   "schema": "boyaki-public-export-provenance-v1",
   "source_repository": "Camembert1001/ai-distribution-company",
-  "source_commit": "06c8daef191f045068b1732657ac9ee1a784652c",
+  "source_commit": "619691a00e6b58b561803e586467f3ca8052e8c7",
   "target_repository": "Camembert1001/boyaki-public",
-  "generated_at": "2026-09-01T16:51:23.923Z",
+  "generated_at": "2026-09-01T16:56:54.843Z",
   "allowlist": [
     ".nojekyll",
     "index.html",
