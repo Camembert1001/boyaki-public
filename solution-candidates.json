@@ -1,6 +1,6 @@
 {
   "schema": "boyaki-solution-candidates-v3",
-  "updated_at": "2026-09-02T01:50:00+09:00",
+  "updated_at": "2026-08-30T08:00:00+09:00",
   "candidates": [
     {
       "id": "solem-ble-release-001",
@@ -50,114 +50,22 @@
         "deeper_upstream_frontier": "ESPHome / bleak-esphome stale BLE session behavior"
       },
       "timeline": [
-        {
-          "stage": "problem",
-          "label": "Problem confirmed by original reporter",
-          "status": "verified"
-        },
-        {
-          "stage": "prototype",
-          "label": "BOYAKI release_ble_after_poll candidate prepared and returned",
-          "status": "verified"
-        },
-        {
-          "stage": "human-validation",
-          "label": "Real BL-IP + ESPHome Bluetooth Proxy status-poll validation",
-          "status": "verified"
-        },
-        {
-          "stage": "upstream",
-          "label": "Reporter-owned upstream PR #55 opened",
-          "status": "verified",
-          "url": "https://github.com/beelzetron/solem-blip-ha/pull/55"
-        },
-        {
-          "stage": "outcome",
-          "label": "PR #55 reviewed, approved and merged to main",
-          "status": "verified",
-          "url": "https://github.com/beelzetron/solem-blip-ha/pull/55"
-        },
-        {
-          "stage": "follow-up",
-          "label": "Reporter voluntarily opened translation follow-up PR #58; merged to main",
-          "status": "verified",
-          "url": "https://github.com/beelzetron/solem-blip-ha/pull/58"
-        },
-        {
-          "stage": "hardening",
-          "label": "Related BLE lifecycle fixes and beta validation continued upstream",
-          "status": "verified"
-        },
-        {
-          "stage": "release",
-          "label": "Stable releases observed: solem-blip-ha v1.2.30 / solem-blip-ble 0.1.38",
-          "status": "verified"
-        },
-        {
-          "stage": "post-release-validation",
-          "label": "Participant voluntarily continued real-hardware validation after stable release",
-          "status": "verified"
-        },
-        {
-          "stage": "new-edge-case",
-          "label": "Stale BLE session across Home Assistant restart exposed by post-release validation",
-          "status": "verified"
-        },
-        {
-          "stage": "next-release",
-          "label": "Solem hardening released in v1.2.31: startup-delay protection and stale-proxy diagnostic",
-          "status": "verified",
-          "url": "https://github.com/beelzetron/solem-blip-ha/releases/tag/v1.2.31"
-        },
-        {
-          "stage": "release-validation",
-          "label": "v1.2.31 release records live ESPHome Bluetooth Proxy and nRF52840 hardware validation",
-          "status": "verified",
-          "url": "https://github.com/beelzetron/solem-blip-ha/releases/tag/v1.2.31"
-        },
-        {
-          "stage": "deeper-upstream",
-          "label": "Underlying session-reaping behavior remains an ESPHome / bleak-esphome upstream frontier",
-          "status": "investigating"
-        }
+        {"stage":"problem","label":"Problem confirmed by original reporter","status":"verified"},
+        {"stage":"prototype","label":"BOYAKI release_ble_after_poll candidate prepared and returned","status":"verified"},
+        {"stage":"human-validation","label":"Real BL-IP + ESPHome Bluetooth Proxy status-poll validation","status":"verified"},
+        {"stage":"upstream","label":"Reporter-owned upstream PR #55 opened","status":"verified","url":"https://github.com/beelzetron/solem-blip-ha/pull/55"},
+        {"stage":"outcome","label":"PR #55 reviewed, approved and merged to main","status":"verified","url":"https://github.com/beelzetron/solem-blip-ha/pull/55"},
+        {"stage":"follow-up","label":"Reporter voluntarily opened translation follow-up PR #58; merged to main","status":"verified","url":"https://github.com/beelzetron/solem-blip-ha/pull/58"},
+        {"stage":"hardening","label":"Related BLE lifecycle fixes and beta validation continued upstream","status":"verified"},
+        {"stage":"release","label":"Stable releases observed: solem-blip-ha v1.2.30 / solem-blip-ble 0.1.38","status":"verified"},
+        {"stage":"post-release-validation","label":"Participant voluntarily continued real-hardware validation after stable release","status":"verified"},
+        {"stage":"new-edge-case","label":"Stale BLE session across Home Assistant restart exposed by post-release validation","status":"verified"},
+        {"stage":"next-release","label":"Solem hardening released in v1.2.31: startup-delay protection and stale-proxy diagnostic","status":"verified","url":"https://github.com/beelzetron/solem-blip-ha/releases/tag/v1.2.31"},
+        {"stage":"release-validation","label":"v1.2.31 release records live ESPHome Bluetooth Proxy and nRF52840 hardware validation","status":"verified","url":"https://github.com/beelzetron/solem-blip-ha/releases/tag/v1.2.31"},
+        {"stage":"deeper-upstream","label":"Underlying session-reaping behavior remains an ESPHome / bleak-esphome upstream frontier","status":"investigating"}
       ],
       "public_consent": "The original problem owner explicitly permitted BOYAKI to retain this as a solution candidate and use the runtime feedback, and later explicitly said they would be happy for the Solem case to become one of the first complete Maker Space examples when BOYAKI is ready.",
       "identity_policy": "The public case may describe the participant's role and contributions, but BOYAKI does not publish personal contact details. A public display name is only shown through the participation surface when the participant chooses one."
-    },
-    {
-      "id": "synthetic-isolation-gate5-do-not-keep",
-      "title": "SYNTHETIC TEST ONLY — Activity isolation comparator (DO NOT KEEP)",
-      "summary_ja": "一時的な内部隔離テスト用fixture。市場ケースではない。使用後に完全撤去する。",
-      "summary_en": "Temporary internal isolation-test fixture. Not a market case. Will be fully removed after the check.",
-      "pain_ja": "SYNTHETIC — no real pain.",
-      "pain_en": "SYNTHETIC — no real pain.",
-      "target_ja": "SYNTHETIC — isolation comparator only.",
-      "target_en": "SYNTHETIC — isolation comparator only.",
-      "tried_ja": "SYNTHETIC — no real work.",
-      "tried_en": "SYNTHETIC — no real work.",
-      "status": "synthetic-test-fixture-do-not-keep",
-      "status_label_ja": "SYNTHETIC TEST FIXTURE — DO NOT KEEP",
-      "status_label_en": "SYNTHETIC TEST FIXTURE — DO NOT KEEP",
-      "current_candidate_ja": "このcandidateはNicolas Activity readiness gate #5の隔離確認のための一時比較用だけ。",
-      "current_candidate_en": "Temporary comparator for Nicolas Activity readiness gate #5 isolation only.",
-      "verified_ja": "検証済みの実績はない。synthetic fixture。",
-      "verified_en": "No real verification. Synthetic fixture.",
-      "limitations_ja": "公開市場ケースとして残してはならない。",
-      "limitations_en": "Must not remain as a public market case.",
-      "outcome_ja": "SYNTHETIC",
-      "outcome_en": "SYNTHETIC",
-      "help_wanted": [
-        "SYNTHETIC — do not join"
-      ],
-      "participation_roles": {
-        "problem-owner": "SYNTHETIC — do not join",
-        "tester": "SYNTHETIC — do not join",
-        "maker": "SYNTHETIC — do not join",
-        "contributor": "SYNTHETIC — do not join"
-      },
-      "source_issue": "https://github.com/Camembert1001/ai-distribution-company",
-      "public_consent": "Internal synthetic fixture only. Not a consented market case.",
-      "identity_policy": "Synthetic fixture."
     }
   ]
 }
