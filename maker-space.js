@@ -42,10 +42,10 @@ function participantEvents(id){return candidateEvents(id).filter(e=>tag(e,'t')==
 function activityEvents(id){return candidateEvents(id).filter(e=>tag(e,'t')==='boyaki-candidate-activity')}
 function latestParticipants(id){
   const map=new Map();
-  for(const ev of participantEvents(id).sort((a,b)=>a.created_at-b.created_at)){
+  for(const ev of participantEvents(id).sort((a,b)=>a.created_at-b.created_at||String(a.id||'').localeCompare(String(b.id||'')))){
     const key=`${ev.pubkey}:${tag(ev,'role')||'contributor'}`; map.set(key,ev);
   }
-  return [...map.values()].sort((a,b)=>b.created_at-a.created_at);
+  return [...map.values()].sort((a,b)=>b.created_at-a.created_at||String(b.id||'').localeCompare(String(a.id||'')));
 }
 function roleLabel(role){return ({tester:'Tester',maker:'Maker',contributor:'Contributor','problem-owner':'Problem owner'})[role]||role||'Contributor'}
 function participantRoles(id,pubkey){
@@ -128,7 +128,7 @@ function renderParticipants(card,candidate){
   }
 }
 function renderActivity(card,candidate){
-  const wrap=$('.candidate-activity',card),xs=activityEvents(candidate.id).sort((a,b)=>b.created_at-a.created_at);
+  const wrap=$('.candidate-activity',card),xs=activityEvents(candidate.id).sort((a,b)=>b.created_at-a.created_at||String(b.id||'').localeCompare(String(a.id||'')));
   wrap.innerHTML='<h3>Public activity / 公開活動ログ</h3>';
   if(!xs.length){wrap.insertAdjacentHTML('beforeend','<p class="hint">まだ公開活動ログはありません。参加後、検証・調査・制作・レビュー結果をここへ残せます。</p>');return}
   const list=document.createElement('div');list.className='activity-list';
