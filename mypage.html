@@ -1,24 +1,10 @@
 <!doctype html>
-<html lang="ja">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <meta name="theme-color" content="#111827" />
-  <meta name="description" content="BOYAKI マイページ — 現在のブラウザIDに紐づくVoice / Makerの実績を確認。" />
-  <meta name="robots" content="noindex,follow" />
-  <link rel="stylesheet" href="./styles.css" />
-  <title>ログイン / マイページ — BOYAKI</title>
-</head>
-<body>
-  <header class="shell topbar"><a class="brand" href="./">BOYAKI</a><nav><a class="nav-link" href="./">新着</a><a class="nav-link" href="./makers.html">Maker Space</a><a class="nav-link active" href="./mypage.html">ログイン / マイページ</a><a class="nav-link" href="./register.html">新規登録</a></nav></header>
-  <main class="shell maker-space">
-    <section class="card hero maker-hero"><p class="eyebrow">BOYAKI Profile — Phase 0</p><h1>マイページ</h1><p class="lead">このブラウザに保存されているBOYAKI IDを自動で読み込みます。</p><p class="hint"><strong>パスワード入力はありません。</strong><br>Phase 0は現在のブラウザIDを使うため、別端末・別ブラウザへの引き継ぎや復旧はまだ保証しません。</p><div id="profile-state" class="hint" role="status" aria-live="polite">読み込み中…</div></section>
-    <section class="card identity-card"><p class="eyebrow">Current profile</p><h2 id="profile-name">プロフィールを確認中</h2><p id="profile-about" class="hint"></p><p class="hint">ブラウザID: <code id="device-id">loading…</code></p><div id="profile-actions" class="actions"></div></section>
-    <section class="card"><p class="eyebrow">Status</p><h2>Voice / Maker</h2><p class="hint">VoiceとMakerは排他的な役割ではありません。同じ人が両方の実績を持てます。</p><div class="stack">
-      <details id="voice-status" class="participation-panel"><summary><strong>Voice Status</strong> — 詳細を見る</summary><div class="chips"><span class="chip">Boyaki <strong id="voice-boyaki">0</strong></span><span class="chip">Validations <strong id="voice-validations">0</strong></span><span class="chip">Resolved / Improved <strong id="voice-resolved">0</strong></span></div><p class="hint">本人に帰属するcanonical evidenceだけを数えます。コメント・いいね・再読込は実績に加算しません。</p><div id="voice-history" class="stack"></div></details>
-      <details id="maker-status" class="participation-panel"><summary><strong>Maker Status</strong> — 詳細を見る</summary><div class="chips"><span class="chip">Solutions <strong id="maker-solutions">0</strong></span><span class="chip">Releases <strong id="maker-releases">0</strong></span><span class="chip">Validations <strong id="maker-validations">0</strong></span><span class="chip">Outcomes <strong id="maker-outcomes">0</strong></span></div><p class="hint">提案しただけではSolutionsに数えません。明示的なSolution責任・Release・Validation・Outcomeのcanonical evidenceのみ対象です。</p><div id="maker-history" class="stack"></div></details>
-    </div></section>
-    <section class="card"><p class="eyebrow">History / Contributions</p><h2>最近の活動</h2><p class="hint">Tester / Contributorなど過去の事実は履歴として残せますが、Voice / Makerと並ぶ恒久ステータスにはしません。</p><div id="recent-history" class="stack"></div></section>
-  </main>
-  <script type="module" src="./mypage.js?v=20260903-phase0"></script>
-</body></html>
+<html lang="ja"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" /><meta name="theme-color" content="#111827" /><meta name="description" content="BOYAKI マイページ — 現在のブラウザIDに紐づくVoice / Makerの実績と自分の投稿を管理。" /><meta name="robots" content="noindex,follow" /><link rel="stylesheet" href="./styles.css" /><title>ログイン / マイページ — BOYAKI</title></head><body>
+<header class="shell topbar"><a class="brand" href="./">BOYAKI</a><nav><a class="nav-link" href="./">新着</a><a class="nav-link" href="./makers.html">Maker Space</a><a class="nav-link active" href="./mypage.html">ログイン / マイページ</a><a class="nav-link" href="./register.html">新規登録</a></nav></header>
+<main class="shell maker-space">
+<section class="card hero maker-hero"><p class="eyebrow">BOYAKI Profile — Phase 0</p><h1>マイページ</h1><p class="lead">このブラウザに保存されているBOYAKI IDを自動で読み込みます。</p><p class="hint"><strong>パスワード入力はありません。</strong><br>Phase 0は現在のブラウザIDを使うため、別端末・別ブラウザへの引き継ぎや復旧はまだ保証しません。</p><div id="profile-state" class="hint" role="status" aria-live="polite">読み込み中…</div></section>
+<section class="card identity-card"><p class="eyebrow">Current profile</p><h2 id="profile-name">プロフィールを確認中</h2><p id="profile-about" class="hint"></p><p class="hint">ブラウザID: <code id="device-id">loading…</code></p><div id="profile-actions" class="actions"></div></section>
+<section class="card"><p class="eyebrow">Your BOYAKI</p><h2>自分の投稿を管理</h2><p class="hint">このブラウザIDで署名したBOYAKIだけを表示します。他人の投稿は取り下げられません。取り下げは署名済みの削除イベントをRelayへ送信し、通常の公開一覧から除外します。</p><div id="ownership-status" class="hint" role="status" aria-live="polite"></div><div id="own-posts" class="stack"><p class="hint">読み込み中…</p></div></section>
+<section class="card"><p class="eyebrow">Status</p><h2>Voice / Maker</h2><p class="hint">VoiceとMakerは排他的な役割ではありません。同じ人が両方の実績を持てます。</p><div class="stack"><details id="voice-status" class="participation-panel"><summary><strong>Voice Status</strong> — 詳細を見る</summary><div class="chips"><span class="chip">Boyaki <strong id="voice-boyaki">0</strong></span><span class="chip">Validations <strong id="voice-validations">0</strong></span><span class="chip">Resolved / Improved <strong id="voice-resolved">0</strong></span></div><p class="hint">本人に帰属するcanonical evidenceだけを数えます。取り下げ済みBOYAKI・コメント・いいね・再読込は実績に加算しません。</p><div id="voice-history" class="stack"></div></details><details id="maker-status" class="participation-panel"><summary><strong>Maker Status</strong> — 詳細を見る</summary><div class="chips"><span class="chip">Solutions <strong id="maker-solutions">0</strong></span><span class="chip">Releases <strong id="maker-releases">0</strong></span><span class="chip">Validations <strong id="maker-validations">0</strong></span><span class="chip">Outcomes <strong id="maker-outcomes">0</strong></span></div><p class="hint">提案しただけではSolutionsに数えません。明示的なSolution責任・Release・Validation・Outcomeのcanonical evidenceのみ対象です。</p><div id="maker-history" class="stack"></div></details></div></section>
+<section class="card"><p class="eyebrow">History / Contributions</p><h2>最近の活動</h2><p class="hint">Tester / Contributorなど過去の事実は履歴として残せますが、Voice / Makerと並ぶ恒久ステータスにはしません。</p><div id="recent-history" class="stack"></div></section>
+</main><script type="module" src="./mypage.js?v=20260903-owner-management-v1"></script></body></html>
