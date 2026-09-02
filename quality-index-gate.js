@@ -55,7 +55,16 @@
       makerView.after(p);
     }
   }
+  function loadPublicSuppression(){
+    if(document.querySelector('script[data-public-suppression-loader]'))return;
+    const script=document.createElement('script');
+    script.src='./public-surface-suppression.js?v=20260903-owner-cleanup';
+    script.defer=true;
+    script.dataset.publicSuppressionLoader='1';
+    document.head.append(script);
+  }
   window.BOYAKI_PROBLEM_INDEX_GATE={version:VERSION,evaluate,apply};
   new MutationObserver(ms=>{for(const m of ms)for(const n of m.addedNodes)if(n.nodeType===1)scan(n)}).observe(document.documentElement,{childList:true,subtree:true});
+  loadPublicSuppression();
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{scan();exposeMakerSpace()});else{scan();exposeMakerSpace()}
 })();
