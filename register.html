@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#111827" />
+  <meta name="description" content="BOYAKI 新規登録 — 匿名参加はそのままに、実績を残したい人向けの仮名プロフィール登録。" />
+  <meta name="robots" content="index,follow" />
+  <link rel="stylesheet" href="./styles.css" />
+  <title>新規登録 — BOYAKI</title>
+</head>
+<body>
+  <header class="shell topbar">
+    <a class="brand" href="./">BOYAKI</a>
+    <nav>
+      <a class="nav-link" href="./">困りごと</a>
+      <a class="nav-link" href="./makers.html">Maker Space</a>
+      <a class="nav-link active" href="./register.html">新規登録</a>
+    </nav>
+  </header>
+
+  <main class="shell maker-space">
+    <section class="card hero maker-hero">
+      <p class="eyebrow">BOYAKI Profile — Phase 0</p>
+      <h1>新規登録</h1>
+      <p class="lead">匿名のままでもBOYAKIは使えます。実績や活動を自分のプロフィールへ残していきたい人だけ、ここで仮名プロフィールを作れます。</p>
+      <p class="hint"><strong>メール・電話番号・本名は不要です。</strong><br>この初期版では、このブラウザ内にある暗号鍵があなたのプロフィールを署名します。秘密鍵そのものをBOYAKIへ送ることはありません。</p>
+    </section>
+
+    <section class="card participation-panel">
+      <p class="eyebrow">Create your profile</p>
+      <h2>プロフィールを作る</h2>
+      <form id="register-form" class="maker-form">
+        <label>表示名 / Display name
+          <input id="register-name" maxlength="40" autocomplete="nickname" placeholder="例: @username / Nicolas" required />
+        </label>
+        <label>主に興味があること / Main interest
+          <select id="register-interest">
+            <option value="both">Voice と Maker の両方</option>
+            <option value="voice">Voice — 困りごと・検証側</option>
+            <option value="maker">Maker — 解決を作る側</option>
+          </select>
+        </label>
+        <label>ひとこと / About (optional)
+          <textarea id="register-about" maxlength="240" rows="4" placeholder="何に困っているか、何を作れるかなど。個人情報や秘密は書かないでください。"></textarea>
+        </label>
+        <div class="actions">
+          <button type="submit">プロフィールを登録する</button>
+        </div>
+      </form>
+      <div id="register-status" class="hint" role="status" aria-live="polite"></div>
+    </section>
+
+    <section class="card identity-card">
+      <p class="eyebrow">Current credential</p>
+      <h2>このブラウザのBOYAKI ID</h2>
+      <p class="hint">Phase 0では、このIDとプロフィールが紐づきます。同じブラウザでは継続できますが、別端末・別ブラウザへの引き継ぎや復旧はまだ実装していません。これは本人確認済み表示ではありません。</p>
+      <code id="device-id">loading…</code>
+    </section>
+
+    <section class="card">
+      <p class="eyebrow">No lock-in</p>
+      <h2>登録しなくても使える。</h2>
+      <p class="hint">BOYAKIは、ぼやく・見る・参加する入口を登録必須にはしません。プロフィール登録は「活動を自分の実績として残していきたい」と思った人向けの入口です。</p>
+      <div class="actions">
+        <a class="button-link" href="./">困りごとを見る</a>
+        <a class="button-link" href="./makers.html">Maker Spaceを見る</a>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="./register.js?v=20260903-0411-phase0"></script>
+</body>
+</html>
