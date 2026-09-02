@@ -1,10 +1,16 @@
 {
   "schema": "boyaki-public-surface-suppressions-v1",
   "scope": "boyaki_public_surface_only",
-  "notice": "These exact event IDs are omitted from the BOYAKI Maker Space public render after valid same-owner deletion handling. This is not Nostr relay deletion, not kind-5, and not author withdrawal.",
-  "reason": "synthetic_test_cleanup",
-  "candidate_id": "solem-ble-release-001",
+  "notice": "These entries are omitted or queued for omission from the BOYAKI public render. Event-ID entries represent exact public-surface suppressions. The owner test-post content match below is an emergency owner-requested suppression because the originating browser identity is not currently available to Holdings. This is not Nostr relay deletion, not kind-5, and not author withdrawal.",
   "events": [
+    {
+      "content_exact": "店の駐車場の許可なし駐車がだるい",
+      "class": "raw-boyaki",
+      "reason": "owner_requested_test_post_cleanup",
+      "provenance": "Owner explicitly requested immediate removal of their test BOYAKI on 2026-09-03; current UI did not expose usable same-author deletion in the owner's present session.",
+      "scope": "boyaki_public_surface_only",
+      "status": "suppression_requested_requires_render_filter"
+    },
     {
       "event_id": "f343accb198878512cdcf0a9652db0f9dbfe9855fc3b1aa6a607e6063b6d825f",
       "candidate_id": "solem-ble-release-001",
