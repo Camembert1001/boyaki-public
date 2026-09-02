@@ -17,6 +17,7 @@
     <nav>
       <button data-view="feed" class="nav active">新着</button>
       <button data-view="maker" class="nav">解決する人向け</button>
+      <a class="nav-link" href="./mypage.html">ログイン / マイページ</a>
       <a class="nav-link" href="./register.html">新規登録</a>
     </nav>
   </header>
@@ -63,21 +64,10 @@
       <div class="meta"></div>
       <p class="raw"></p>
       <div class="chips"></div>
-      <div class="actions">
-        <button data-action="same">自分も困ってる</button>
-        <button data-action="canbuild">解決できそう</button>
-      </div>
-      <details class="clarify">
-        <summary>少しだけ詳しくする</summary>
-        <form data-form="clarify"><input maxlength="240" placeholder="いつ/どこで困る？ 今はどう回避してる？" /><button>送る</button></form>
-      </details>
-      <details class="proposal">
-        <summary>解決案を提案する</summary>
-        <form data-form="proposal"><input maxlength="300" placeholder="解決案を短く。勝手に要件を決めない。" /><button>提案</button></form>
-      </details>
-      <div class="demand-ladder"></div>
-      <div class="thread"></div>
-      <a class="permalink" rel="nofollow">この問題のURL</a>
+      <div class="actions"><button data-action="same">自分も困ってる</button><button data-action="canbuild">解決できそう</button></div>
+      <details class="clarify"><summary>少しだけ詳しくする</summary><form data-form="clarify"><input maxlength="240" placeholder="いつ/どこで困る？ 今はどう回避してる？" /><button>送る</button></form></details>
+      <details class="proposal"><summary>解決案を提案する</summary><form data-form="proposal"><input maxlength="300" placeholder="解決案を短く。勝手に要件を決めない。" /><button>提案</button></form></details>
+      <div class="demand-ladder"></div><div class="thread"></div><a class="permalink" rel="nofollow">この問題のURL</a>
     </article>
   </template>
 
@@ -86,52 +76,14 @@
   <script type="module" src="./external-attestation.js"></script>
   <script>
   (()=>{
-    const campaigns={
-      'train-ticketing':{eyebrow:'電車・新幹線の地味な不便',title:'予約や受取、何がめんどい？',hint:'予約サイト、きっぷ、受取方法、乗換え。どこで引っかかったかを、仕様書にせず一言だけ話せます。',placeholder:'例：予約した切符をどこで受け取るか毎回迷う'},
-      'work-admin':{eyebrow:'仕事そのもの以外の面倒も原材料に',title:'報告や二重入力、何がめんどい？',hint:'転記、日報、同じ数字の再入力、承認のためだけの作業。今いちばん「これ要る？」と思うことを一言で。',placeholder:'例：同じ実績をExcelとシステムに二回入力してる'}
-    };
-    const key=new URLSearchParams(location.search).get('discover'),c=campaigns[key];if(!c)return;
-    const composer=document.querySelector('#composer'),eyebrow=composer?.querySelector('.eyebrow'),title=composer?.querySelector('h1'),hint=composer?.querySelector('.hint'),input=document.querySelector('#raw');
-    if(eyebrow)eyebrow.textContent=c.eyebrow;if(title)title.textContent=c.title;if(hint)hint.innerHTML=`<strong>あなた自身の困りごとを、そのまま。</strong><br>${c.hint}`;if(input)input.placeholder=c.placeholder;
-    const note=document.createElement('p');note.className='hint';note.dataset.acqNote='1';note.textContent='最初の一言はこのブラウザ内で整理され、あなたが明示的に「解決候補として公開する」を選んだときだけBOYAKIへ公開されます。外部で見つけた誰かの発言を転載する場所ではありません。';document.querySelector('#raw-form')?.after(note);document.title=`${c.title} — BOYAKI`;window.BOYAKI_DISCOVERY_OVERLAY_VERSION='chat-first-v53';
+    const campaigns={'train-ticketing':{eyebrow:'電車・新幹線の地味な不便',title:'予約や受取、何がめんどい？',hint:'予約サイト、きっぷ、受取方法、乗換え。どこで引っかかったかを、仕様書にせず一言だけ話せます。',placeholder:'例：予約した切符をどこで受け取るか毎回迷う'},'work-admin':{eyebrow:'仕事そのもの以外の面倒も原材料に',title:'報告や二重入力、何がめんどい？',hint:'転記、日報、同じ数字の再入力、承認のためだけの作業。今いちばん「これ要る？」と思うことを一言で。',placeholder:'例：同じ実績をExcelとシステムに二回入力してる'}};
+    const key=new URLSearchParams(location.search).get('discover'),c=campaigns[key];if(!c)return;const composer=document.querySelector('#composer'),eyebrow=composer?.querySelector('.eyebrow'),title=composer?.querySelector('h1'),hint=composer?.querySelector('.hint'),input=document.querySelector('#raw');if(eyebrow)eyebrow.textContent=c.eyebrow;if(title)title.textContent=c.title;if(hint)hint.innerHTML=`<strong>あなた自身の困りごとを、そのまま。</strong><br>${c.hint}`;if(input)input.placeholder=c.placeholder;const note=document.createElement('p');note.className='hint';note.dataset.acqNote='1';note.textContent='最初の一言はこのブラウザ内で整理され、あなたが明示的に「解決候補として公開する」を選んだときだけBOYAKIへ公開されます。外部で見つけた誰かの発言を転載する場所ではありません。';document.querySelector('#raw-form')?.after(note);document.title=`${c.title} — BOYAKI`;window.BOYAKI_DISCOVERY_OVERLAY_VERSION='chat-first-v53';
   })();
   </script>
   <script>
   (()=>{
-    window.BOYAKI_CONTEXT_GATE_VERSION='context-v2-poster-bound';
-    const HIGH_RISK=/(医療|診断|治療|薬|服薬|法律|訴訟|裁判|投資|株|暗号資産|借金|融資|銃|武器|爆発|自殺|自傷|パスワード|認証情報|個人情報)/i;
-    const RULES=[
-      [/(忘れ|失念|漏れ|うっかり|見落と)/i,['reminder','checklist']],
-      [/(毎回|手作業|コピペ|転記|入力|繰り返|反復)/i,['template','automation']],
-      [/(探す|検索|見つから|見付から|整理|どこに)/i,['search-filter','index']],
-      [/(在庫|発注|補充|欠品|ストック)/i,['threshold-alert','checklist']],
-      [/(予定|予約|期限|締切|時間|スケジュール)/i,['reminder','scheduler']],
-      [/(比較|選べない|迷う|どれがいい|判断)/i,['comparison','decision-guide']],
-      [/(管理|記録|集計|一覧|見える化)/i,['template','dashboard']],
-      [/(連絡|共有|伝達|通知|知らせ)/i,['notification','shared-log']],
-      [/(待つ|混雑|順番|行列|空き)/i,['queue-status','notification']]
-    ];
-    function contextText(card){
-      const raw=card.querySelector('.raw')?.textContent||'';
-      const posterAnswers=[...card.querySelectorAll('.thread-item[data-actor-role="original-poster"]')].map(x=>x.textContent).join(' ');
-      return `${raw} ${posterAnswers}`.normalize('NFKC');
-    }
-    function contextState(card){
-      const text=contextText(card), forms=new Set();
-      for(const [re,names] of RULES)if(re.test(text))for(const n of names)forms.add(n);
-      return {risky:HIGH_RISK.test(text),forms:[...forms],sufficient:!HIGH_RISK.test(text)&&forms.size>=2};
-    }
-    function apply(card){
-      const form=card.querySelector('[data-form="proposal"]'); if(!form)return;
-      const s=contextState(card); form.dataset.contextSufficient=s.sufficient?'1':'0'; form.dataset.solutionForms=s.forms.join(',');
-      const input=form.querySelector('input'),button=form.querySelector('button'); if(input)input.disabled=!s.sufficient;if(button)button.disabled=!s.sufficient;
-      let hint=form.querySelector('[data-context-gate-hint]');
-      if(!s.sufficient){if(!hint){hint=document.createElement('p');hint.className='hint';hint.dataset.contextGateHint='1';form.append(hint)}hint.textContent=s.risky?'安全上、この公開情報だけではBOYAKI上で解決案を提案できません。':'公開情報だけでは複数の安全な解決案をまだ分けられません。必要なら追加質問を最大2つまで使えます。'}else if(hint)hint.remove();
-    }
-    function scan(root=document){for(const card of root.querySelectorAll?.('.problem-card')||[])apply(card);if(root.matches?.('.problem-card'))apply(root)}
-    document.addEventListener('submit',e=>{const f=e.target;if(f?.matches?.('[data-form="proposal"]')){const card=f.closest('.problem-card');if(!card||!contextState(card).sufficient){e.preventDefault();e.stopImmediatePropagation()}}},true);
-    new MutationObserver(ms=>{for(const m of ms)for(const n of m.addedNodes)if(n.nodeType===1)scan(n)}).observe(document.documentElement,{childList:true,subtree:true});
-    if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>scan());else scan();
+    window.BOYAKI_CONTEXT_GATE_VERSION='context-v2-poster-bound';const HIGH_RISK=/(医療|診断|治療|薬|服薬|法律|訴訟|裁判|投資|株|暗号資産|借金|融資|銃|武器|爆発|自殺|自傷|パスワード|認証情報|個人情報)/i;const RULES=[[/(忘れ|失念|漏れ|うっかり|見落と)/i,['reminder','checklist']],[/(毎回|手作業|コピペ|転記|入力|繰り返|反復)/i,['template','automation']],[/(探す|検索|見つから|見付から|整理|どこに)/i,['search-filter','index']],[/(在庫|発注|補充|欠品|ストック)/i,['threshold-alert','checklist']],[/(予定|予約|期限|締切|時間|スケジュール)/i,['reminder','scheduler']],[/(比較|選べない|迷う|どれがいい|判断)/i,['comparison','decision-guide']],[/(管理|記録|集計|一覧|見える化)/i,['template','dashboard']],[/(連絡|共有|伝達|通知|知らせ)/i,['notification','shared-log']],[/(待つ|混雑|順番|行列|空き)/i,['queue-status','notification']]];
+    function contextText(card){const raw=card.querySelector('.raw')?.textContent||'';const posterAnswers=[...card.querySelectorAll('.thread-item[data-actor-role="original-poster"]')].map(x=>x.textContent).join(' ');return `${raw} ${posterAnswers}`.normalize('NFKC')}function contextState(card){const text=contextText(card),forms=new Set();for(const [re,names] of RULES)if(re.test(text))for(const n of names)forms.add(n);return{risky:HIGH_RISK.test(text),forms:[...forms],sufficient:!HIGH_RISK.test(text)&&forms.size>=2}}function apply(card){const form=card.querySelector('[data-form="proposal"]');if(!form)return;const s=contextState(card);form.dataset.contextSufficient=s.sufficient?'1':'0';form.dataset.solutionForms=s.forms.join(',');const input=form.querySelector('input'),button=form.querySelector('button');if(input)input.disabled=!s.sufficient;if(button)button.disabled=!s.sufficient;let hint=form.querySelector('[data-context-gate-hint]');if(!s.sufficient){if(!hint){hint=document.createElement('p');hint.className='hint';hint.dataset.contextGateHint='1';form.append(hint)}hint.textContent=s.risky?'安全上、この公開情報だけではBOYAKI上で解決案を提案できません。':'公開情報だけでは複数の安全な解決案をまだ分けられません。必要なら追加質問を最大2つまで使えます。'}else if(hint)hint.remove()}function scan(root=document){for(const card of root.querySelectorAll?.('.problem-card')||[])apply(card);if(root.matches?.('.problem-card'))apply(root)}document.addEventListener('submit',e=>{const f=e.target;if(f?.matches?.('[data-form="proposal"]')){const card=f.closest('.problem-card');if(!card||!contextState(card).sufficient){e.preventDefault();e.stopImmediatePropagation()}}},true);new MutationObserver(ms=>{for(const m of ms)for(const n of m.addedNodes)if(n.nodeType===1)scan(n)}).observe(document.documentElement,{childList:true,subtree:true});if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>scan());else scan();
   })();
   </script>
   <script src="./quality-index-gate.js"></script>
