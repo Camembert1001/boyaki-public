@@ -1,4 +1,4 @@
-import { SimplePool, generateSecretKey, getPublicKey, finalizeEvent } from 'https://esm.sh/nostr-tools@2.17.0';
+import { SimplePool, generateSecretKey, getPublicKey, finalizeEvent, nip49 } from 'https://esm.sh/nostr-tools@2.17.0';
 
 const RELAYS=['wss://nos.lol','wss://relay.primal.net'];
 const pool=new SimplePool();
@@ -8,83 +8,47 @@ const toHex=bytes=>[...bytes].map(b=>b.toString(16).padStart(2,'0')).join('');
 const fromHex=hex=>new Uint8Array((hex.match(/.{1,2}/g)||[]).map(b=>parseInt(b,16)));
 const short=pk=>`${pk.slice(0,8)}…${pk.slice(-6)}`;
 
-function getIdentity(){
+function getLegacyIdentity(){
   let hex=localStorage.getItem('boyaki-device-sk');
-  if(!hex){
-    hex=toHex(generateSecretKey());
-    localStorage.setItem('boyaki-device-sk',hex);
-  }
-  const sk=fromHex(hex);
-  return {sk,pk:getPublicKey(sk)};
+  if(!hex){hex=toHex(generateSecretKey());localStorage.setItem('boyaki-device-sk',hex)}
+  const sk=fromHex(hex);return {sk,pk:getPublicKey(sk)}
 }
+const legacy=getLegacyIdentity();
+$('#device-id').textContent=short(legacy.pk);
 
-const identity=getIdentity();
-$('#device-id').textContent=short(identity.pk);
-
-function signed(template){
-  return finalizeEvent({...template,created_at:template.created_at??unix()},identity.sk);
-}
-
-async function publishProfile(profile){
-  const ev=signed({
-    kind:0,
-    content:JSON.stringify({
-      name:profile.displayName,
-      display_name:profile.displayName,
-      about:profile.about,
-      boyaki_interest:profile.interest,
-      boyaki_schema:'profile-v1'
-    }),
-    tags:[['app','boyaki-web'],['schema','boyaki-profile-v1']]
-  });
+function signed(template,sk){return finalizeEvent({...template,created_at:template.created_at??unix()},sk)}
+async function publishProfile(profile,sk){
+  const ev=signed({kind:0,content:JSON.stringify({
+    name:profile.displayName,display_name:profile.displayName,about:profile.about,
+    boyaki_interest:profile.interest,boyaki_schema:'account-profile-v1'
+  }),tags:[['app','boyaki-web'],['schema','boyaki-account-profile-v1']]},sk);
   const out=await Promise.allSettled(pool.publish(RELAYS,ev));
   if(!out.some(x=>x.status==='fulfilled'))throw new Error('relay publish failed');
   return ev;
 }
 
-async function loadExisting(){
-  const localName=localStorage.getItem('boyaki-profile-display-name')||localStorage.getItem('boyaki-maker-display-name')||'';
-  const localInterest=localStorage.getItem('boyaki-profile-interest')||'both';
-  const localAbout=localStorage.getItem('boyaki-profile-about')||'';
-  $('#register-name').value=localName;
-  $('#register-interest').value=['voice','maker','both'].includes(localInterest)?localInterest:'both';
-  $('#register-about').value=localAbout;
-
-  try{
-    const rows=await pool.querySync(RELAYS,{kinds:[0],authors:[identity.pk],limit:20});
-    const latest=rows.sort((a,b)=>b.created_at-a.created_at)[0];
-    if(!latest)return;
-    const p=JSON.parse(latest.content||'{}');
-    if(p.boyaki_schema!=='profile-v1')return;
-    if(typeof p.display_name==='string'&&p.display_name)$('#register-name').value=p.display_name;
-    if(['voice','maker','both'].includes(p.boyaki_interest))$('#register-interest').value=p.boyaki_interest;
-    if(typeof p.about==='string')$('#register-about').value=p.about;
-    $('#register-status').textContent='このブラウザIDには、すでにBOYAKIプロフィールがあります。変更して再登録できます。';
-  }catch{}
-}
-
 $('#register-form').addEventListener('submit',async e=>{
   e.preventDefault();
-  const button=e.submitter;
-  const displayName=$('#register-name').value.trim();
-  const interest=$('#register-interest').value;
-  const about=$('#register-about').value.trim();
-  if(!displayName){$('#register-status').textContent='表示名を入力してください。';return;}
-  button.disabled=true;
-  $('#register-status').textContent='プロフィールを署名して登録しています…';
+  const button=e.submitter,displayName=$('#register-name').value.trim(),interest=$('#register-interest').value,about=$('#register-about').value.trim();
+  const password=$('#register-password').value,confirm=$('#register-password-confirm').value;
+  if(!displayName){$('#register-status').textContent='表示名を入力してください。';return}
+  if(password.length<10){$('#register-status').textContent='パスワードは10文字以上にしてください。';return}
+  if(password!==confirm){$('#register-status').textContent='パスワードが一致しません。';return}
+  button.disabled=true;$('#register-status').textContent='アカウント鍵を作成しています…';
   try{
-    await publishProfile({displayName,interest,about});
+    const sk=generateSecretKey(),pk=getPublicKey(sk);
+    const loginKey=nip49.encrypt(sk,password);
+    await publishProfile({displayName,interest,about},sk);
+    localStorage.setItem('boyaki-account-sk',toHex(sk));
+    localStorage.setItem('boyaki-account-login-key',loginKey);
+    localStorage.setItem('boyaki-account-pk',pk);
     localStorage.setItem('boyaki-profile-display-name',displayName);
     localStorage.setItem('boyaki-profile-interest',interest);
     localStorage.setItem('boyaki-profile-about',about);
-    localStorage.setItem('boyaki-profile-registered-at',String(Date.now()));
-    localStorage.setItem('boyaki-maker-display-name',displayName);
-    $('#register-status').textContent='登録しました。このプロフィールは現在のブラウザIDに紐づいています。匿名利用は引き続き可能です。';
-  }catch{
-    $('#register-status').textContent='登録できませんでした。通信状態を確認して、少し後で再試行してください。';
-  }finally{
-    button.disabled=false;
-  }
+    $('#account-login-key').value=loginKey;$('#account-result').hidden=false;
+    $('#register-status').textContent='アカウントを作成しました。この端末ではログイン済みです。ログインキーを必ず保存してください。';
+  }catch(err){
+    console.error(err);$('#register-status').textContent='アカウントを作成できませんでした。通信状態を確認して再試行してください。';
+  }finally{button.disabled=false}
 });
-
-loadExisting();
+$('#copy-login-key').addEventListener('click',async()=>{const v=$('#account-login-key').value;if(!v)return;try{await navigator.clipboard.writeText(v);$('#copy-login-key').textContent='コピーしました'}catch{$('#account-login-key').select()}});
