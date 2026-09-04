@@ -1,4 +1,5 @@
-import { SimplePool, generateSecretKey, getPublicKey, finalizeEvent, nip49 } from 'https://esm.sh/nostr-tools@2.17.0';
+import { SimplePool, generateSecretKey, getPublicKey, finalizeEvent } from 'https://esm.sh/nostr-tools@2.17.0';
+import * as nip49 from 'https://esm.sh/nostr-tools@2.17.0/nip49';
 
 const RELAYS=['wss://nos.lol','wss://relay.primal.net'];
 const pool=new SimplePool();
