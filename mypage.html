@@ -16,7 +16,7 @@
       <a class="nav-link" href="./">新着</a>
       <a class="nav-link" href="./makers.html">Maker Space</a>
       <a class="nav-link active" href="./mypage.html">ログイン / マイページ</a>
-      <a class="nav-link" href="./register.html">新規登録</a>
+      <a class="nav-link" data-auth-register-link href="./register.html">新規登録</a>
     </nav>
   </header>
 
@@ -92,5 +92,8 @@
     </section>
   </main>
   <script type="module" src="./mypage.js?v=20260904-account-link-v1"></script>
+<script>
+(()=>{window.BOYAKI_AUTH_NAV_V1='1';const loggedIn=!!(localStorage.getItem('boyaki-account-sk')||sessionStorage.getItem('boyaki-account-sk'));if(loggedIn)document.querySelectorAll('[data-auth-register-link]').forEach(x=>x.style.display='none')})();
+</script>
 </body>
 </html>
