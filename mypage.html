@@ -44,7 +44,7 @@
       <h2 id="profile-name">プロフィールを確認中</h2>
       <p id="profile-about" class="hint"></p>
       <p class="hint">Account ID: <code id="device-id">loading…</code></p>
-      <div id="profile-actions" class="actions"></div>
+      <div id="profile-actions" class="actions"><a id="profile-edit-link" class="button-link" href="./profile-edit.html?v=20260904-v2">プロフィールを編集</a></div>
       <p id="legacy-identity-note" class="hint"></p>
     </section>
 
@@ -91,7 +91,7 @@
       <div id="recent-history" class="stack"></div>
     </section>
   </main>
-  <script type="module" src="./mypage.js?v=20260904-profile-edit-route-v2"></script>
+  <script type="module" src="./mypage.js?v=20260904-profile-edit-static-v3"></script>
 <script>
 (()=>{window.BOYAKI_AUTH_NAV_V1='1';const loggedIn=!!(localStorage.getItem('boyaki-account-sk')||sessionStorage.getItem('boyaki-account-sk'));if(loggedIn)document.querySelectorAll('[data-auth-register-link]').forEach(x=>x.style.display='none')})();
 </script>
