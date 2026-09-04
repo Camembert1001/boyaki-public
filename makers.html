@@ -15,7 +15,7 @@
     <nav>
       <a class="nav-link" href="./">困りごと</a>
       <a class="nav-link active" href="./makers.html">Maker Space</a>
-      <a class="nav-link" href="./register.html">新規登録</a>
+      <a class="nav-link" data-auth-register-link href="./register.html">新規登録</a>
     </nav>
   </header>
 
@@ -127,5 +127,8 @@
   </template>
 
   <script type="module" src="./maker-space.js?v=20260902-0748-surface-suppress"></script>
+<script>
+(()=>{window.BOYAKI_AUTH_NAV_V1='1';const loggedIn=!!(localStorage.getItem('boyaki-account-sk')||sessionStorage.getItem('boyaki-account-sk'));if(loggedIn)document.querySelectorAll('[data-auth-register-link]').forEach(x=>x.style.display='none')})();
+</script>
 </body>
 </html>
