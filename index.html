@@ -58,8 +58,8 @@
       <div id="maker-list" class="stack"></div>
     </section>
   </main>
-<div id="boyaki-alert" class="boyaki-alert" hidden role="alertdialog" aria-modal="true" aria-labelledby="boyaki-alert-title">
-  <div class="boyaki-alert-card">
+<div id="boyaki-alert" class="boyaki-alert" hidden role="alertdialog" aria-modal="true" aria-labelledby="boyaki-alert-title" style="position:fixed;inset:0;z-index:2147483647;display:grid;place-items:center;padding:24px;background:rgba(17,24,39,.32);backdrop-filter:blur(4px);">
+  <div class="boyaki-alert-card" style="width:min(360px,calc(100vw - 48px));background:#fff;border-radius:24px;padding:24px;text-align:center;box-shadow:0 24px 80px rgba(17,24,39,.28);">
     <div class="boyaki-alert-icon">!</div>
     <h2 id="boyaki-alert-title" data-alert-title>お知らせ</h2>
     <p data-alert-message></p>
@@ -80,7 +80,7 @@
   </template>
 
   <script src="./chat-first-v53.js"></script>
-  <script type="module" src="./app.js?v=20260904-publish-resilience-v1"></script>
+  <script type="module" src="./app.js?v=20260904-relay-fallback-v2"></script>
   <script type="module" src="./external-attestation.js"></script>
   <script>
   (()=>{
