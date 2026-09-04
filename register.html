@@ -19,12 +19,72 @@
       <a class="nav-link active" href="./register.html">新規登録</a>
     </nav>
   </header>
+
   <main class="shell maker-space">
-    <section class="card hero maker-hero"><p class="eyebrow">BOYAKI Profile — Phase 0</p><h1>新規登録</h1><p class="lead">匿名のままでもBOYAKIは使えます。実績や活動を自分のプロフィールへ残していきたい人だけ、ここで仮名プロフィールを作れます。</p><p class="hint"><strong>メール・電話番号・本名は不要です。</strong><br>この初期版では、このブラウザ内にある暗号鍵があなたのプロフィールを署名します。秘密鍵そのものをBOYAKIへ送ることはありません。</p></section>
-    <section class="card participation-panel"><p class="eyebrow">Create your profile</p><h2>プロフィールを作る</h2><form id="register-form" class="maker-form"><label>表示名 / Display name<input id="register-name" maxlength="40" autocomplete="nickname" placeholder="例: @username / Nicolas" required /></label><label>主に興味があること / Main interest<select id="register-interest"><option value="both">Voice と Maker の両方</option><option value="voice">Voice — 困りごと・検証側</option><option value="maker">Maker — 解決を作る側</option></select></label><label>ひとこと / About (optional)<textarea id="register-about" maxlength="240" rows="4" placeholder="何に困っているか、何を作れるかなど。個人情報や秘密は書かないでください。"></textarea></label><div class="actions"><button type="submit">プロフィールを登録する</button></div></form><div id="register-status" class="hint" role="status" aria-live="polite"></div></section>
-    <section class="card identity-card"><p class="eyebrow">Current credential</p><h2>このブラウザのBOYAKI ID</h2><p class="hint">Phase 0では、このIDとプロフィールが紐づきます。同じブラウザでは継続できますが、別端末・別ブラウザへの引き継ぎや復旧はまだ実装していません。これは本人確認済み表示ではありません。</p><code id="device-id">loading…</code><div class="actions"><a class="button-link" href="./mypage.html">ログイン / マイページを開く</a></div></section>
-    <section class="card"><p class="eyebrow">No lock-in</p><h2>登録しなくても使える。</h2><p class="hint">BOYAKIは、ぼやく・見る・参加する入口を登録必須にはしません。プロフィール登録は「活動を自分の実績として残していきたい」と思った人向けの入口です。</p><div class="actions"><a class="button-link" href="./">困りごとを見る</a><a class="button-link" href="./makers.html">Maker Spaceを見る</a></div></section>
+    <section class="card hero maker-hero">
+      <p class="eyebrow">BOYAKI Account — Phase 1</p>
+      <h1>アカウントを作る</h1>
+      <p class="lead">匿名のままでもBOYAKIは使えます。複数端末でも同じMy Pageを使いたい人は、ここで持続的なBOYAKIアカウントを作れます。</p>
+      <p class="hint"><strong>メール・電話番号・本名は不要です。</strong><br>アカウント鍵を作成し、パスワードで暗号化したログインキーを発行します。そのログインキーとパスワードがあれば、別端末から同じアカウントへログインできます。</p>
+    </section>
+
+    <section class="card participation-panel">
+      <p class="eyebrow">Create account</p>
+      <h2>アカウント登録</h2>
+      <form id="register-form" class="maker-form">
+        <label>表示名 / Display name
+          <input id="register-name" maxlength="40" autocomplete="nickname" placeholder="例: @username / Nicolas" required />
+        </label>
+        <label>主に興味があること / Main interest
+          <select id="register-interest">
+            <option value="both">Voice と Maker の両方</option>
+            <option value="voice">Voice — 困りごと・検証側</option>
+            <option value="maker">Maker — 解決を作る側</option>
+          </select>
+        </label>
+        <label>パスワード / Password
+          <input id="register-password" type="password" minlength="10" autocomplete="new-password" placeholder="10文字以上" required />
+        </label>
+        <label>パスワード確認
+          <input id="register-password-confirm" type="password" minlength="10" autocomplete="new-password" required />
+        </label>
+        <label>ひとこと / About (optional)
+          <textarea id="register-about" maxlength="240" rows="4" placeholder="何に困っているか、何を作れるかなど。個人情報や秘密は書かないでください。"></textarea>
+        </label>
+        <div class="actions">
+          <button type="submit">アカウントを作成する</button>
+        </div>
+      </form>
+      <div id="register-status" class="hint" role="status" aria-live="polite"></div>
+    </section>
+
+    <section class="card identity-card" id="account-result" hidden>
+      <p class="eyebrow">Login key</p>
+      <h2>ログインキーを保存</h2>
+      <p class="hint">この文字列は別端末でログインするときに必要です。パスワードとは別に安全な場所へ保存してください。BOYAKIはこのキーを復元できません。</p>
+      <textarea id="account-login-key" rows="4" readonly></textarea>
+      <div class="actions"><button type="button" id="copy-login-key">ログインキーをコピー</button><a class="button-link" href="./mypage.html">マイページへ</a></div>
+    </section>
+
+    <section class="card identity-card">
+      <p class="eyebrow">Current credential</p>
+      <h2>このブラウザの旧BOYAKI ID</h2>
+      <p class="hint">既存の匿名参加との互換性のため、このブラウザIDは残します。新しいアカウントはこれとは別の持続的identityです。過去browser IDの活動をアカウントへ引き継ぐ機能は次工程です。</p>
+      <code id="device-id">loading…</code>
+      <div class="actions"><a class="button-link" href="./mypage.html">ログイン / マイページを開く</a></div>
+    </section>
+
+    <section class="card">
+      <p class="eyebrow">No lock-in</p>
+      <h2>登録しなくても使える。</h2>
+      <p class="hint">BOYAKIは、ぼやく・見る・参加する入口を登録必須にはしません。プロフィール登録は「活動を自分の実績として残していきたい」と思った人向けの入口です。</p>
+      <div class="actions">
+        <a class="button-link" href="./">困りごとを見る</a>
+        <a class="button-link" href="./makers.html">Maker Spaceを見る</a>
+      </div>
+    </section>
   </main>
-  <script type="module" src="./register.js?v=20260903-0411-phase0"></script>
+
+  <script type="module" src="./register.js?v=20260904-account-phase1"></script>
 </body>
 </html>
