@@ -1,9 +1,9 @@
 {
   "schema": "boyaki-public-export-provenance-v1",
   "source_repository": "Camembert1001/ai-distribution-company",
-  "source_commit": "24646f73da097f9737116c0c70f6d3fdd35ba3a1",
+  "source_commit": "568201ada10a2e40cd8515728d686bb373abf8fa",
   "target_repository": "Camembert1001/boyaki-public",
-  "generated_at": "2026-09-04T01:01:00Z",
+  "generated_at": "2026-09-04T01:58:00Z",
   "allowlist": [
     ".nojekyll",
     "index.html",
@@ -20,6 +20,7 @@
     "register.js",
     "mypage.html",
     "mypage.js",
+    "bug-report.html",
     "public-surface-suppression.js",
     "public-surface-suppressions.json",
     "solution-candidates.json",
