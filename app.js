@@ -4,6 +4,19 @@ const RELAYS=['wss://nos.lol','wss://relay.primal.net'];
 const RECOVERY_PUBKEY='1ba668198fc73341765d7dc8d51e7f669d04b613e56e43bba0fc0d7b5e313250';
 const pool=new SimplePool();
 const $=(s,r=document)=>r.querySelector(s); const $$=(s,r=document)=>[...r.querySelectorAll(s)];
+function showBoyakiAlert(message,title='お知らせ'){
+  const overlay=document.querySelector('#boyaki-alert');
+  if(!overlay){alert(message);return}
+  overlay.querySelector('[data-alert-title]').textContent=title;
+  overlay.querySelector('[data-alert-message]').textContent=message;
+  overlay.hidden=false;
+  requestAnimationFrame(()=>overlay.classList.add('show'));
+}
+function hideBoyakiAlert(){
+  const overlay=document.querySelector('#boyaki-alert');if(!overlay)return;
+  overlay.classList.remove('show');setTimeout(()=>overlay.hidden=true,160);
+}
+document.addEventListener('click',e=>{if(e.target.matches?.('[data-alert-close]')||e.target.id==='boyaki-alert')hideBoyakiAlert()});
 const status=$('#status'),feed=$('#feed'),makerList=$('#maker-list'),problemView=$('#problem-view'); let roots=[],related=[];
 function toHex(bytes){return [...bytes].map(b=>b.toString(16).padStart(2,'0')).join('')}
 function fromHex(hex){return new Uint8Array((hex.match(/.{1,2}/g)||[]).map(b=>parseInt(b,16)))}
@@ -27,9 +40,21 @@ function acquisitionTags(){const key=new URLSearchParams(location.search).get('d
 async function createRaw(text){
  const raw=signed({kind:1,content:text,tags:[['t','boyaki-raw'],['app','boyaki-web'],['schema','raw-v1'],['source','deliberate-web-submission'],...acquisitionTags()]});
  const deletion=signed({kind:5,content:'withdraw raw source',tags:[['e',raw.id],['k','1'],['app','boyaki-web'],['schema','presigned-withdrawal-v1']]});
- const conversationKey=nip44.v2.utils.getConversationKey(identity.sk,RECOVERY_PUBKEY); const encrypted=nip44.v2.encrypt(JSON.stringify(deletion),conversationKey);
- const capsule=signed({kind:1,content:encrypted,tags:[['t','boyaki-recovery-capsule'],['e',raw.id,RELAYS[0],'root'],['p',RECOVERY_PUBKEY],['app','boyaki-web'],['schema','encrypted-revocation-capsule-v1']]});
- await publishExact(capsule); await publishExact(raw); localStorage.setItem(`boyaki-withdrawal:${raw.id}`,JSON.stringify(deletion)); return raw;
+ // First preserve the local withdrawal proof, then publish the user's BOYAKI.
+ // Recovery-capsule failure must not silently prevent the BOYAKI itself from being posted.
+ localStorage.setItem(`boyaki-withdrawal:${raw.id}`,JSON.stringify(deletion));
+ await publishExact(raw);
+ try{
+   const conversationKey=nip44.v2.utils.getConversationKey(identity.sk,RECOVERY_PUBKEY);
+   const encrypted=nip44.v2.encrypt(JSON.stringify(deletion),conversationKey);
+   const capsule=signed({kind:1,content:encrypted,tags:[['t','boyaki-recovery-capsule'],['e',raw.id,RELAYS[0],'root'],['p',RECOVERY_PUBKEY],['app','boyaki-web'],['schema','encrypted-revocation-capsule-v1']]});
+   await publishExact(capsule);
+   localStorage.removeItem(`boyaki-recovery-pending:${raw.id}`);
+ }catch(err){
+   console.warn('recovery capsule pending',err);
+   localStorage.setItem(`boyaki-recovery-pending:${raw.id}`,'1');
+ }
+ return raw;
 }
 async function createReply(root,type,text,parent=null){const tags=[['e',root.id,RELAYS[0],'root'],['p',root.pubkey],['t',`boyaki-${type}`],['app','boyaki-web'],['problem_id',root.id]];if(parent){tags.splice(1,0,['e',parent.id,RELAYS[0],'reply']);tags.push(['parent_id',parent.id]);if(parent.pubkey!==root.pubkey)tags.push(['p',parent.pubkey])}return publish({kind:1,content:text,tags})}
 async function rootReact(root,type){return publish({kind:7,content:type,tags:[['e',root.id,RELAYS[0],'root'],['p',root.pubkey],['t','boyaki-demand-ladder'],['action',type],['scope','problem'],['app','boyaki-web']]})}
@@ -84,7 +109,7 @@ function renderMaker(q=''){makerList.innerHTML='';const items=roots.filter(r=>!q
 function showHome(){history.replaceState(null,'',location.pathname);problemView.hidden=true;$('#feed-view').hidden=false;$('#maker-view').hidden=true;$('#composer').hidden=false;$$('[data-view]').forEach(x=>x.classList.toggle('active',x.dataset.view==='feed'));renderFeed()}
 function renderProblem(id){const r=roots.find(x=>x.id===id);if(!r)return false;problemView.innerHTML='<div class="section-head"><div><p class="eyebrow">この問題のページ</p><h2>困りごと</h2></div><button id="problem-back">一覧へ</button></div>';problemView.append(card(r,{detail:true}));problemView.hidden=false;$('#feed-view').hidden=true;$('#maker-view').hidden=true;$('#composer').hidden=true;$('#problem-back').addEventListener('click',showHome);return true}
 async function refresh(){status.textContent='';await queryAll();const id=new URLSearchParams(location.search).get('problem');if(id&&renderProblem(id))return;renderFeed();renderMaker($('#maker-search').value)}
-$('#raw-form').addEventListener('submit',async e=>{e.preventDefault();const input=$('#raw'),text=input.value.trim();if(!text)return;$('#submit-btn').disabled=true;status.textContent='公開しています…';try{const ev=await createRaw(text);input.value='';status.innerHTML=`公開しました。<a href="?problem=${ev.id}">この問題を見る</a>`;await refresh()}catch{status.textContent='公開できませんでした。少し後で再試行してください。'}finally{$('#submit-btn').disabled=false}});
+$('#raw-form').addEventListener('submit',async e=>{e.preventDefault();const input=$('#raw'),text=input.value.trim();if(!text)return;$('#submit-btn').disabled=true;status.textContent='公開しています…';try{const ev=await createRaw(text);input.value='';status.innerHTML=`公開しました。<a href="?problem=${ev.id}">この問題を見る</a>`;await refresh()}catch(err){console.error(err);status.textContent='公開できませんでした。';showBoyakiAlert('BOYAKIを公開できませんでした。通信状態を確認して、少し後でもう一度試してください。','公開できませんでした');}finally{$('#submit-btn').disabled=false}});
 $('#brand-home').addEventListener('click',e=>{e.preventDefault();showHome()});
 $('#refresh').addEventListener('click',refresh);$('#maker-search').addEventListener('input',e=>renderMaker(e.target.value));$$('[data-view]').forEach(b=>b.addEventListener('click',()=>{$$('[data-view]').forEach(x=>x.classList.toggle('active',x===b));$('#feed-view').hidden=b.dataset.view!=='feed';$('#maker-view').hidden=b.dataset.view!=='maker';problemView.hidden=true;$('#composer').hidden=false}));
 if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});refresh().catch(()=>{status.textContent='読み込めませんでした。更新してください。'});
