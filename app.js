@@ -1,6 +1,6 @@
 import { SimplePool, generateSecretKey, getPublicKey, finalizeEvent, nip44 } from 'https://esm.sh/nostr-tools@2.17.0';
 
-const RELAYS=['wss://nos.lol','wss://relay.primal.net'];
+const RELAYS=['wss://nos.lol','wss://relay.primal.net','wss://relay.damus.io','wss://relay.nostr.band'];
 const RECOVERY_PUBKEY='1ba668198fc73341765d7dc8d51e7f669d04b613e56e43bba0fc0d7b5e313250';
 const pool=new SimplePool();
 const $=(s,r=document)=>r.querySelector(s); const $$=(s,r=document)=>[...r.querySelectorAll(s)];
@@ -30,7 +30,21 @@ function short(pk){return `${pk.slice(0,6)}…${pk.slice(-4)}`}
 function fmt(ts){return new Date(ts*1000).toLocaleString('ja-JP',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}
 function escapeHtml(s=''){return s.replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
 function signed(template){return finalizeEvent({...template,created_at:template.created_at??unix()},identity.sk)}
-async function publishExact(ev){const result=await Promise.allSettled(pool.publish(RELAYS,ev));if(!result.some(x=>x.status==='fulfilled'))throw new Error('relay publish failed');return ev}
+async function publishExact(ev){
+  const attempts=pool.publish(RELAYS,ev);
+  const wrapped=attempts.map((p,i)=>Promise.resolve(p).then(()=>RELAYS[i]));
+  try{
+    const relay=await Promise.race([
+      Promise.any(wrapped),
+      new Promise((_,reject)=>setTimeout(()=>reject(new Error('relay publish timeout')),9000))
+    ]);
+    console.info('published via',relay);
+    return ev;
+  }catch(err){
+    console.error('all relay publishes failed',err);
+    throw err;
+  }
+}
 async function publish(template){return publishExact(signed(template))}
 const ACQUISITION_CAMPAIGNS={
  'train-ticketing':{contentId:'cs-train-ticketing-v12',campaignId:'owned-bdf-train-v12',vertical:'travel_mobility',theme:'jp_train_ticketing_friction'},
@@ -109,7 +123,7 @@ function renderMaker(q=''){makerList.innerHTML='';const items=roots.filter(r=>!q
 function showHome(){history.replaceState(null,'',location.pathname);problemView.hidden=true;$('#feed-view').hidden=false;$('#maker-view').hidden=true;$('#composer').hidden=false;$$('[data-view]').forEach(x=>x.classList.toggle('active',x.dataset.view==='feed'));renderFeed()}
 function renderProblem(id){const r=roots.find(x=>x.id===id);if(!r)return false;problemView.innerHTML='<div class="section-head"><div><p class="eyebrow">この問題のページ</p><h2>困りごと</h2></div><button id="problem-back">一覧へ</button></div>';problemView.append(card(r,{detail:true}));problemView.hidden=false;$('#feed-view').hidden=true;$('#maker-view').hidden=true;$('#composer').hidden=true;$('#problem-back').addEventListener('click',showHome);return true}
 async function refresh(){status.textContent='';await queryAll();const id=new URLSearchParams(location.search).get('problem');if(id&&renderProblem(id))return;renderFeed();renderMaker($('#maker-search').value)}
-$('#raw-form').addEventListener('submit',async e=>{e.preventDefault();const input=$('#raw'),text=input.value.trim();if(!text)return;$('#submit-btn').disabled=true;status.textContent='公開しています…';try{const ev=await createRaw(text);input.value='';status.innerHTML=`公開しました。<a href="?problem=${ev.id}">この問題を見る</a>`;await refresh()}catch(err){console.error(err);status.textContent='公開できませんでした。';showBoyakiAlert('BOYAKIを公開できませんでした。通信状態を確認して、少し後でもう一度試してください。','公開できませんでした');}finally{$('#submit-btn').disabled=false}});
+$('#raw-form').addEventListener('submit',async e=>{e.preventDefault();const input=$('#raw'),text=input.value.trim();if(!text)return;$('#submit-btn').disabled=true;status.textContent='公開しています…';try{const ev=await createRaw(text);input.value='';status.innerHTML=`公開しました。<a href="?problem=${ev.id}">この問題を見る</a>`;await refresh()}catch(err){console.error(err);status.textContent='公開できませんでした。';showBoyakiAlert('BOYAKIを公開できませんでした。Relayへの接続に失敗しました。通信状態を確認して再試行してください。','公開できませんでした');}finally{$('#submit-btn').disabled=false}});
 $('#brand-home').addEventListener('click',e=>{e.preventDefault();showHome()});
 $('#refresh').addEventListener('click',refresh);$('#maker-search').addEventListener('input',e=>renderMaker(e.target.value));$$('[data-view]').forEach(b=>b.addEventListener('click',()=>{$$('[data-view]').forEach(x=>x.classList.toggle('active',x===b));$('#feed-view').hidden=b.dataset.view!=='feed';$('#maker-view').hidden=b.dataset.view!=='maker';problemView.hidden=true;$('#composer').hidden=false}));
 if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});refresh().catch(()=>{status.textContent='読み込めませんでした。更新してください。'});
