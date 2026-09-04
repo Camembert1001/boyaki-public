@@ -57,6 +57,16 @@
       "reason": "synthetic_test_cleanup",
       "provenance": "readiness-test Activity residue; public-surface suppression only",
       "scope": "boyaki_public_surface_only"
+    },
+    {
+      "event_id": "70ece2bf6b2c9d6a7d4e4e3edda5ffecbdfbd1267ba936e2a61416654e3fe38d",
+      "content_exact": "【E2Eテスト専用・実需要ではありません】ESC-H-I0001-C-E2E-001 一時投稿。検証後に取り下げます。",
+      "pubkey_prefix": "68a49214",
+      "class": "raw-boyaki",
+      "reason": "work_e2e_synthetic_cleanup_after_browser_credential_expiry",
+      "provenance": "ESC-H-I0001-C-E2E-001 Work browser expired before the confirmed same-owner withdrawal could be submitted; public-surface suppression only, not relay deletion, kind-5, or author withdrawal.",
+      "scope": "boyaki_public_surface_only",
+      "status": "render_filter_active"
     }
   ]
 }
