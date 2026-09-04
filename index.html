@@ -58,6 +58,14 @@
       <div id="maker-list" class="stack"></div>
     </section>
   </main>
+<div id="boyaki-alert" class="boyaki-alert" hidden role="alertdialog" aria-modal="true" aria-labelledby="boyaki-alert-title">
+  <div class="boyaki-alert-card">
+    <div class="boyaki-alert-icon">!</div>
+    <h2 id="boyaki-alert-title" data-alert-title>お知らせ</h2>
+    <p data-alert-message></p>
+    <button type="button" data-alert-close>OK</button>
+  </div>
+</div>
 
   <template id="problem-template">
     <article class="card problem-card">
@@ -72,7 +80,7 @@
   </template>
 
   <script src="./chat-first-v53.js"></script>
-  <script type="module" src="./app.js"></script>
+  <script type="module" src="./app.js?v=20260904-publish-resilience-v1"></script>
   <script type="module" src="./external-attestation.js"></script>
   <script>
   (()=>{
