@@ -48,6 +48,14 @@
       <p id="legacy-identity-note" class="hint"></p>
     </section>
 
+    <section class="card" id="legacy-link-card" hidden>
+      <p class="eyebrow">Account migration</p>
+      <h2>このブラウザの過去活動を引き継ぐ</h2>
+      <p class="hint" id="legacy-link-description">この端末に残っている旧BOYAKI IDを、現在のアカウントへ安全に紐づけます。両方の鍵で相互署名するため、他人の履歴を勝手に取り込むことはできません。</p>
+      <div id="legacy-link-status" class="hint" role="status" aria-live="polite"></div>
+      <div class="actions"><button id="legacy-link-button" type="button">過去活動をこのアカウントへ引き継ぐ</button></div>
+    </section>
+
     <section class="card">
       <p class="eyebrow">Your BOYAKI</p>
       <h2>自分の投稿を管理</h2>
@@ -83,6 +91,6 @@
       <div id="recent-history" class="stack"></div>
     </section>
   </main>
-  <script type="module" src="./mypage.js?v=20260904-account-phase1"></script>
+  <script type="module" src="./mypage.js?v=20260904-account-link-v1"></script>
 </body>
 </html>
