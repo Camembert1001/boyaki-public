@@ -120,16 +120,26 @@ async function main(){
   $('#device-id').textContent=short(identity.pk);
   const loginForm=$('#login-form'); if(loginForm) loginForm.hidden=true;
   const legacy=legacyIdentity();
-  const linked=await linkedLegacyPubkeys(identity.pk);
+  let linked=await linkedLegacyPubkeys(identity.pk);
   const linkCard=$('#legacy-link-card'),linkButton=$('#legacy-link-button'),linkStatus=$('#legacy-link-status');
   if(legacy&&legacy.pk!==identity.pk){
     linkCard.hidden=false;
-    if(linked.includes(legacy.pk)){
+    if(!linked.includes(legacy.pk)){
+      linkStatus.textContent=`このブラウザで作成された旧BOYAKI ID ${short(legacy.pk)} の過去活動を確認しています…`;
+      linkButton.hidden=true;
+      try{
+        await publishLinkPair(identity,legacy);
+        linked=[...new Set([...linked,legacy.pk])];
+        linkStatus.textContent=`このブラウザの旧BOYAKI ID ${short(legacy.pk)} の過去活動を自動でこのアカウントへ紐づけました。`;
+      }catch(err){
+        console.error('automatic legacy link failed',err);
+        linkStatus.textContent=`旧BOYAKI ID ${short(legacy.pk)} の自動引き継ぎに失敗しました。通信状態を確認して再試行してください。`;
+        linkButton.hidden=false;
+        linkButton.addEventListener('click',async()=>{linkButton.disabled=true;linkStatus.textContent='両方のidentityで相互署名しています…';try{await publishLinkPair(identity,legacy);linkStatus.textContent='引き継ぎました。My Pageを更新します…';setTimeout(()=>location.reload(),500)}catch(err){console.error(err);linkStatus.textContent='引き継ぎに失敗しました。通信状態を確認して再試行してください。';linkButton.disabled=false}});
+      }
+    }else{
       linkStatus.textContent=`このブラウザの旧BOYAKI ID ${short(legacy.pk)} は、このアカウントに引き継ぎ済みです。`;
       linkButton.hidden=true;
-    }else{
-      linkStatus.textContent=`旧BOYAKI ID ${short(legacy.pk)} の過去活動をこのアカウントへ引き継げます。`;
-      linkButton.addEventListener('click',async()=>{linkButton.disabled=true;linkStatus.textContent='両方のidentityで相互署名しています…';try{await publishLinkPair(identity,legacy);linkStatus.textContent='引き継ぎました。My Pageを更新します…';setTimeout(()=>location.reload(),500)}catch(err){console.error(err);linkStatus.textContent='引き継ぎに失敗しました。通信状態を確認して再試行してください。';linkButton.disabled=false}});
     }
   }
   const profile=await loadProfile(identity);
