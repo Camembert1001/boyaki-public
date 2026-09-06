@@ -114,17 +114,46 @@ async function loadEvidence(identity){
 $('#login-form').addEventListener('submit',async e=>{e.preventDefault();const key=$('#login-key').value.trim(),password=$('#login-password').value,remember=$('#remember-login').checked;const button=e.submitter;button.disabled=true;$('#profile-state').textContent='ログイン中…';try{const sk=nip49.decrypt(key,password);const hex=[...sk].map(b=>b.toString(16).padStart(2,'0')).join('');if(remember)localStorage.setItem('boyaki-account-sk',hex);else sessionStorage.setItem('boyaki-account-sk',hex);localStorage.setItem('boyaki-account-login-key',key);location.reload()}catch(err){console.error(err);$('#profile-state').textContent='ログインできませんでした。ログインキーとパスワードを確認してください。'}finally{button.disabled=false}});
 
 // ログイン済みならログインフォームを常に隠す。プロフィール取得成否とは分離する。
-function setupAccountKeyBackup(){
+function setupAccountKeyBackup(identity){
   const card=$('#account-key-backup');
   const show=$('#account-key-show');
   const copy=$('#account-key-copy');
   const hide=$('#account-key-hide');
   const area=$('#account-key-backup-value');
   const status=$('#account-key-backup-status');
-  if(!card||!show||!copy||!hide||!area||!status)return;
-  const value=localStorage.getItem('boyaki-account-login-key')||'';
-  if(!value)return;
+  const reissueForm=$('#account-key-reissue-form');
+  const password=$('#account-key-new-password');
+  const confirm=$('#account-key-new-password-confirm');
+  if(!card||!show||!copy||!hide||!area||!status||!reissueForm||!identity)return;
+  let value=localStorage.getItem('boyaki-account-login-key')||'';
   card.hidden=false;
+  if(!value){
+    show.hidden=true;
+    reissueForm.hidden=false;
+    status.textContent='この端末にはログインキーの保存がありませんが、現在のAccount IDを維持したまま再発行できます。';
+    reissueForm.addEventListener('submit',e=>{
+      e.preventDefault();
+      const p=password.value;
+      const c=confirm.value;
+      if(p.length<10){status.textContent='パスワードは10文字以上にしてください。';return}
+      if(p!==c){status.textContent='パスワードが一致しません。';return}
+      try{
+        value=nip49.encrypt(identity.sk,p);
+        localStorage.setItem('boyaki-account-login-key',value);
+        area.value=value;
+        area.hidden=false;
+        copy.hidden=false;
+        hide.hidden=false;
+        reissueForm.hidden=true;
+        status.textContent='同じAccount IDのログインキーを再発行しました。安全な場所へ保存してください。';
+        password.value='';confirm.value='';
+      }catch(err){
+        console.error('login key reissue failed',err);
+        status.textContent='ログインキーを再発行できませんでした。再試行してください。';
+      }
+    },{once:true});
+    return;
+  }
   status.textContent='この端末に保存されているログインキーがあります。';
   show.addEventListener('click',()=>{
     area.value=value;
@@ -159,7 +188,7 @@ async function main(){
   const identity=currentIdentity();
   if(!identity){$('#profile-state').textContent='BOYAKIアカウントにログインしていません。';$('#profile-name').textContent='未ログイン';$('#device-id').textContent='not logged in';$('#profile-actions').innerHTML='<a class="button-link" href="./register.html">新規登録へ</a>';const legacy=legacyIdentity();if(legacy)$('#legacy-identity-note').textContent=`このブラウザには旧BOYAKI ID ${short(legacy.pk)} があります。過去活動のアカウント引き継ぎは次工程です。`;$('#own-posts').innerHTML='<p class="hint">アカウントへログイン後、そのアカウントに紐づく投稿をここで管理できます。</p>';return}
   $('#device-id').textContent=short(identity.pk);
-  setupAccountKeyBackup();
+  setupAccountKeyBackup(identity);
   const loginForm=$('#login-form'); if(loginForm) loginForm.hidden=true;
   const legacy=legacyIdentity();
   let linked=await linkedLegacyPubkeys(identity.pk);
