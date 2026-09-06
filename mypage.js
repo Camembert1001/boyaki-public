@@ -114,10 +114,52 @@ async function loadEvidence(identity){
 $('#login-form').addEventListener('submit',async e=>{e.preventDefault();const key=$('#login-key').value.trim(),password=$('#login-password').value,remember=$('#remember-login').checked;const button=e.submitter;button.disabled=true;$('#profile-state').textContent='ログイン中…';try{const sk=nip49.decrypt(key,password);const hex=[...sk].map(b=>b.toString(16).padStart(2,'0')).join('');if(remember)localStorage.setItem('boyaki-account-sk',hex);else sessionStorage.setItem('boyaki-account-sk',hex);localStorage.setItem('boyaki-account-login-key',key);location.reload()}catch(err){console.error(err);$('#profile-state').textContent='ログインできませんでした。ログインキーとパスワードを確認してください。'}finally{button.disabled=false}});
 
 // ログイン済みならログインフォームを常に隠す。プロフィール取得成否とは分離する。
+function setupAccountKeyBackup(){
+  const card=$('#account-key-backup');
+  const show=$('#account-key-show');
+  const copy=$('#account-key-copy');
+  const hide=$('#account-key-hide');
+  const area=$('#account-key-backup-value');
+  const status=$('#account-key-backup-status');
+  if(!card||!show||!copy||!hide||!area||!status)return;
+  const value=localStorage.getItem('boyaki-account-login-key')||'';
+  if(!value)return;
+  card.hidden=false;
+  status.textContent='この端末に保存されているログインキーがあります。';
+  show.addEventListener('click',()=>{
+    area.value=value;
+    area.hidden=false;
+    copy.hidden=false;
+    hide.hidden=false;
+    show.hidden=true;
+    status.textContent='ログインキーを表示しています。保存後は隠してください。';
+  });
+  copy.addEventListener('click',async()=>{
+    try{
+      await navigator.clipboard.writeText(value);
+      status.textContent='ログインキーをコピーしました。';
+    }catch{
+      area.hidden=false;
+      area.focus();
+      area.select();
+      status.textContent='自動コピーできませんでした。表示欄を選択してコピーしてください。';
+    }
+  });
+  hide.addEventListener('click',()=>{
+    area.value='';
+    area.hidden=true;
+    copy.hidden=true;
+    hide.hidden=true;
+    show.hidden=false;
+    status.textContent='ログインキーを隠しました。';
+  });
+}
+
 async function main(){
   const identity=currentIdentity();
   if(!identity){$('#profile-state').textContent='BOYAKIアカウントにログインしていません。';$('#profile-name').textContent='未ログイン';$('#device-id').textContent='not logged in';$('#profile-actions').innerHTML='<a class="button-link" href="./register.html">新規登録へ</a>';const legacy=legacyIdentity();if(legacy)$('#legacy-identity-note').textContent=`このブラウザには旧BOYAKI ID ${short(legacy.pk)} があります。過去活動のアカウント引き継ぎは次工程です。`;$('#own-posts').innerHTML='<p class="hint">アカウントへログイン後、そのアカウントに紐づく投稿をここで管理できます。</p>';return}
   $('#device-id').textContent=short(identity.pk);
+  setupAccountKeyBackup();
   const loginForm=$('#login-form'); if(loginForm) loginForm.hidden=true;
   const legacy=legacyIdentity();
   let linked=await linkedLegacyPubkeys(identity.pk);
