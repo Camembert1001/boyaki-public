@@ -58,6 +58,18 @@
         <button id="account-key-copy" type="button" hidden>コピー</button>
         <button id="account-key-hide" type="button" hidden>隠す</button>
       </div>
+      <form id="account-key-reissue-form" class="maker-form" hidden>
+        <p class="hint">この端末にはアカウント秘密鍵が残っています。新しいパスワードで、同じAccount IDのログインキーを再発行できます。</p>
+        <label>新しいパスワード
+          <input id="account-key-new-password" type="password" minlength="10" autocomplete="new-password" required />
+        </label>
+        <label>新しいパスワード確認
+          <input id="account-key-new-password-confirm" type="password" minlength="10" autocomplete="new-password" required />
+        </label>
+        <div class="actions">
+          <button type="submit">ログインキーを再発行</button>
+        </div>
+      </form>
     </section>
 
     <section class="card" id="legacy-link-card" hidden>
@@ -103,7 +115,7 @@
       <div id="recent-history" class="stack"></div>
     </section>
   </main>
-  <script type="module" src="./mypage.js?v=20260906-account-key-backup-v1"></script>
+  <script type="module" src="./mypage.js?v=20260906-account-key-reissue-v2"></script>
 <script>
 (()=>{window.BOYAKI_AUTH_NAV_V1='1';const loggedIn=!!(localStorage.getItem('boyaki-account-sk')||sessionStorage.getItem('boyaki-account-sk'));if(loggedIn)document.querySelectorAll('[data-auth-register-link]').forEach(x=>x.style.display='none')})();
 </script>
