@@ -47,6 +47,19 @@
       <p id="legacy-identity-note" class="hint"></p>
     </section>
 
+    <section class="card" id="account-key-backup" hidden>
+      <p class="eyebrow">Account backup</p>
+      <h2>ログインキーを確認</h2>
+      <p class="hint">別端末で同じBOYAKIアカウントへログインするためのキーです。必要なときだけ表示してください。</p>
+      <div id="account-key-backup-status" class="hint" role="status" aria-live="polite"></div>
+      <textarea id="account-key-backup-value" rows="4" readonly hidden></textarea>
+      <div class="actions">
+        <button id="account-key-show" type="button">ログインキーを表示</button>
+        <button id="account-key-copy" type="button" hidden>コピー</button>
+        <button id="account-key-hide" type="button" hidden>隠す</button>
+      </div>
+    </section>
+
     <section class="card" id="legacy-link-card" hidden>
       <p class="eyebrow">Account migration</p>
       <h2>このブラウザの過去活動を引き継ぐ</h2>
@@ -90,7 +103,7 @@
       <div id="recent-history" class="stack"></div>
     </section>
   </main>
-  <script type="module" src="./mypage.js?v=20260906-auto-link-v1"></script>
+  <script type="module" src="./mypage.js?v=20260906-account-key-backup-v1"></script>
 <script>
 (()=>{window.BOYAKI_AUTH_NAV_V1='1';const loggedIn=!!(localStorage.getItem('boyaki-account-sk')||sessionStorage.getItem('boyaki-account-sk'));if(loggedIn)document.querySelectorAll('[data-auth-register-link]').forEach(x=>x.style.display='none')})();
 </script>
