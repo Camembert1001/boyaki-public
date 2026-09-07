@@ -1,6 +1,5 @@
 import {SimplePool,finalizeEvent,getPublicKey} from 'https://esm.sh/nostr-tools@2.17.0';
-
-const RELAYS=['wss://nos.lol','wss://relay.primal.net'];
+import { RELAYS } from './relays.js';
 const pool=new SimplePool();
 const status=document.querySelector('#status');
 const HEX64=/^[0-9a-f]{64}$/i;
