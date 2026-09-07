@@ -1,7 +1,6 @@
 import { SimplePool, generateSecretKey, getPublicKey, finalizeEvent } from 'https://esm.sh/nostr-tools@2.17.0';
 import * as nip49 from 'https://esm.sh/nostr-tools@2.17.0/nip49';
-
-const RELAYS=['wss://nos.lol','wss://relay.primal.net'];
+import { RELAYS } from './relays.js';
 const pool=new SimplePool();
 const $=s=>document.querySelector(s);
 const unix=()=>Math.floor(Date.now()/1000);
