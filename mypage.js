@@ -1,7 +1,6 @@
 import { SimplePool, getPublicKey, finalizeEvent } from 'https://esm.sh/nostr-tools@2.17.0';
 import * as nip49 from 'https://esm.sh/nostr-tools@2.17.0/nip49';
-
-const RELAYS=['wss://nos.lol','wss://relay.primal.net'];
+import { RELAYS } from './relays.js';
 const pool=new SimplePool();
 const $=s=>document.querySelector(s);
 const fromHex=hex=>new Uint8Array((hex.match(/.{1,2}/g)||[]).map(b=>parseInt(b,16)));
@@ -114,6 +113,42 @@ async function loadEvidence(identity){
 $('#login-form').addEventListener('submit',async e=>{e.preventDefault();const key=$('#login-key').value.trim(),password=$('#login-password').value,remember=$('#remember-login').checked;const button=e.submitter;button.disabled=true;$('#profile-state').textContent='ログイン中…';try{const sk=nip49.decrypt(key,password);const hex=[...sk].map(b=>b.toString(16).padStart(2,'0')).join('');if(remember)localStorage.setItem('boyaki-account-sk',hex);else sessionStorage.setItem('boyaki-account-sk',hex);localStorage.setItem('boyaki-account-login-key',key);location.reload()}catch(err){console.error(err);$('#profile-state').textContent='ログインできませんでした。ログインキーとパスワードを確認してください。'}finally{button.disabled=false}});
 
 // ログイン済みならログインフォームを常に隠す。プロフィール取得成否とは分離する。
+function setupLoginKeyRecoveryUI(){
+  const card=$('#login-key-card'),show=$('#show-login-key'),copy=$('#copy-login-key'),hide=$('#hide-login-key'),area=$('#saved-login-key'),status=$('#login-key-status');
+  if(!card||!show||!copy||!hide||!area||!status)return;
+  const key=localStorage.getItem('boyaki-account-login-key')||sessionStorage.getItem('boyaki-account-login-key')||'';
+  if(!key)return;
+  card.hidden=false;
+  status.textContent='この端末に保存されているログインキーがあります。';
+  show.addEventListener('click',()=>{
+    area.value=key;
+    area.hidden=false;
+    copy.hidden=false;
+    hide.hidden=false;
+    show.hidden=true;
+    status.textContent='ログインキーを表示しています。安全な場所へ保存したら「隠す」を押してください。';
+  });
+  copy.addEventListener('click',async()=>{
+    try{
+      await navigator.clipboard.writeText(key);
+      status.textContent='ログインキーをコピーしました。';
+    }catch{
+      area.hidden=false;
+      area.focus();
+      area.select();
+      status.textContent='自動コピーできませんでした。表示欄を選択してコピーしてください。';
+    }
+  });
+  hide.addEventListener('click',()=>{
+    area.value='';
+    area.hidden=true;
+    copy.hidden=true;
+    hide.hidden=true;
+    show.hidden=false;
+    status.textContent='ログインキーを隠しました。';
+  });
+}
+
 function setupAccountKeyBackup(identity){
   const card=$('#account-key-backup');
   const show=$('#account-key-show');
@@ -188,7 +223,7 @@ async function main(){
   const identity=currentIdentity();
   if(!identity){$('#profile-state').textContent='BOYAKIアカウントにログインしていません。';$('#profile-name').textContent='未ログイン';$('#device-id').textContent='not logged in';$('#profile-actions').innerHTML='<a class="button-link" href="./register.html">新規登録へ</a>';const legacy=legacyIdentity();if(legacy)$('#legacy-identity-note').textContent=`このブラウザには旧BOYAKI ID ${short(legacy.pk)} があります。過去活動のアカウント引き継ぎは次工程です。`;$('#own-posts').innerHTML='<p class="hint">アカウントへログイン後、そのアカウントに紐づく投稿をここで管理できます。</p>';return}
   $('#device-id').textContent=short(identity.pk);
-  setupAccountKeyBackup(identity);
+  setupLoginKeyRecoveryUI();
   const loginForm=$('#login-form'); if(loginForm) loginForm.hidden=true;
   const legacy=legacyIdentity();
   let linked=await linkedLegacyPubkeys(identity.pk);
