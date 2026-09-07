@@ -1,6 +1,5 @@
 import { SimplePool, generateSecretKey, getPublicKey, finalizeEvent, nip44 } from 'https://esm.sh/nostr-tools@2.17.0';
-
-const RELAYS=['wss://nos.lol','wss://relay.primal.net'];
+import { RELAYS } from '../relays.js';
 const RECOVERY_PUBKEY='1ba668198fc73341765d7dc8d51e7f669d04b613e56e43bba0fc0d7b5e313250';
 const pool=new SimplePool();
 const $=s=>document.querySelector(s);
