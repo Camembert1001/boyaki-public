@@ -47,6 +47,19 @@
       <p id="legacy-identity-note" class="hint"></p>
     </section>
 
+    <section class="card" id="login-key-card" hidden>
+      <p class="eyebrow">Account recovery</p>
+      <h2>ログインキー</h2>
+      <p class="hint">別端末で同じBOYAKIアカウントへログインするためのキーです。秘密情報なので通常は隠しています。表示したまま画面共有やスクリーンショットをしないでください。</p>
+      <div id="login-key-status" class="hint" role="status" aria-live="polite"></div>
+      <textarea id="saved-login-key" rows="4" readonly hidden></textarea>
+      <div class="actions">
+        <button id="show-login-key" type="button">ログインキーを表示</button>
+        <button id="copy-login-key" type="button" hidden>コピー</button>
+        <button id="hide-login-key" type="button" hidden>隠す</button>
+      </div>
+    </section>
+
     <section class="card" id="account-key-backup" hidden>
       <p class="eyebrow">Account backup</p>
       <h2>ログインキーを確認</h2>
@@ -115,7 +128,7 @@
       <div id="recent-history" class="stack"></div>
     </section>
   </main>
-  <script type="module" src="./mypage.js?v=20260906-account-key-reissue-v2"></script>
+  <script type="module" src="./mypage.js?v=20260906-canonical-relay-set-v1"></script>
 <script>
 (()=>{window.BOYAKI_AUTH_NAV_V1='1';const loggedIn=!!(localStorage.getItem('boyaki-account-sk')||sessionStorage.getItem('boyaki-account-sk'));if(loggedIn)document.querySelectorAll('[data-auth-register-link]').forEach(x=>x.style.display='none')})();
 </script>
