@@ -1,6 +1,5 @@
 import { SimplePool, getPublicKey, finalizeEvent } from 'https://esm.sh/nostr-tools@2.17.0';
-
-const RELAYS=['wss://nos.lol','wss://relay.primal.net'];
+import { RELAYS } from './relays.js';
 const pool=new SimplePool();
 const $=s=>document.querySelector(s);
 const fromHex=hex=>new Uint8Array((hex.match(/.{1,2}/g)||[]).map(b=>parseInt(b,16)));
