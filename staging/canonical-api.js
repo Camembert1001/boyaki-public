@@ -1,12 +1,13 @@
 import { finalizeEvent, getPublicKey } from 'https://esm.sh/nostr-tools@2.17.0';
 
 const STAGING_API_BASE='https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/boyaki-api';
+const STAGING_THREAD_API_BASE='https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/boyaki-thread-api';
 const fromHex=hex=>new Uint8Array((hex.match(/.{1,2}/g)||[]).map(b=>parseInt(b,16)));
 const unix=()=>Math.floor(Date.now()/1000);
 
 window.BOYAKI_STAGING=true;
 window.BOYAKI_ENVIRONMENT='staging';
-window.BOYAKI_STAGING_CLIENT_VERSION='20260909-v5';
+window.BOYAKI_STAGING_CLIENT_VERSION='20260909-v6';
 const robots=document.querySelector('meta[name="robots"]');
 if(robots)robots.setAttribute('content','noindex,nofollow');
 if(!document.querySelector('[data-boyaki-staging-banner]')){
@@ -20,6 +21,9 @@ if(!document.querySelector('[data-boyaki-staging-banner]')){
 function apiBase(){
   const meta=document.querySelector('meta[name="boyaki-staging-api-base"]')?.content?.trim();
   return (window.BOYAKI_STAGING_API_BASE||meta||STAGING_API_BASE).replace(/\/$/,'');
+}
+function threadApiBase(){
+  return (window.BOYAKI_STAGING_THREAD_API_BASE||STAGING_THREAD_API_BASE).replace(/\/$/,'');
 }
 
 function identity(){
@@ -47,8 +51,7 @@ async function signedHeaders(url,method,rawBody=''){
   const ev=finalizeEvent({kind:27235,created_at:unix(),content:'',tags},id.sk);
   return {Authorization:`Nostr ${b64Utf8(JSON.stringify(ev))}`,'Content-Type':'application/json'};
 }
-async function request(path,{method='GET',body=null,signed=false}={}){
-  const base=apiBase();
+async function requestAt(base,path,{method='GET',body=null,signed=false}={}){
   if(!base)throw new Error('boyaki_staging_api_unconfigured');
   const url=`${base}${path.startsWith('/')?path:`/${path}`}`;
   const rawBody=body===null?'':JSON.stringify(body);
@@ -58,6 +61,9 @@ async function request(path,{method='GET',body=null,signed=false}={}){
   if(!response.ok)throw new Error(payload?.error||`canonical_api_${response.status}`);
   return payload;
 }
+const request=(path,options)=>requestAt(apiBase(),path,options);
+const threadRequest=(path,options)=>requestAt(threadApiBase(),path,options);
+
 async function health(){return request('/health')}
 async function listPosts(limit=100){return request(`/posts?limit=${Math.max(1,Math.min(Number(limit)||100,100))}`)}
 async function listMine(){return request('/me/posts',{signed:true})}
@@ -68,6 +74,16 @@ async function registerLegacyControl(nostrEvent){return request('/legacy-control
 async function deleteLegacy(eventId){return request(`/legacy/${encodeURIComponent(eventId)}`,{method:'DELETE',signed:true})}
 async function legacyControls(ids=[]){const q=ids.filter(Boolean).slice(0,200).join(',');return q?request(`/legacy-controls?ids=${encodeURIComponent(q)}`):{controls:[]}}
 async function report(targetType,targetId,reasonCode='other',detail=''){return request('/reports',{method:'POST',signed:true,body:{target_type:targetType,target_id:targetId,reason_code:reasonCode,detail}})}
+
+async function threadHealth(){return threadRequest('/health')}
+async function listThread(postId){return threadRequest(`/posts/${encodeURIComponent(postId)}/thread`)}
+async function threadAccess(postId){return threadRequest(`/posts/${encodeURIComponent(postId)}/thread/access`,{signed:true})}
+async function createThread(postId,eventType,content,parentEventId=null){
+  const id=identity();if(!id)throw new Error('boyaki_identity_missing');
+  return threadRequest(`/posts/${encodeURIComponent(postId)}/thread`,{method:'POST',signed:true,body:{event_type:eventType,content,parent_event_id:parentEventId||null,identity_kind:id.kind}});
+}
+async function deleteThread(eventId){return threadRequest(`/thread/${encodeURIComponent(eventId)}`,{method:'DELETE',signed:true})}
+
 let initPromise=null;
 async function initialize(){
   if(window.BOYAKI_CANONICAL_BACKEND_READY===true)return true;
@@ -86,16 +102,37 @@ async function initialize(){
       console.warn('staging canonical backend unavailable',err);
       window.BOYAKI_CANONICAL_BACKEND_READY=false;
       return false;
-    }finally{
-      initPromise=null;
-    }
+    }finally{initPromise=null}
   })();
   return initPromise;
 }
-window.BOYAKI_CANONICAL={apiBase,identity,health,listPosts,listMine,createPost,deletePost,verifyIdentityLink,registerLegacyControl,deleteLegacy,legacyControls,report,initialize};
+let threadInitPromise=null;
+async function initializeThreads(){
+  if(window.BOYAKI_CANONICAL_THREAD_BACKEND_READY===true)return true;
+  if(threadInitPromise)return threadInitPromise;
+  threadInitPromise=(async()=>{
+    window.BOYAKI_STAGING_LAST_THREAD_INIT_ERROR='';
+    try{
+      const state=await threadHealth();
+      const ready=state?.ok===true&&state?.canonical_threads===true;
+      window.BOYAKI_CANONICAL_THREAD_BACKEND_READY=ready;
+      if(!ready)window.BOYAKI_STAGING_LAST_THREAD_INIT_ERROR='thread_health_not_ready';
+      return ready;
+    }catch(err){
+      const code=String(err?.message||err||'unknown_thread_init_error');
+      window.BOYAKI_STAGING_LAST_THREAD_INIT_ERROR=code;
+      console.warn('staging canonical thread backend unavailable',err);
+      window.BOYAKI_CANONICAL_THREAD_BACKEND_READY=false;
+      return false;
+    }finally{threadInitPromise=null}
+  })();
+  return threadInitPromise;
+}
+
+window.BOYAKI_CANONICAL={apiBase,threadApiBase,identity,health,listPosts,listMine,createPost,deletePost,verifyIdentityLink,registerLegacyControl,deleteLegacy,legacyControls,report,threadHealth,listThread,threadAccess,createThread,deleteThread,initialize,initializeThreads};
 initialize().then(async ready=>{
   if(ready){
-    try{await import('./canonical-cutover.js?v=20260909-staging-cutover-v5')}catch(err){
+    try{await import('./canonical-cutover.js?v=20260909-staging-cutover-v6')}catch(err){
       window.BOYAKI_STAGING_LAST_INIT_ERROR=`cutover_import:${String(err?.message||err||'unknown')}`;
       console.error('staging canonical cutover load failed',err);
     }
