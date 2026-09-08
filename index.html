@@ -10,9 +10,15 @@
   <link rel="manifest" href="./manifest.webmanifest" />
   <link rel="stylesheet" href="./styles.css" />
   <script>
-  (()=>{try{const loggedIn=!!(localStorage.getItem('boyaki-account-sk')||sessionStorage.getItem('boyaki-account-sk'));if(loggedIn)document.documentElement.dataset.boyakiLoggedIn='1'}catch{}})();
+  (()=>{try{
+    const loggedIn=!!(localStorage.getItem('boyaki-account-sk')||sessionStorage.getItem('boyaki-account-sk'));
+    document.documentElement.dataset.boyakiAuthState=loggedIn?'in':'out';
+  }catch{document.documentElement.dataset.boyakiAuthState='out'}})();
   </script>
-  <style>html[data-boyaki-logged-in="1"] [data-auth-register-link]{display:none!important}</style>
+  <style>
+    [data-auth-register-link][hidden]{display:none!important}
+    html[data-boyaki-auth-state="out"] [data-auth-register-link]{display:inline-flex!important}
+  </style>
   <title>BOYAKI — 困ったこと、そのまま話して。</title>
 </head>
 <body>
@@ -22,7 +28,7 @@
       <button data-view="feed" class="nav active">ホーム</button>
       <button type="button" class="nav" data-onboarding-open>BOYAKIとは？</button>
       <a class="nav-link" href="./mypage.html">ログイン / マイページ</a>
-      <a class="nav-link" data-auth-register-link href="./register.html">新規登録</a>
+      <a class="nav-link" data-auth-register-link href="./register.html" hidden>新規登録</a>
       <a class="nav-link" href="./bug-report.html">バグ報告</a>
     </nav>
   </header>
@@ -141,7 +147,7 @@
 (()=>{const fix=()=>{const b=document.querySelector('[data-onboarding-open]');if(b&&b.textContent.trim()!=='BOYAKIとは？')b.textContent='BOYAKIとは？'};fix();new MutationObserver(fix).observe(document.documentElement,{childList:true,subtree:true,characterData:true})})();
 </script>
 <script>
-(()=>{window.BOYAKI_AUTH_NAV_V1='1';const loggedIn=!!(localStorage.getItem('boyaki-account-sk')||sessionStorage.getItem('boyaki-account-sk'));if(loggedIn)document.querySelectorAll('[data-auth-register-link]').forEach(x=>x.style.display='none')})();
+(()=>{window.BOYAKI_AUTH_NAV_V2='1';const loggedIn=!!(localStorage.getItem('boyaki-account-sk')||sessionStorage.getItem('boyaki-account-sk'));document.querySelectorAll('[data-auth-register-link]').forEach(x=>{if(loggedIn){x.hidden=true;x.style.removeProperty('display')}else{x.hidden=false;x.style.removeProperty('display')}})})();
 </script>
 </body>
 </html>
