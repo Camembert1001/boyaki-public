@@ -83,6 +83,6 @@ async function initialize(){
 window.BOYAKI_CANONICAL={apiBase,identity,health,listPosts,listMine,createPost,deletePost,verifyIdentityLink,registerLegacyControl,deleteLegacy,legacyControls,report,initialize};
 initialize().then(async ready=>{
   if(ready){
-    try{await import('./canonical-cutover.js?v=20260909-staging-cutover-v1')}catch(err){console.error('staging canonical cutover load failed',err)}
+    try{await import('./canonical-cutover.js?v=20260909-staging-cutover-v2')}catch(err){console.error('staging canonical cutover load failed',err)}
   }
 });
