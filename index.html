@@ -134,6 +134,9 @@
   </script>
   <script src="./quality-index-gate.js?v=20260908-remove-activity-v1"></script>
 <script>
+(()=>{const fix=()=>{const b=document.querySelector('[data-onboarding-open]');if(b&&b.textContent.trim()!=='BOYAKIとは？')b.textContent='BOYAKIとは？'};fix();new MutationObserver(fix).observe(document.documentElement,{childList:true,subtree:true,characterData:true})})();
+</script>
+<script>
 (()=>{window.BOYAKI_AUTH_NAV_V1='1';const loggedIn=!!(localStorage.getItem('boyaki-account-sk')||sessionStorage.getItem('boyaki-account-sk'));if(loggedIn)document.querySelectorAll('[data-auth-register-link]').forEach(x=>x.style.display='none')})();
 </script>
 </body>
