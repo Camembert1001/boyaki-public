@@ -14,7 +14,7 @@
     <nav>
       <a class="nav-link" href="./index.html">ホーム</a>
       <a class="nav-link" href="./mypage.html">ログイン / マイページ</a>
-      <a class="nav-link" href="./register.html">新規登録</a>
+      <a class="nav-link" data-auth-register-link href="./register.html">新規登録</a>
       <a class="nav-link active" href="./bug-report.html">バグ報告</a>
     </nav>
   </header>
@@ -26,5 +26,8 @@
       <p class="hint">バグ報告は公開BOYAKIやVoice/Maker実績、market signalには加算しません。</p>
     </section>
   </main>
+<script>
+(()=>{const loggedIn=!!(localStorage.getItem('boyaki-account-sk')||sessionStorage.getItem('boyaki-account-sk'));if(loggedIn)document.querySelectorAll('[data-auth-register-link]').forEach(x=>x.style.display='none')})();
+</script>
 </body>
 </html>
