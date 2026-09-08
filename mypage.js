@@ -222,6 +222,7 @@ function setupAccountKeyBackup(identity){
 async function main(){
   const identity=currentIdentity();
   if(!identity){$('#profile-state').textContent='BOYAKIアカウントにログインしていません。';$('#profile-name').textContent='未ログイン';$('#device-id').textContent='not logged in';$('#profile-actions').innerHTML='<a class="button-link" href="./register.html">新規登録へ</a>';const legacy=legacyIdentity();if(legacy)$('#legacy-identity-note').textContent=`このブラウザには旧BOYAKI ID ${short(legacy.pk)} があります。過去活動のアカウント引き継ぎは次工程です。`;$('#own-posts').innerHTML='<p class="hint">アカウントへログイン後、そのアカウントに紐づく投稿をここで管理できます。</p>';return}
+  document.querySelectorAll('[data-authenticated-only]').forEach(x=>x.hidden=false);
   $('#device-id').textContent=short(identity.pk);
   setupLoginKeyRecoveryUI();
   const loginForm=$('#login-form'); if(loginForm) loginForm.hidden=true;
