@@ -166,12 +166,15 @@ async function activate(){
         const panel=document.querySelector('#private-chat-v53');
         if(panel){panel.hidden=true;panel.replaceChildren()}
         const input=document.querySelector('#raw');if(input)input.value='';
+        window.BOYAKI_STAGING_LAST_PUBLISH_ERROR='';
         status('公開しました。Account単位で管理できるBOYAKIとして保存されました。');
         await renderHybrid();
         if(result?.post?.id)history.replaceState(null,'',location.pathname);
       }catch(err){
+        const code=String(err?.message||err||'unknown_error');
+        window.BOYAKI_STAGING_LAST_PUBLISH_ERROR=code;
         console.error('canonical publish failed',err);
-        status('公開できませんでした。下書きはこの端末に残っています。');
+        status(`公開できませんでした。E2E診断: ${code}（下書きはこの端末に残っています）`);
         button.disabled=false;
         button.textContent='解決候補として公開する';
       }
