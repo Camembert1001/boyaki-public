@@ -53,10 +53,10 @@
     document.head.append(script);
   }
   function installCanonicalStorageCutoverGuard(){
-    // Safety invariant: backend health alone must NEVER reopen the old plaintext Relay path.
-    // The guard is released only after the actual frontend write path is switched to canonical API.
     window.BOYAKI_PLAINTEXT_NOSTR_PUBLICATION_DISABLED=true;
-    const canonicalWriteActive=()=>window.BOYAKI_CANONICAL_BACKEND_READY===true&&window.BOYAKI_CANONICAL_WRITE_CUTOVER_ACTIVE===true;
+    const backendReady=()=>window.BOYAKI_CANONICAL_BACKEND_READY===true;
+    const rootWriteActive=()=>backendReady()&&window.BOYAKI_CANONICAL_ROOT_WRITE_CUTOVER_ACTIVE===true;
+    const threadWriteActive=()=>backendReady()&&window.BOYAKI_CANONICAL_THREAD_WRITE_CUTOVER_ACTIVE===true;
     const blockedMessage='削除可能なAccount単位の保存基盤へ移行中です。下書きはこの端末に残り、Nostr Relayへは送信していません。';
     const setBlockedStatus=(button)=>{
       const status=document.querySelector('#status');
@@ -66,17 +66,16 @@
     document.addEventListener('click',e=>{
       const button=e.target?.closest?.('[data-v53-publish="1"]');
       if(!button)return;
-      if(canonicalWriteActive())return;
+      if(rootWriteActive())return;
       e.preventDefault();
       e.stopImmediatePropagation();
       setBlockedStatus(button);
     },true);
     document.addEventListener('submit',e=>{
-      if(canonicalWriteActive())return;
       const form=e.target;
       if(!(form instanceof HTMLFormElement))return;
       const isThreadPlaintext=form.matches('[data-form="clarify"],[data-form="proposal"],[data-form="poster-response"]')||!!form.closest('.poster-clarification-answer');
-      if(!isThreadPlaintext)return;
+      if(!isThreadPlaintext||threadWriteActive())return;
       e.preventDefault();
       e.stopImmediatePropagation();
       setBlockedStatus(form.querySelector('button[type="submit"],button:not([type])'));
