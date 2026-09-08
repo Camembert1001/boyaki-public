@@ -16,6 +16,7 @@ function shouldSuppressCard(card){
   const eventId=card.dataset.eventId||card.querySelector('[data-event-id]')?.dataset.eventId||'';
   return suppressionRules.some(rule=>
     (rule.content_exact&&normalized(rule.content_exact)===raw) ||
+    (rule.content_prefix&&raw.startsWith(normalized(rule.content_prefix))) ||
     (rule.event_id&&eventId&&rule.event_id===eventId)
   );
 }
