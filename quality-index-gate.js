@@ -52,8 +52,26 @@
     script.dataset.publicSuppressionLoader='1';
     document.head.append(script);
   }
+  function installCanonicalStorageCutoverGuard(){
+    // Safety invariant: do not create any more plaintext Nostr BOYAKI while
+    // BOYAKI is moving publication authority to an operator-controlled,
+    // account-owned canonical store. Local/private drafting still works.
+    window.BOYAKI_PLAINTEXT_NOSTR_PUBLICATION_DISABLED=true;
+    document.addEventListener('click',e=>{
+      const button=e.target?.closest?.('[data-v53-publish="1"]');
+      if(!button)return;
+      if(window.BOYAKI_CANONICAL_BACKEND_READY===true)return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      const status=document.querySelector('#status');
+      if(status)status.textContent='削除可能なAccount単位の保存基盤へ移行中です。下書きはこの端末に残り、Nostr Relayへは送信していません。';
+      button.disabled=true;
+      button.textContent='公開基盤を移行中';
+    },true);
+  }
   window.BOYAKI_PROBLEM_INDEX_GATE={version:VERSION,evaluate,apply};
   new MutationObserver(ms=>{for(const m of ms)for(const n of m.addedNodes)if(n.nodeType===1)scan(n)}).observe(document.documentElement,{childList:true,subtree:true});
   loadPublicSuppression();
+  installCanonicalStorageCutoverGuard();
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{scan();suppressLegacyMakerSpaceNav()});else{scan();suppressLegacyMakerSpaceNav()}
 })();
