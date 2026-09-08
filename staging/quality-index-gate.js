@@ -14,13 +14,6 @@
       banner.style.cssText='position:sticky;top:0;z-index:2147483646;padding:10px 16px;text-align:center;font-weight:800;background:#fff3cd;border-bottom:2px solid #8a6d00;color:#332701';
       document.body.prepend(banner);
     }
-    if(!document.querySelector('script[data-canonical-cutover-loader]')){
-      const script=document.createElement('script');
-      script.type='module';
-      script.src='./canonical-cutover.js?v=20260909-staging-cutover-v4';
-      script.dataset.canonicalCutoverLoader='1';
-      document.body.append(script);
-    }
   }
 
   const parseCount=(card,label)=>{
