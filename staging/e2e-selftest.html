@@ -22,12 +22,12 @@
   <main>
     <section class="card">
       <h1>BOYAKI STAGING E2E Self-test</h1>
-      <p class="hint">実ユーザーのAccountやログインキーは使いません。毎回その場で一時的な暗号鍵を生成し、STAGING Supabaseだけを対象に Account所有・跨端末権限・旧browser ID引継ぎ・通報経路を検証します。本番project refが検出された場合は実行を拒否します。</p>
+      <p class="hint">実ユーザーのAccountやログインキーは使いません。毎回その場で一時的な暗号鍵を生成し、STAGING Supabaseだけを対象に Account所有・跨端末権限・旧browser ID引継ぎ・通報・canonical thread（追加質問/解決案/投稿者返答）・Nostr plaintext freeze guardを検証します。本番project refが検出された場合は実行を拒否します。</p>
       <p><button id="run" type="button">E2Eを実行</button></p>
       <div id="summary" role="status" aria-live="polite"></div>
       <pre id="output">待機中</pre>
     </section>
   </main>
-  <script type="module" src="./e2e-selftest.js?v=20260909-v1"></script>
+  <script type="module" src="./e2e-selftest.js?v=20260909-v2"></script>
 </body>
 </html>
