@@ -180,7 +180,6 @@ async function activate(){
     const feed=document.querySelector('#feed');
     if(feed)new MutationObserver(()=>{
       if(!rendering&&lastPosts.length&&!feed.querySelector('[data-canonical-post-card]'))scheduleHybrid(200);
-      else if(!rendering)scheduleHybrid(350);
     }).observe(feed,{childList:true});
     document.querySelector('#refresh')?.addEventListener('click',()=>scheduleHybrid(1200));
     await renderHybrid();
