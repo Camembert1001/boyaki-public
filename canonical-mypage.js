@@ -8,6 +8,7 @@ const NOSTR_ID_RE=/^[0-9a-f]{64}$/i;
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const fmt=value=>new Date(value).toLocaleString('ja-JP');
 const tag=(ev,k)=>ev?.tags?.find(t=>t[0]===k)?.[1];
+let syncing=false;
 
 async function api(){
   for(let i=0;i<30;i++){
@@ -112,7 +113,7 @@ async function patchLegacyButtons(client){
   for(const row of rows){
     const control=controls.get(row.id);
     if(!control)continue;
-    const button=[...row.wrap.querySelectorAll('button')].find(b=>/旧端末でのみ取り下げ可能|自分の投稿を取り下げ|取り下げ済み/.test(b.textContent||''));
+    const button=[...row.wrap.querySelectorAll('button')].find(b=>/旧端末でのみ取り下げ可能|自分の投稿を取り下げ|取り下げ済み|再試行/.test(b.textContent||''));
     if(!button)continue;
     if(control.status!=='active'){
       button.disabled=true;button.textContent='取り下げ済み';
@@ -135,12 +136,10 @@ async function patchLegacyButtons(client){
   }
 }
 
-async function activate(){
-  const client=await api();
-  const ready=await client.initialize();
-  const id=client.identity();
-  if(!ready||id?.kind!=='account')return;
-  ownershipStatus('Account単位の投稿管理を同期しています…');
+async function syncAccountOwnership(client,id,{quiet=false}={}){
+  if(syncing)return;
+  syncing=true;
+  if(!quiet)ownershipStatus('Account単位の投稿管理を同期しています…');
   try{
     const migrated=await promoteLegacy(client,id.pk);
     await renderCanonicalMine(client);
@@ -154,7 +153,24 @@ async function activate(){
   }catch(err){
     console.error('canonical mypage sync failed',err);
     ownershipStatus('Account管理DBとの同期の一部に失敗しました。既存の履歴表示は維持されています。');
+  }finally{syncing=false}
+}
+
+async function activate(){
+  const client=await api();
+  const ready=await client.initialize();
+  const id=client.identity();
+  if(!ready||id?.kind!=='account')return;
+
+  const linkButton=document.querySelector('#legacy-link-button');
+  if(linkButton){
+    linkButton.addEventListener('click',()=>{
+      setTimeout(()=>syncAccountOwnership(client,id,{quiet:true}),1800);
+      setTimeout(()=>syncAccountOwnership(client,id,{quiet:true}),5000);
+    });
   }
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncAccountOwnership(client,id,{quiet:true})});
+  await syncAccountOwnership(client,id);
 }
 
 activate();
