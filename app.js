@@ -113,6 +113,7 @@ function locallyWithdrawn(id){return localStorage.getItem(`boyaki-withdrawn:${id
 function isInternalSyntheticRoot(ev){
   const content=(ev?.content||'').normalize('NFKC').trim();
   return content.startsWith('SYNTHETIC-CONTEXT-') ||
+    content.startsWith('SYNTHETIC-LINEAGE-') ||
     content.startsWith('【E2Eテスト専用・実需要ではありません】');
 }
 async function withdraw(root){
