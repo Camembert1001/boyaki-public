@@ -1,11 +1,12 @@
 import { finalizeEvent, getPublicKey } from 'https://esm.sh/nostr-tools@2.17.0';
 
+const DEFAULT_API_BASE='https://uvjyponltgoytjzwkfrh.supabase.co/functions/v1/boyaki-api';
 const fromHex=hex=>new Uint8Array((hex.match(/.{1,2}/g)||[]).map(b=>parseInt(b,16)));
 const unix=()=>Math.floor(Date.now()/1000);
 
 function apiBase(){
   const meta=document.querySelector('meta[name="boyaki-api-base"]')?.content?.trim();
-  return (window.BOYAKI_CANONICAL_API_BASE||meta||localStorage.getItem('boyaki-canonical-api-base')||'').replace(/\/$/,'');
+  return (window.BOYAKI_CANONICAL_API_BASE||meta||localStorage.getItem('boyaki-canonical-api-base')||DEFAULT_API_BASE).replace(/\/$/,'');
 }
 
 function identity(){
@@ -74,7 +75,6 @@ async function report(targetType,targetId,reasonCode='other',detail=''){return r
 
 async function initialize(){
   window.BOYAKI_CANONICAL_BACKEND_READY=false;
-  if(!apiBase())return false;
   try{
     const state=await health();
     const ready=state?.ok===true&&state?.canonical_storage===true;
