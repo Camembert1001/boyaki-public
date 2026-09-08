@@ -17,7 +17,7 @@
     if(!document.querySelector('script[data-canonical-cutover-loader]')){
       const script=document.createElement('script');
       script.type='module';
-      script.src='./canonical-cutover.js?v=20260909-staging-v1';
+      script.src='./canonical-cutover.js?v=20260909-staging-cutover-v4';
       script.dataset.canonicalCutoverLoader='1';
       document.body.append(script);
     }
@@ -78,11 +78,17 @@
     const backendReady=()=>window.BOYAKI_CANONICAL_BACKEND_READY===true;
     const rootWriteActive=()=>backendReady()&&window.BOYAKI_CANONICAL_ROOT_WRITE_CUTOVER_ACTIVE===true;
     const threadWriteActive=()=>backendReady()&&window.BOYAKI_CANONICAL_THREAD_WRITE_CUTOVER_ACTIVE===true;
-    const blockedMessage='STAGING保存基盤を準備中です。内容はNostr Relayへ送信していません。';
+    const diagnostic=()=>{
+      const backend=backendReady()?'1':'0';
+      const root=window.BOYAKI_CANONICAL_ROOT_WRITE_CUTOVER_ACTIVE===true?'1':'0';
+      const init=String(window.BOYAKI_STAGING_LAST_INIT_ERROR||'none');
+      const client=String(window.BOYAKI_STAGING_CLIENT_VERSION||'unknown');
+      return `guard_backend=${backend};root=${root};init=${init};client=${client}`;
+    };
     const setBlockedStatus=(button)=>{
       const status=document.querySelector('#status');
-      if(status)status.textContent=blockedMessage;
-      if(button){button.disabled=true;button.textContent='STAGING準備中'}
+      if(status)status.textContent=`STAGING保存経路がまだ有効化されていません。E2E診断: ${diagnostic()}（Nostr Relayへは送信していません）`;
+      if(button){button.disabled=false;button.textContent='解決候補として公開する'}
     };
     document.addEventListener('click',e=>{
       const button=e.target?.closest?.('[data-v53-publish="1"]');
