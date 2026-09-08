@@ -38,22 +38,11 @@
     const card=root.matches?.('.problem-card')?root:root.querySelector?.('.problem-card');
     if(card) apply(card);
   }
-  function exposeMakerSpace(){
-    const nav=document.querySelector('.topbar nav');
-    if(!nav||nav.querySelector('[data-maker-space-link]'))return;
-    const link=document.createElement('a');
-    link.href='./makers.html';
-    link.className='nav-link';
-    link.dataset.makerSpaceLink='1';
-    link.textContent='活動する';
-    link.setAttribute('aria-label','BOYAKI Maker Space');
-    nav.append(link);
-    const makerView=document.querySelector('#maker-view .hint');
-    if(makerView&&!document.querySelector('[data-maker-space-cta]')){
-      const p=document.createElement('p');p.className='hint';p.dataset.makerSpaceCta='1';
-      p.innerHTML='<strong>実際に参加する:</strong> <a href="./makers.html">Maker SpaceでSolution Candidate・Tester・Makerの活動を見る</a>';
-      makerView.after(p);
-    }
+  function suppressLegacyMakerSpaceNav(){
+    document.querySelectorAll('[data-maker-space-link]').forEach(el=>el.remove());
+    document.querySelectorAll('.topbar nav a,.topbar nav button').forEach(el=>{
+      if(el.textContent?.trim()==='活動する')el.remove();
+    });
   }
   function loadPublicSuppression(){
     if(document.querySelector('script[data-public-suppression-loader]'))return;
@@ -66,5 +55,5 @@
   window.BOYAKI_PROBLEM_INDEX_GATE={version:VERSION,evaluate,apply};
   new MutationObserver(ms=>{for(const m of ms)for(const n of m.addedNodes)if(n.nodeType===1)scan(n)}).observe(document.documentElement,{childList:true,subtree:true});
   loadPublicSuppression();
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{scan();exposeMakerSpace()});else{scan();exposeMakerSpace()}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{scan();suppressLegacyMakerSpaceNav()});else{scan();suppressLegacyMakerSpaceNav()}
 })();
