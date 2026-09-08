@@ -6,7 +6,7 @@ const unix=()=>Math.floor(Date.now()/1000);
 
 window.BOYAKI_STAGING=true;
 window.BOYAKI_ENVIRONMENT='staging';
-window.BOYAKI_STAGING_CLIENT_VERSION='20260909-v4';
+window.BOYAKI_STAGING_CLIENT_VERSION='20260909-v5';
 const robots=document.querySelector('meta[name="robots"]');
 if(robots)robots.setAttribute('content','noindex,nofollow');
 if(!document.querySelector('[data-boyaki-staging-banner]')){
@@ -68,27 +68,34 @@ async function registerLegacyControl(nostrEvent){return request('/legacy-control
 async function deleteLegacy(eventId){return request(`/legacy/${encodeURIComponent(eventId)}`,{method:'DELETE',signed:true})}
 async function legacyControls(ids=[]){const q=ids.filter(Boolean).slice(0,200).join(',');return q?request(`/legacy-controls?ids=${encodeURIComponent(q)}`):{controls:[]}}
 async function report(targetType,targetId,reasonCode='other',detail=''){return request('/reports',{method:'POST',signed:true,body:{target_type:targetType,target_id:targetId,reason_code:reasonCode,detail}})}
+let initPromise=null;
 async function initialize(){
-  window.BOYAKI_CANONICAL_BACKEND_READY=false;
-  window.BOYAKI_STAGING_LAST_INIT_ERROR='';
-  try{
-    const state=await health();
-    const ready=state?.ok===true&&state?.canonical_storage===true;
-    window.BOYAKI_CANONICAL_BACKEND_READY=ready;
-    if(!ready)window.BOYAKI_STAGING_LAST_INIT_ERROR='health_not_ready';
-    return ready;
-  }catch(err){
-    const code=String(err?.message||err||'unknown_init_error');
-    window.BOYAKI_STAGING_LAST_INIT_ERROR=code;
-    console.warn('staging canonical backend unavailable',err);
-    window.BOYAKI_CANONICAL_BACKEND_READY=false;
-    return false;
-  }
+  if(window.BOYAKI_CANONICAL_BACKEND_READY===true)return true;
+  if(initPromise)return initPromise;
+  initPromise=(async()=>{
+    window.BOYAKI_STAGING_LAST_INIT_ERROR='';
+    try{
+      const state=await health();
+      const ready=state?.ok===true&&state?.canonical_storage===true;
+      window.BOYAKI_CANONICAL_BACKEND_READY=ready;
+      if(!ready)window.BOYAKI_STAGING_LAST_INIT_ERROR='health_not_ready';
+      return ready;
+    }catch(err){
+      const code=String(err?.message||err||'unknown_init_error');
+      window.BOYAKI_STAGING_LAST_INIT_ERROR=code;
+      console.warn('staging canonical backend unavailable',err);
+      window.BOYAKI_CANONICAL_BACKEND_READY=false;
+      return false;
+    }finally{
+      initPromise=null;
+    }
+  })();
+  return initPromise;
 }
 window.BOYAKI_CANONICAL={apiBase,identity,health,listPosts,listMine,createPost,deletePost,verifyIdentityLink,registerLegacyControl,deleteLegacy,legacyControls,report,initialize};
 initialize().then(async ready=>{
   if(ready){
-    try{await import('./canonical-cutover.js?v=20260909-staging-cutover-v4')}catch(err){
+    try{await import('./canonical-cutover.js?v=20260909-staging-cutover-v5')}catch(err){
       window.BOYAKI_STAGING_LAST_INIT_ERROR=`cutover_import:${String(err?.message||err||'unknown')}`;
       console.error('staging canonical cutover load failed',err);
     }
