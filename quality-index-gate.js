@@ -81,9 +81,19 @@
       setBlockedStatus(form.querySelector('button[type="submit"],button:not([type])'));
     },true);
   }
+  async function loadCanonicalCutover(){
+    try{
+      await import('./canonical-api.js?v=20260909-live-v1');
+      await import('./canonical-cutover.js?v=20260909-root-v1');
+    }catch(err){
+      console.error('canonical cutover bootstrap failed',err);
+      window.BOYAKI_CANONICAL_ROOT_WRITE_CUTOVER_ACTIVE=false;
+    }
+  }
   window.BOYAKI_PROBLEM_INDEX_GATE={version:VERSION,evaluate,apply};
   new MutationObserver(ms=>{for(const m of ms)for(const n of m.addedNodes)if(n.nodeType===1)scan(n)}).observe(document.documentElement,{childList:true,subtree:true});
   loadPublicSuppression();
   installCanonicalStorageCutoverGuard();
+  loadCanonicalCutover();
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{scan();suppressLegacyMakerSpaceNav()});else{scan();suppressLegacyMakerSpaceNav()}
 })();
