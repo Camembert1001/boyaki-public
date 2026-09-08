@@ -78,7 +78,7 @@ async function rootReact(root,type){return publish({kind:7,content:type,tags:[['
 async function reactProposal(root,proposal,type){return publish({kind:7,content:type,tags:[['e',root.id,RELAYS[0],'root'],['e',proposal.id,RELAYS[0],'reply'],['p',root.pubkey],['p',proposal.pubkey],['t','boyaki-demand-ladder'],['action',type],['scope','proposal-specific'],['proposal_id',proposal.id],['problem_id',root.id],['app','boyaki-web']]})}
 async function report(root,type='other'){return publish({kind:1984,content:'BOYAKI public safety report',tags:[['e',root.id,RELAYS[0],type],['p',root.pubkey],['app','boyaki-web'],['schema','public-report-v1']]})}
 async function withdraw(root){if(root.pubkey!==identity.pk)return;const stored=localStorage.getItem(`boyaki-withdrawal:${root.id}`);const ev=stored?JSON.parse(stored):signed({kind:5,content:'withdrawn by original browser identity',tags:[['e',root.id],['k','1'],['app','boyaki-web']]});await publishExact(ev);localStorage.setItem(`boyaki-withdrawn:${root.id}`,'1');await refresh()}
-async function queryAll(){const since=unix()-60*60*24*30;const [raw,threads,reactions,deletions]=await Promise.all([pool.querySync(RELAYS,{kinds:[1],'#t':['boyaki-raw'],since,limit:200}),pool.querySync(RELAYS,{kinds:[1],'#t':['boyaki-clarify','boyaki-proposal','boyaki-poster-response'],since,limit:500}),pool.querySync(RELAYS,{kinds:[7],'#t':['boyaki-demand-ladder'],since,limit:1000}),pool.querySync(RELAYS,{kinds:[5],since,limit:1000})]);const deleted=new Set(deletions.flatMap(e=>e.tags.filter(t=>t[0]==='e').map(t=>t[1])));roots=dedupe(raw).filter(e=>!deleted.has(e.id)).sort((a,b)=>b.created_at-a.created_at);related=[...dedupe(threads),...dedupe(reactions)].filter(e=>!deleted.has(e.id))}
+async function queryAll(){const since=unix()-60*60*24*30;const [raw,threads,reactions,deletions]=await Promise.all([pool.querySync(RELAYS,{kinds:[1],'#t':['boyaki-raw'],since,limit:200}),pool.querySync(RELAYS,{kinds:[1],'#t':['boyaki-clarify','boyaki-proposal','boyaki-poster-response'],since,limit:500}),pool.querySync(RELAYS,{kinds:[7],'#t':['boyaki-demand-ladder'],since,limit:1000}),pool.querySync(RELAYS,{kinds:[5],since,limit:1000})]);const deleted=new Set(deletions.flatMap(e=>e.tags.filter(t=>t[0]==='e').map(t=>t[1])));return{roots:dedupe(raw).filter(e=>!deleted.has(e.id)).sort((a,b)=>b.created_at-a.created_at),related:[...dedupe(threads),...dedupe(reactions)].filter(e=>!deleted.has(e.id))}}
 function dedupe(xs){const m=new Map();for(const x of xs)m.set(x.id,x);return [...m.values()]}
 function relatedTo(id){return related.filter(e=>rootTag(e)===id)}
 function validPosterResponse(root,e){return e.kind===1&&tag(e,'t')==='boyaki-poster-response'&&e.pubkey===root.pubkey&&rootTag(e)===root.id}
@@ -125,8 +125,30 @@ function renderFeed(){feed.innerHTML='';if(!roots.length)feed.innerHTML='<div cl
 function renderMaker(q=''){makerList.innerHTML='';const items=roots.filter(r=>!q||r.content.toLowerCase().includes(q.toLowerCase())).sort((a,b)=>{const A=stats(a),B=stats(b);return(B.same+B.clarify+B.canbuild+B.proposal)-(A.same+A.clarify+A.canbuild+A.proposal)||b.created_at-a.created_at});for(const r of items)makerList.append(card(r,{maker:true,detail:false}));if(!items.length)makerList.innerHTML='<div class="card">該当する困りごとはありません。</div>'}
 function showHome(){history.replaceState(null,'',location.pathname);problemView.hidden=true;$('#feed-view').hidden=false;$('#maker-view').hidden=true;$('#composer').hidden=false;$$('[data-view]').forEach(x=>x.classList.toggle('active',x.dataset.view==='feed'));renderFeed()}
 function renderProblem(id){const r=roots.find(x=>x.id===id);if(!r)return false;problemView.innerHTML='<div class="section-head"><div><p class="eyebrow">この問題のページ</p><h2>困りごと</h2></div><button id="problem-back">一覧へ</button></div>';problemView.append(card(r,{detail:true}));problemView.hidden=false;$('#feed-view').hidden=true;$('#maker-view').hidden=true;$('#composer').hidden=true;$('#problem-back').addEventListener('click',showHome);return true}
-async function refresh(){status.textContent='';await queryAll();const id=new URLSearchParams(location.search).get('problem');if(id&&renderProblem(id))return;renderFeed();renderMaker($('#maker-search').value)}
+let refreshInFlight=null;
+async function refresh({interactive=false}={}){
+ const button=$('#refresh');
+ if(refreshInFlight){if(interactive)status.textContent='更新中…';return refreshInFlight}
+ if(interactive){button.disabled=true;status.textContent='更新中…'}else status.textContent='';
+ refreshInFlight=(async()=>{
+   try{
+     const result=await Promise.race([queryAll(),new Promise((_,reject)=>setTimeout(()=>reject(new Error('refresh timeout')),15000))]);
+     roots=result.roots;related=result.related;
+     const id=new URLSearchParams(location.search).get('problem');
+     if(!(id&&renderProblem(id))){renderFeed();renderMaker($('#maker-search').value)}
+     if(interactive)status.textContent='更新しました。';
+     return true;
+   }catch(err){
+     console.error('refresh failed',err);
+     if(interactive)status.textContent='更新に失敗しました。もう一度お試しください。';
+     throw err;
+   }finally{
+     if(interactive)button.disabled=false;
+   }
+ })();
+ try{return await refreshInFlight}finally{refreshInFlight=null}
+}
 $('#raw-form').addEventListener('submit',async e=>{e.preventDefault();const input=$('#raw'),text=input.value.trim();if(!text)return;$('#submit-btn').disabled=true;status.textContent='公開しています…';let ev;try{ev=await createRaw(text)}catch(err){console.error(err);status.textContent='公開できませんでした。';const reason=String(err?.message||'');const detail=reason.startsWith('publish_failed|')?reason.split('|').slice(2).join(' / '):reason;showBoyakiAlert(`BOYAKIを公開できませんでした。${detail?'\n\n診断: '+detail:''}`,'公開できませんでした');$('#submit-btn').disabled=false;return}input.value='';status.innerHTML=`公開しました。<a href="?problem=${ev.id}">この問題を見る</a>`;try{await refresh()}catch(err){console.error('post-publish render failed',err);showBoyakiAlert(`BOYAKI自体は公開されましたが、一覧の再表示に失敗しました。\n\nEvent ID: ${ev.id}\n診断: ${String(err?.message||err)}`,'公開済み・表示更新失敗')}finally{$('#submit-btn').disabled=false}});
 $('#brand-home').addEventListener('click',e=>{e.preventDefault();showHome()});
-$('#refresh').addEventListener('click',refresh);$('#maker-search').addEventListener('input',e=>renderMaker(e.target.value));$$('[data-view]').forEach(b=>b.addEventListener('click',()=>{$$('[data-view]').forEach(x=>x.classList.toggle('active',x===b));$('#feed-view').hidden=b.dataset.view!=='feed';$('#maker-view').hidden=b.dataset.view!=='maker';problemView.hidden=true;$('#composer').hidden=false}));
+$('#refresh').addEventListener('click',()=>refresh({interactive:true}).catch(()=>{}));$('#maker-search').addEventListener('input',e=>renderMaker(e.target.value));$$('[data-view]').forEach(b=>b.addEventListener('click',()=>{$$('[data-view]').forEach(x=>x.classList.toggle('active',x===b));$('#feed-view').hidden=b.dataset.view!=='feed';$('#maker-view').hidden=b.dataset.view!=='maker';problemView.hidden=true;$('#composer').hidden=false}));
 if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});refresh().catch(()=>{status.textContent='読み込めませんでした。更新してください。'});
