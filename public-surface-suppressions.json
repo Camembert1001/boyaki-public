@@ -67,6 +67,14 @@
       "provenance": "ESC-H-I0001-C-E2E-001 Work browser expired before the confirmed same-owner withdrawal could be submitted; public-surface suppression only, not relay deletion, kind-5, or author withdrawal.",
       "scope": "boyaki_public_surface_only",
       "status": "render_filter_active"
+    },
+    {
+      "content_prefix": "SYNTHETIC-CONTEXT-",
+      "class": "raw-boyaki",
+      "reason": "synthetic_test_cleanup",
+      "provenance": "Internal synthetic BOYAKI generated during testing; owner requested it be hidden from the public feed.",
+      "scope": "boyaki_public_surface_only",
+      "status": "render_filter_active"
     }
   ]
 }
