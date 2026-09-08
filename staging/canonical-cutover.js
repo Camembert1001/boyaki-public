@@ -101,7 +101,6 @@ async function hydrateCanonicalThread(article,post){
   }
 
   const list=document.createElement('div');list.className='thread';list.dataset.canonicalThreadList='1';mount.append(list);
-  const eventById=new Map(events.map(e=>[e.id,e]));
   for(const ev of events){
     const item=document.createElement('div');item.className=`thread-item ${ev.event_type==='proposal'?'proposal-item':ev.event_type==='clarify'?'clarification-unanswered':''}`;
     item.dataset.eventId=ev.id;item.dataset.eventType=`boyaki-${ev.event_type.replace('_','-')}`;item.dataset.actorRole=eventRole(ev.event_type);
@@ -135,16 +134,21 @@ async function hydrateCanonicalThread(article,post){
   voice.addEventListener('click',()=>applyRole('voice'));maker.addEventListener('click',()=>applyRole('maker'));
   applyRole(localStorage.getItem(roleKey)||'');
 
-  controls.querySelectorAll('[data-canonical-thread-form="1"]').forEach(form=>form.addEventListener('submit',async e=>{
-    e.preventDefault();e.stopPropagation();
-    const input=form.querySelector('input'),text=(input?.value||'').trim();if(!text)return;
-    const type=form.dataset.canonicalEventType,parent=form.dataset.parentEventId||null,button=form.querySelector('button');
-    button.disabled=true;
-    try{
-      await client.createThread(post.id,type,text,parent);
-      input.value='';status(`${eventLabel(type)}を管理DBへ保存しました。`);await hydrateCanonicalThread(article,post);
-    }catch(err){status(`スレッドへ保存できませんでした: ${String(err?.message||err)}（Nostr Relayへは送信していません）`);button.disabled=false}
-  }));
+  if(mount.dataset.canonicalThreadSubmitBound!=='1'){
+    mount.dataset.canonicalThreadSubmitBound='1';
+    mount.addEventListener('submit',async e=>{
+      const form=e.target;
+      if(!(form instanceof HTMLFormElement)||form.dataset.canonicalThreadForm!=='1')return;
+      e.preventDefault();e.stopPropagation();
+      const input=form.querySelector('input'),text=(input?.value||'').trim();if(!text)return;
+      const type=form.dataset.canonicalEventType,parent=form.dataset.parentEventId||null,button=form.querySelector('button');
+      button.disabled=true;
+      try{
+        await client.createThread(post.id,type,text,parent);
+        input.value='';status(`${eventLabel(type)}を管理DBへ保存しました。`);await hydrateCanonicalThread(article,post);
+      }catch(err){status(`スレッドへ保存できませんでした: ${String(err?.message||err)}（Nostr Relayへは送信していません）`);button.disabled=false}
+    });
+  }
 }
 
 function canonicalCard(post,{detail=false}={}){
@@ -152,12 +156,10 @@ function canonicalCard(post,{detail=false}={}){
   article.className='card problem-card';
   article.dataset.canonicalPostCard='1';
   article.dataset.canonicalPostId=post.id;
-
   const meta=document.createElement('div');meta.className='meta';meta.textContent=`${fmt(post.created_at)} · ${short(post.author_pubkey)} · BOYAKI canonical`;article.append(meta);
   const raw=document.createElement('p');raw.className='raw';raw.textContent=post.content||'';article.append(raw);
   const chips=document.createElement('div');chips.className='chips';
   const canonical=document.createElement('span');canonical.className='chip';canonical.textContent='Account単位で管理可能';chips.append(canonical);article.append(chips);
-
   if(detail){
     const note=document.createElement('p');note.className='hint';note.textContent='この投稿本文と新しいスレッド本文はBOYAKIの管理DBを正本として保存します。Nostr plaintextには新規送信しません。';article.append(note);
     const mount=document.createElement('div');mount.dataset.canonicalThreadMount='1';article.append(mount);
@@ -166,7 +168,6 @@ function canonicalCard(post,{detail=false}={}){
     const actions=document.createElement('div');actions.className='actions';
     const open=document.createElement('a');open.className='button-link';open.href=`?problem=${encodeURIComponent(post.id)}`;open.textContent='このBOYAKIを開く';actions.append(open);article.append(actions);
   }
-
   const permalink=document.createElement('a');permalink.className='permalink';permalink.rel='nofollow';permalink.href=`?problem=${encodeURIComponent(post.id)}`;permalink.textContent='この問題のURL';article.append(permalink);
   return article;
 }
@@ -219,7 +220,6 @@ async function activate(){
     if(!ready){window.BOYAKI_CANONICAL_THREAD_WRITE_CUTOVER_ACTIVE=false;return}
     const threadReady=await client.initializeThreads();
     window.BOYAKI_CANONICAL_THREAD_WRITE_CUTOVER_ACTIVE=threadReady===true;
-
     document.addEventListener('click',async e=>{
       const button=e.target?.closest?.('[data-v53-publish="1"]');if(!button||window.BOYAKI_CANONICAL_ROOT_WRITE_CUTOVER_ACTIVE!==true)return;
       e.preventDefault();e.stopImmediatePropagation();
@@ -232,7 +232,6 @@ async function activate(){
         const input=document.querySelector('#raw');if(input)input.value='';window.BOYAKI_STAGING_LAST_PUBLISH_ERROR='';status('公開しました。Account単位で管理できるBOYAKIとして保存されました。');await renderHybrid();if(result?.post?.id)history.replaceState(null,'',location.pathname);
       }catch(err){const code=String(err?.message||err||'unknown_error');window.BOYAKI_STAGING_LAST_PUBLISH_ERROR=code;console.error('canonical publish failed',err);status(`公開できませんでした。E2E診断: ${code}（下書きはこの端末に残っています）`);button.disabled=false;button.textContent='解決候補として公開する'}
     },true);
-
     const feed=document.querySelector('#feed');if(feed)new MutationObserver(()=>{if(!rendering&&lastPosts.length&&!feed.querySelector('[data-canonical-post-card]'))scheduleHybrid(200)}).observe(feed,{childList:true});
     document.querySelector('#refresh')?.addEventListener('click',()=>scheduleHybrid(1200));
     await renderHybrid();
@@ -242,5 +241,4 @@ async function activate(){
     window.BOYAKI_CANONICAL_THREAD_WRITE_CUTOVER_ACTIVE=false;
   }
 }
-
 activate();
