@@ -53,20 +53,33 @@
     document.head.append(script);
   }
   function installCanonicalStorageCutoverGuard(){
-    // Safety invariant: do not create any more plaintext Nostr BOYAKI while
-    // BOYAKI is moving publication authority to an operator-controlled,
-    // account-owned canonical store. Local/private drafting still works.
+    // Safety invariant: do not create any more user-generated plaintext Nostr BOYAKI while
+    // BOYAKI is moving publication authority to an operator-controlled, account-owned
+    // canonical store. Local/private drafting still works.
     window.BOYAKI_PLAINTEXT_NOSTR_PUBLICATION_DISABLED=true;
+    const blockedMessage='削除可能なAccount単位の保存基盤へ移行中です。下書きはこの端末に残り、Nostr Relayへは送信していません。';
+    const setBlockedStatus=(button)=>{
+      const status=document.querySelector('#status');
+      if(status)status.textContent=blockedMessage;
+      if(button){button.disabled=true;button.textContent='公開基盤を移行中'}
+    };
     document.addEventListener('click',e=>{
       const button=e.target?.closest?.('[data-v53-publish="1"]');
       if(!button)return;
       if(window.BOYAKI_CANONICAL_BACKEND_READY===true)return;
       e.preventDefault();
       e.stopImmediatePropagation();
-      const status=document.querySelector('#status');
-      if(status)status.textContent='削除可能なAccount単位の保存基盤へ移行中です。下書きはこの端末に残り、Nostr Relayへは送信していません。';
-      button.disabled=true;
-      button.textContent='公開基盤を移行中';
+      setBlockedStatus(button);
+    },true);
+    document.addEventListener('submit',e=>{
+      if(window.BOYAKI_CANONICAL_BACKEND_READY===true)return;
+      const form=e.target;
+      if(!(form instanceof HTMLFormElement))return;
+      const isThreadPlaintext=form.matches('[data-form="clarify"],[data-form="proposal"],[data-form="poster-response"]')||!!form.closest('.poster-clarification-answer');
+      if(!isThreadPlaintext)return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      setBlockedStatus(form.querySelector('button[type="submit"],button:not([type])'));
     },true);
   }
   window.BOYAKI_PROBLEM_INDEX_GATE={version:VERSION,evaluate,apply};
