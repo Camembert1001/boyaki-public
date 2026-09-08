@@ -70,18 +70,21 @@
     window.BOYAKI_PLAINTEXT_NOSTR_PUBLICATION_DISABLED=true;
     const backendReady=()=>window.BOYAKI_CANONICAL_BACKEND_READY===true;
     const rootWriteActive=()=>backendReady()&&window.BOYAKI_CANONICAL_ROOT_WRITE_CUTOVER_ACTIVE===true;
-    const threadWriteActive=()=>backendReady()&&window.BOYAKI_CANONICAL_THREAD_WRITE_CUTOVER_ACTIVE===true;
+    const threadWriteActive=()=>backendReady()&&window.BOYAKI_CANONICAL_THREAD_BACKEND_READY===true&&window.BOYAKI_CANONICAL_THREAD_WRITE_CUTOVER_ACTIVE===true;
     const diagnostic=()=>{
       const backend=backendReady()?'1':'0';
       const root=window.BOYAKI_CANONICAL_ROOT_WRITE_CUTOVER_ACTIVE===true?'1':'0';
+      const thread=window.BOYAKI_CANONICAL_THREAD_WRITE_CUTOVER_ACTIVE===true?'1':'0';
+      const threadBackend=window.BOYAKI_CANONICAL_THREAD_BACKEND_READY===true?'1':'0';
       const init=String(window.BOYAKI_STAGING_LAST_INIT_ERROR||'none');
+      const threadInit=String(window.BOYAKI_STAGING_LAST_THREAD_INIT_ERROR||'none');
       const client=String(window.BOYAKI_STAGING_CLIENT_VERSION||'unknown');
-      return `guard_backend=${backend};root=${root};init=${init};client=${client}`;
+      return `guard_backend=${backend};root=${root};thread_backend=${threadBackend};thread=${thread};init=${init};thread_init=${threadInit};client=${client}`;
     };
-    const setBlockedStatus=(button)=>{
+    const setBlockedStatus=(button,isThread=false)=>{
       const status=document.querySelector('#status');
       if(status)status.textContent=`STAGING保存経路がまだ有効化されていません。E2E診断: ${diagnostic()}（Nostr Relayへは送信していません）`;
-      if(button){button.disabled=false;button.textContent='解決候補として公開する'}
+      if(button){button.disabled=false;if(isThread&&button.dataset.boyakiOriginalLabel)button.textContent=button.dataset.boyakiOriginalLabel;else if(!isThread)button.textContent='解決候補として公開する'}
     };
     document.addEventListener('click',e=>{
       const button=e.target?.closest?.('[data-v53-publish="1"]');
@@ -89,16 +92,22 @@
       if(rootWriteActive())return;
       e.preventDefault();
       e.stopImmediatePropagation();
-      setBlockedStatus(button);
+      setBlockedStatus(button,false);
     },true);
     document.addEventListener('submit',e=>{
       const form=e.target;
       if(!(form instanceof HTMLFormElement))return;
       const isThreadPlaintext=form.matches('[data-form="clarify"],[data-form="proposal"],[data-form="poster-response"]')||!!form.closest('.poster-clarification-answer');
-      if(!isThreadPlaintext||threadWriteActive())return;
+      if(!isThreadPlaintext)return;
+      const canonicalThread=form.dataset.canonicalThreadForm==='1';
+      // Only canonical DB-backed thread forms may pass. Legacy forms remain frozen
+      // even after the thread backend is ready, preventing accidental plaintext Nostr writes.
+      if(canonicalThread&&threadWriteActive())return;
       e.preventDefault();
       e.stopImmediatePropagation();
-      setBlockedStatus(form.querySelector('button[type="submit"],button:not([type])'));
+      const button=form.querySelector('button[type="submit"],button:not([type])');
+      if(button&&!button.dataset.boyakiOriginalLabel)button.dataset.boyakiOriginalLabel=button.textContent||'';
+      setBlockedStatus(button,true);
     },true);
   }
   window.BOYAKI_PROBLEM_INDEX_GATE={version:VERSION,evaluate,apply};
