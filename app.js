@@ -133,6 +133,7 @@ async function refresh({interactive=false}={}){
  refreshInFlight=(async()=>{
    try{
      const result=await Promise.race([queryAll(),new Promise((_,reject)=>setTimeout(()=>reject(new Error('refresh timeout')),15000))]);
+     if(roots.length>0&&result.roots.length===0)throw new Error('transient empty relay result');
      roots=result.roots;related=result.related;
      const id=new URLSearchParams(location.search).get('problem');
      if(!(id&&renderProblem(id))){renderFeed();renderMaker($('#maker-search').value)}
