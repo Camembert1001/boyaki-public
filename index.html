@@ -9,6 +9,10 @@
   <script>if(new URLSearchParams(location.search).has('problem'))document.getElementById('robots-meta').setAttribute('content','noindex,follow');</script>
   <link rel="manifest" href="./manifest.webmanifest" />
   <link rel="stylesheet" href="./styles.css" />
+  <script>
+  (()=>{try{const loggedIn=!!(localStorage.getItem('boyaki-account-sk')||sessionStorage.getItem('boyaki-account-sk'));if(loggedIn)document.documentElement.dataset.boyakiLoggedIn='1'}catch{}})();
+  </script>
+  <style>html[data-boyaki-logged-in="1"] [data-auth-register-link]{display:none!important}</style>
   <title>BOYAKI — 困ったこと、そのまま話して。</title>
 </head>
 <body>
