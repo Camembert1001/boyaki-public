@@ -8,6 +8,7 @@
   <meta name="robots" content="noindex,follow" />
   <link rel="stylesheet" href="./styles.css" />
   <title>ログイン / マイページ — BOYAKI</title>
+  <style>[data-authenticated-only][hidden]{display:none!important}</style>
 </head>
 <body>
   <header class="shell topbar">
@@ -39,6 +40,7 @@
       <div id="profile-state" class="hint" role="status" aria-live="polite">読み込み中…</div>
     </section>
 
+    <div data-authenticated-only hidden>
     <section class="card identity-card">
       <p class="eyebrow">Current profile</p>
       <h2 id="profile-name">プロフィールを確認中</h2>
@@ -128,6 +130,7 @@
       <p class="hint">Tester / Contributorなど過去の事実は履歴として残せますが、Voice / Makerと並ぶ恒久ステータスにはしません。</p>
       <div id="recent-history" class="stack"></div>
     </section>
+    </div>
   </main>
   <script type="module" src="./mypage.js?v=20260906-canonical-relay-set-v1"></script>
 <script>
