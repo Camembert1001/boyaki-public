@@ -1,10 +1,8 @@
 import { finalizeEvent, getPublicKey } from 'https://esm.sh/nostr-tools@2.17.0';
 
 const PRODUCTION_REF='uvjyponltgoytjzwkfrh';
-const STAGING_REF='vbqitqjhobzpdlaraglc';
 const API_BASE=`https://${PRODUCTION_REF}.supabase.co/functions/v1/boyaki-api`;
 const THREAD_API_BASE=`https://${PRODUCTION_REF}.supabase.co/functions/v1/boyaki-thread-api`;
-if(API_BASE.includes(STAGING_REF)||THREAD_API_BASE.includes(STAGING_REF))throw new Error('production_api_points_to_staging');
 const fromHex=hex=>new Uint8Array((hex.match(/.{1,2}/g)||[]).map(b=>parseInt(b,16)));
 const unix=()=>Math.floor(Date.now()/1000);
 window.BOYAKI_CANONICAL_CLIENT_VERSION='20260909-prod-candidate-v1';
