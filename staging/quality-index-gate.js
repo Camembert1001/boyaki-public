@@ -1,5 +1,28 @@
 (()=>{
   const VERSION='quality-index-v1';
+  window.BOYAKI_STAGING=true;
+
+  function installStagingSurface(){
+    const robots=document.querySelector('meta[name="robots"]');
+    if(robots)robots.setAttribute('content','noindex,nofollow');
+    document.documentElement.dataset.boyakiEnvironment='staging';
+    if(!document.querySelector('[data-boyaki-staging-banner]')){
+      const banner=document.createElement('div');
+      banner.dataset.boyakiStagingBanner='1';
+      banner.setAttribute('role','status');
+      banner.textContent='STAGING / E2E TEST — 本番BOYAKIではありません';
+      banner.style.cssText='position:sticky;top:0;z-index:2147483646;padding:10px 16px;text-align:center;font-weight:800;background:#fff3cd;border-bottom:2px solid #8a6d00;color:#332701';
+      document.body.prepend(banner);
+    }
+    if(!document.querySelector('script[data-canonical-cutover-loader]')){
+      const script=document.createElement('script');
+      script.type='module';
+      script.src='./canonical-cutover.js?v=20260909-staging-v1';
+      script.dataset.canonicalCutoverLoader='1';
+      document.body.append(script);
+    }
+  }
+
   const parseCount=(card,label)=>{
     for(const chip of card.querySelectorAll('.chip')){
       const text=(chip.textContent||'').trim();
@@ -28,7 +51,7 @@
     const meta=document.querySelector('meta[name="robots"]');
     if(!meta||!new URLSearchParams(location.search).has('problem')) return null;
     const state=evaluate(card);
-    meta.setAttribute('content',state.eligible?'index,follow':'noindex,follow');
+    meta.setAttribute('content','noindex,nofollow');
     document.documentElement.dataset.problemIndexEligible=state.eligible?'1':'0';
     document.documentElement.dataset.problemIndexGateVersion=VERSION;
     return state;
@@ -40,9 +63,7 @@
   }
   function suppressLegacyMakerSpaceNav(){
     document.querySelectorAll('[data-maker-space-link]').forEach(el=>el.remove());
-    document.querySelectorAll('.topbar nav a,.topbar nav button').forEach(el=>{
-      if(el.textContent?.trim()==='活動する')el.remove();
-    });
+    document.querySelectorAll('.topbar nav a,.topbar nav button').forEach(el=>{if(el.textContent?.trim()==='活動する')el.remove()});
   }
   function loadPublicSuppression(){
     if(document.querySelector('script[data-public-suppression-loader]'))return;
@@ -57,11 +78,11 @@
     const backendReady=()=>window.BOYAKI_CANONICAL_BACKEND_READY===true;
     const rootWriteActive=()=>backendReady()&&window.BOYAKI_CANONICAL_ROOT_WRITE_CUTOVER_ACTIVE===true;
     const threadWriteActive=()=>backendReady()&&window.BOYAKI_CANONICAL_THREAD_WRITE_CUTOVER_ACTIVE===true;
-    const blockedMessage='削除可能なAccount単位の保存基盤へ移行中です。下書きはこの端末に残り、Nostr Relayへは送信していません。';
+    const blockedMessage='STAGING保存基盤を準備中です。内容はNostr Relayへ送信していません。';
     const setBlockedStatus=(button)=>{
       const status=document.querySelector('#status');
       if(status)status.textContent=blockedMessage;
-      if(button){button.disabled=true;button.textContent='公開基盤を移行中'}
+      if(button){button.disabled=true;button.textContent='STAGING準備中'}
     };
     document.addEventListener('click',e=>{
       const button=e.target?.closest?.('[data-v53-publish="1"]');
@@ -81,19 +102,9 @@
       setBlockedStatus(form.querySelector('button[type="submit"],button:not([type])'));
     },true);
   }
-  async function loadCanonicalCutover(){
-    try{
-      await import('./canonical-api.js?v=20260909-live-v1');
-      await import('./canonical-cutover.js?v=20260909-root-v1');
-    }catch(err){
-      console.error('canonical cutover bootstrap failed',err);
-      window.BOYAKI_CANONICAL_ROOT_WRITE_CUTOVER_ACTIVE=false;
-    }
-  }
   window.BOYAKI_PROBLEM_INDEX_GATE={version:VERSION,evaluate,apply};
   new MutationObserver(ms=>{for(const m of ms)for(const n of m.addedNodes)if(n.nodeType===1)scan(n)}).observe(document.documentElement,{childList:true,subtree:true});
   loadPublicSuppression();
   installCanonicalStorageCutoverGuard();
-  loadCanonicalCutover();
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{scan();suppressLegacyMakerSpaceNav()});else{scan();suppressLegacyMakerSpaceNav()}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{installStagingSurface();scan();suppressLegacyMakerSpaceNav()});else{installStagingSurface();scan();suppressLegacyMakerSpaceNav()}
 })();
