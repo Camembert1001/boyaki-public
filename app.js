@@ -44,6 +44,12 @@ function confirmBoyakiAction(message,title='確認',confirmLabel='取り下げ�
 }
 document.addEventListener('click',e=>{if(e.target.matches?.('[data-alert-close]')||e.target.id==='boyaki-alert')hideBoyakiAlert()});
 const status=$('#status'),feed=$('#feed'),makerList=$('#maker-list'),problemView=$('#problem-view'); let roots=[],related=[];
+function removeLegacyActivityNav(){
+  for(const el of document.querySelectorAll('a,button')){
+    if(el.textContent?.trim()==='活動する')el.remove();
+  }
+}
+removeLegacyActivityNav();
 function toHex(bytes){return [...bytes].map(b=>b.toString(16).padStart(2,'0')).join('')}
 function fromHex(hex){return new Uint8Array((hex.match(/.{1,2}/g)||[]).map(b=>parseInt(b,16)))}
 function getIdentity(){let hex=localStorage.getItem('boyaki-device-sk');if(!hex){hex=toHex(generateSecretKey());localStorage.setItem('boyaki-device-sk',hex)}const sk=fromHex(hex);return{sk,pk:getPublicKey(sk)}}
@@ -199,4 +205,4 @@ async function refresh({interactive=false}={}){
 $('#raw-form').addEventListener('submit',async e=>{e.preventDefault();const input=$('#raw'),text=input.value.trim();if(!text)return;$('#submit-btn').disabled=true;status.textContent='公開しています…';let ev;try{ev=await createRaw(text)}catch(err){console.error(err);status.textContent='公開できませんでした。';const reason=String(err?.message||'');const detail=reason.startsWith('publish_failed|')?reason.split('|').slice(2).join(' / '):reason;showBoyakiAlert(`BOYAKIを公開できませんでした。${detail?'\n\n診断: '+detail:''}`,'公開できませんでした');$('#submit-btn').disabled=false;return}input.value='';status.innerHTML=`公開しました。<a href="?problem=${ev.id}">この問題を見る</a>`;try{await refresh()}catch(err){console.error('post-publish render failed',err);showBoyakiAlert(`BOYAKI自体は公開されましたが、一覧の再表示に失敗しました。\n\nEvent ID: ${ev.id}\n診断: ${String(err?.message||err)}`,'公開済み・表示更新失敗')}finally{$('#submit-btn').disabled=false}});
 $('#brand-home').addEventListener('click',e=>{e.preventDefault();showHome()});
 $('#refresh').addEventListener('click',()=>refresh({interactive:true}).catch(()=>{}));$('#maker-search').addEventListener('input',e=>renderMaker(e.target.value));$$('[data-view]').forEach(b=>b.addEventListener('click',()=>{$$('[data-view]').forEach(x=>x.classList.toggle('active',x===b));$('#feed-view').hidden=b.dataset.view!=='feed';$('#maker-view').hidden=b.dataset.view!=='maker';problemView.hidden=true;$('#composer').hidden=false}));
-if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});refresh().catch(()=>{status.textContent='読み込めませんでした。更新してください。'});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{});refresh().catch(()=>{status.textContent='読み込めませんでした。更新してください。'});
