@@ -78,8 +78,28 @@ async function rootReact(root,type){return publish({kind:7,content:type,tags:[['
 async function reactProposal(root,proposal,type){return publish({kind:7,content:type,tags:[['e',root.id,RELAYS[0],'root'],['e',proposal.id,RELAYS[0],'reply'],['p',root.pubkey],['p',proposal.pubkey],['t','boyaki-demand-ladder'],['action',type],['scope','proposal-specific'],['proposal_id',proposal.id],['problem_id',root.id],['app','boyaki-web']]})}
 async function report(root,type='other'){return publish({kind:1984,content:'BOYAKI public safety report',tags:[['e',root.id,RELAYS[0],type],['p',root.pubkey],['app','boyaki-web'],['schema','public-report-v1']]})}
 function locallyWithdrawn(id){return localStorage.getItem(`boyaki-withdrawn:${id}`)==='1'}
-async function withdraw(root){if(root.pubkey!==identity.pk)return;const stored=localStorage.getItem(`boyaki-withdrawal:${root.id}`);const ev=stored?JSON.parse(stored):signed({kind:5,content:'withdrawn by original browser identity',tags:[['e',root.id],['k','1'],['app','boyaki-web']]});await publishExact(ev);localStorage.setItem(`boyaki-withdrawn:${root.id}`,'1');await refresh()}
-async function queryAll(){const since=unix()-60*60*24*30;const [raw,threads,reactions,deletions]=await Promise.all([pool.querySync(RELAYS,{kinds:[1],'#t':['boyaki-raw'],since,limit:200}),pool.querySync(RELAYS,{kinds:[1],'#t':['boyaki-clarify','boyaki-proposal','boyaki-poster-response'],since,limit:500}),pool.querySync(RELAYS,{kinds:[7],'#t':['boyaki-demand-ladder'],since,limit:1000}),pool.querySync(RELAYS,{kinds:[5],since,limit:1000})]);const deleted=new Set(deletions.flatMap(e=>e.tags.filter(t=>t[0]==='e').map(t=>t[1])));return{roots:dedupe(raw).filter(e=>!deleted.has(e.id)&&!locallyWithdrawn(e.id)).sort((a,b)=>b.created_at-a.created_at),related:[...dedupe(threads),...dedupe(reactions)].filter(e=>!deleted.has(e.id))}}
+async function withdraw(root){
+ if(root.pubkey!==identity.pk)return;
+ const stored=localStorage.getItem(`boyaki-withdrawal:${root.id}`);
+ const ev=stored?JSON.parse(stored):signed({kind:5,content:'withdrawn by original browser identity',tags:[['e',root.id],['k','1'],['app','boyaki-web']]});
+ // The user's withdrawal intent takes effect locally immediately; relay propagation is sync, not the UI authority.
+ localStorage.setItem(`boyaki-withdrawn:${root.id}`,'1');
+ localStorage.setItem(`boyaki-withdraw-pending:${root.id}`,'1');
+ roots=roots.filter(r=>r.id!==root.id);
+ related=related.filter(e=>rootTag(e)!==root.id);
+ const openId=new URLSearchParams(location.search).get('problem');
+ if(openId===root.id)showHome();else{renderFeed();renderMaker($('#maker-search').value)}
+ status.textContent='取り下げました。';
+ try{
+   await publishExact(ev);
+   localStorage.removeItem(`boyaki-withdraw-pending:${root.id}`);
+ }catch(err){
+   console.error('withdraw relay sync pending',err);
+   status.textContent='この端末では取り下げました。同期は保留中です。';
+ }
+ try{await refresh()}catch(err){console.warn('post-withdraw refresh failed',err)}
+}
+async function queryAll(){const since=unix()-60*60*24*30;const [raw,threads,reactions,deletions]=await Promise.all([pool.querySync(RELAYS,{kinds:[1],'#t':['boyaki-raw'],since,limit:200}),pool.querySync(RELAYS,{kinds:[1],'#t':['boyaki-clarify','boyaki-proposal','boyaki-poster-response'],since,limit:500}),pool.querySync(RELAYS,{kinds:[7],'#t':['boyaki-demand-ladder'],since,limit:1000}),pool.querySync(RELAYS,{kinds:[5],since,limit:1000})]);const rawRoots=dedupe(raw);const deleted=new Set(deletions.flatMap(e=>e.tags.filter(t=>t[0]==='e').map(t=>t[1])));return{rawCount:rawRoots.length,roots:rawRoots.filter(e=>!deleted.has(e.id)&&!locallyWithdrawn(e.id)).sort((a,b)=>b.created_at-a.created_at),related:[...dedupe(threads),...dedupe(reactions)].filter(e=>!deleted.has(e.id))}}
 function dedupe(xs){const m=new Map();for(const x of xs)m.set(x.id,x);return [...m.values()]}
 function relatedTo(id){return related.filter(e=>rootTag(e)===id)}
 function validPosterResponse(root,e){return e.kind===1&&tag(e,'t')==='boyaki-poster-response'&&e.pubkey===root.pubkey&&rootTag(e)===root.id}
@@ -134,7 +154,7 @@ async function refresh({interactive=false}={}){
  refreshInFlight=(async()=>{
    try{
      const result=await Promise.race([queryAll(),new Promise((_,reject)=>setTimeout(()=>reject(new Error('refresh timeout')),15000))]);
-     if(roots.length>0&&result.roots.length===0)throw new Error('transient empty relay result');
+     if(roots.length>0&&result.rawCount===0)throw new Error('transient empty relay result');
      roots=result.roots;related=result.related;
      const id=new URLSearchParams(location.search).get('problem');
      if(!(id&&renderProblem(id))){renderFeed();renderMaker($('#maker-search').value)}
