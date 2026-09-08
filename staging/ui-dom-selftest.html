@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>BOYAKI STAGING Thread UI DOM Self-test</title>
+  <style>
+    body{font-family:system-ui,sans-serif;margin:0;background:#f6f7f9;color:#111827}.banner{padding:10px 16px;text-align:center;font-weight:800;background:#fff3cd;border-bottom:2px solid #8a6d00;color:#332701}main{max-width:900px;margin:0 auto;padding:28px 18px}.card{background:#fff;border:1px solid #e5e7eb;border-radius:18px;padding:20px}pre{white-space:pre-wrap;word-break:break-word;background:#0b1020;color:#e5e7eb;padding:16px;border-radius:14px;min-height:220px}.pass{color:#067647;font-weight:800}.fail{color:#b42318;font-weight:800}.fixture{position:absolute;left:-99999px;width:800px}
+  </style>
+  <script>
+  (()=>{
+    const ROOT='11111111-1111-4111-8111-111111111111';
+    const q=new URLSearchParams(location.search);
+    if(q.get('problem')!==ROOT){q.set('problem',ROOT);q.set('autorun','1');history.replaceState(null,'',`${location.pathname}?${q}`)}
+  })();
+  </script>
+</head>
+<body>
+  <div class="banner">STAGING / UI DOM E2E — 本番ではありません</div>
+  <main><section class="card"><h1>Canonical Thread UI DOM Self-test</h1><p>実Account・実投稿・本番DBを使わず、STAGINGの実canonical-cutover/guardコードをブラウザDOM上で検証します。</p><div id="summary" role="status"></div><pre id="output">実行準備中…</pre></section></main>
+  <div class="fixture" aria-hidden="true">
+    <div id="status"></div><section id="composer"></section><section id="problem-view"></section><section id="feed-view"><div id="feed"></div></section><section id="maker-view"></section><button id="refresh">refresh</button>
+    <form id="legacy-thread-form" data-form="clarify"><input /><button type="submit">legacy send</button></form>
+  </div>
+  <script>
+  (()=>{
+    const root='11111111-1111-4111-8111-111111111111';
+    const post={id:root,author_pubkey:'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',content:'毎回Excelへ転記して管理するのが面倒',created_at:'2026-09-09T00:00:00Z',status:'active'};
+    window.__BOYAKI_UI_E2E_EVENTS=[];window.__BOYAKI_UI_E2E_CALLS=[];window.__BOYAKI_UI_E2E_LEGACY_REACHED=false;
+    document.querySelector('#legacy-thread-form').addEventListener('submit',()=>{window.__BOYAKI_UI_E2E_LEGACY_REACHED=true});
+    let n=0;
+    window.BOYAKI_CANONICAL_BACKEND_READY=true;window.BOYAKI_CANONICAL_THREAD_BACKEND_READY=true;window.BOYAKI_STAGING_CLIENT_VERSION='20260909-v7';
+    window.BOYAKI_CANONICAL={
+      initialize:async()=>true,initializeThreads:async()=>true,listPosts:async()=>({posts:[post]}),identity:()=>({pk:'a'.repeat(64),kind:'account'}),
+      listThread:async()=>({events:window.__BOYAKI_UI_E2E_EVENTS}),
+      threadAccess:async()=>({can_post_as_poster:true,deletable_event_ids:window.__BOYAKI_UI_E2E_EVENTS.map(e=>e.id)}),
+      createThread:async(postId,type,content,parent)=>{const id='22222222-2222-4222-8222-'+String(++n).padStart(12,'0');const ev={id,post_id:postId,author_pubkey:'a'.repeat(64),event_type:type,parent_event_id:parent,content,status:'active',created_at:new Date().toISOString()};window.__BOYAKI_UI_E2E_EVENTS.push(ev);window.__BOYAKI_UI_E2E_CALLS.push(['createThread',postId,type,content,parent]);return{event:ev}},
+      deleteThread:async id=>{window.__BOYAKI_UI_E2E_EVENTS=window.__BOYAKI_UI_E2E_EVENTS.filter(e=>e.id!==id);window.__BOYAKI_UI_E2E_CALLS.push(['deleteThread',id]);return{ok:true}},
+      legacyControls:async()=>({controls:[]}),createPost:async()=>({})
+    };
+    try{localStorage.removeItem(`boyaki-thread-role:${root}`)}catch{}
+  })();
+  </script>
+  <script src="./quality-index-gate.js?v=20260909-staging-guard-v6"></script>
+  <script src="./canonical-cutover.js?v=20260909-staging-cutover-v7"></script>
+  <script type="module" src="./ui-dom-selftest.js?v=20260909-v1"></script>
+</body>
+</html>
