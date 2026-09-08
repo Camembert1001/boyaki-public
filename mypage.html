@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <meta name="theme-color" content="#111827" />
-  <meta name="description" content="BOYAKI マイページ — 現在のブラウザIDに紐づくVoice / Makerの実績と自分の投稿を管理。" />
+  <meta name="description" content="BOYAKI マイページ — Account IDに紐づくVoice / Makerの実績と自分の投稿を複数端末から管理。" />
   <meta name="robots" content="noindex,follow" />
   <link rel="stylesheet" href="./styles.css" />
   <title>ログイン / マイページ — BOYAKI</title>
@@ -15,7 +15,7 @@
     <a class="brand" href="./">BOYAKI</a>
     <nav>
       <a class="nav-link" href="./">ホーム</a>
-            <a class="nav-link active" href="./mypage.html">ログイン / マイページ</a>
+      <a class="nav-link active" href="./mypage.html">ログイン / マイページ</a>
       <a class="nav-link" data-auth-register-link href="./register.html">新規登録</a>
       <a class="nav-link" href="./bug-report.html">バグ報告</a>
     </nav>
@@ -23,9 +23,9 @@
 
   <main class="shell maker-space">
     <section class="card hero maker-hero">
-      <p class="eyebrow">BOYAKI Account — Phase 1</p>
+      <p class="eyebrow">BOYAKI Account</p>
       <h1>マイページ</h1>
-      <p class="lead">ログイン済みのBOYAKIアカウントをMy Pageの親identityとして使います。</p>
+      <p class="lead">BOYAKI Accountを本人の親identityとして使い、同じAccountでログインした端末間で履歴と投稿管理を共有します。</p>
       <p class="hint">未ログインの場合は下のフォームから、登録時に発行されたログインキーとパスワードでログインできます。</p>
       <form id="login-form" class="maker-form">
         <label>ログインキー
@@ -82,9 +82,7 @@
         <label>新しいパスワード確認
           <input id="account-key-new-password-confirm" type="password" minlength="10" autocomplete="new-password" required />
         </label>
-        <div class="actions">
-          <button type="submit">ログインキーを再発行</button>
-        </div>
+        <div class="actions"><button type="submit">ログインキーを再発行</button></div>
       </form>
     </section>
 
@@ -99,7 +97,7 @@
     <section class="card">
       <p class="eyebrow">Your BOYAKI</p>
       <h2>自分の投稿を管理</h2>
-      <p class="hint">このブラウザIDで署名したBOYAKIだけを表示します。他人の投稿は取り下げられません。取り下げは署名済みの削除イベントをRelayへ送信し、通常の公開一覧から除外します。</p>
+      <p class="hint">本人の削除権限は端末ではなくAccount IDに紐づきます。同じAccountでログインしたiPhone・PCなど、どの端末からでもAccount所有の投稿を管理できます。相互署名で引き継ぎ済みの旧ブラウザID投稿もBOYAKIの管理状態へ昇格します。</p>
       <div id="ownership-status" class="hint" role="status" aria-live="polite"></div>
       <div id="own-posts" class="stack"><p class="hint">読み込み中…</p></div>
     </section>
@@ -132,7 +130,9 @@
     </section>
     </div>
   </main>
-  <script type="module" src="./mypage.js?v=20260906-canonical-relay-set-v1"></script>
+  <script type="module" src="./canonical-api.js?v=20260909-live-v1"></script>
+  <script type="module" src="./mypage.js?v=20260909-account-canonical-v1"></script>
+  <script type="module" src="./canonical-mypage.js?v=20260909-account-canonical-v1"></script>
 <script>
 (()=>{window.BOYAKI_AUTH_NAV_V1='1';const loggedIn=!!(localStorage.getItem('boyaki-account-sk')||sessionStorage.getItem('boyaki-account-sk'));if(loggedIn)document.querySelectorAll('[data-auth-register-link]').forEach(x=>x.style.display='none')})();
 </script>
