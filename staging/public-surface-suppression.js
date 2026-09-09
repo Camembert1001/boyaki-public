@@ -33,5 +33,8 @@ new MutationObserver(records=>{
 
 loadRules();
 
+// STAGING navigation fix: legacy "open-thread" was incorrectly treated as a reaction action.
+import('./open-thread-nav-v1.js?v=20260909-open-thread-nav-v1').catch(err=>console.warn('open thread nav loader failed',err));
+
 // STAGING-only room UX. Viewing stays passive; speaking requires a Voice/Maker role.
 import('./thread-room-v1.js?v=20260909-room-v1').catch(err=>console.warn('thread room loader failed',err));
