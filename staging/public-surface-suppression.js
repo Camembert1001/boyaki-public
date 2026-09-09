@@ -32,3 +32,6 @@ new MutationObserver(records=>{
 }).observe(document.documentElement,{childList:true,subtree:true});
 
 loadRules();
+
+// STAGING-only room UX. Viewing stays passive; speaking requires a Voice/Maker role.
+import('./thread-room-v1.js?v=20260909-room-v1').catch(err=>console.warn('thread room loader failed',err));
