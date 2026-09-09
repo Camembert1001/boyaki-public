@@ -61,7 +61,7 @@
   function loadPublicSuppression(){
     if(document.querySelector('script[data-public-suppression-loader]'))return;
     const script=document.createElement('script');
-    script.src='./public-surface-suppression.js?v=20260903-owner-cleanup';
+    script.src='./public-surface-suppression.js?v=20260909-open-thread-nav-v1';
     script.defer=true;
     script.dataset.publicSuppressionLoader='1';
     document.head.append(script);
