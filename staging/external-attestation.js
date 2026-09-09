@@ -85,3 +85,7 @@ function scheduleRender(){
 }
 new MutationObserver(scheduleRender).observe(document.documentElement,{childList:true,subtree:true});
 scheduleRender();
+
+// STAGING-only shell loader. This is explicitly loaded by index.html, so it is the
+// reliable bridge that activates legacy-open navigation fixes and Room v1.
+import('./public-surface-suppression.js?v=20260909-room-loader-v2').catch(err=>console.warn('staging room shell loader failed',err));
