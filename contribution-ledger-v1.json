@@ -1,0 +1,6 @@
+{
+  "schema": "boyaki-contribution-ledger-v1",
+  "phase": "early-access",
+  "note": "Public status reads only entries with state=verified. Candidate/pending evidence is not projected to profile counters.",
+  "entries": []
+}
