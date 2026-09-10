@@ -103,21 +103,29 @@
     </section>
 
     <section class="card">
-      <p class="eyebrow">Status</p>
+      <p class="eyebrow">Contribution Status · Early Access</p>
       <h2>Voice / Maker</h2>
-      <p class="hint">VoiceとMakerは排他的な役割ではありません。同じ人が両方の実績を持てます。</p>
+      <p class="hint">VoiceとMakerは排他的な役割ではありません。同じ人が両方のステータスを持てます。</p>
       <div class="stack">
-        <details id="voice-status" class="participation-panel">
-          <summary><strong>Voice Status</strong> — 詳細を見る</summary>
-          <div class="chips"><span class="chip">Boyaki <strong id="voice-boyaki">0</strong></span><span class="chip">Validations <strong id="voice-validations">0</strong></span><span class="chip">Resolved / Improved <strong id="voice-resolved">0</strong></span></div>
-          <p class="hint">本人に帰属するcanonical evidenceだけを数えます。取り下げ済みBOYAKI・コメント・いいね・再読込は実績に加算しません。</p>
-          <div id="voice-history" class="stack"></div>
+        <details id="voice-status" class="participation-panel" open>
+          <summary><strong>Voice Status</strong> — Light → Mid → Heavy</summary>
+          <div class="chips">
+            <span class="chip">Useful Inputs</span>
+            <span class="chip">Verified Validations</span>
+            <span class="chip">Resolved Cases</span>
+          </div>
+          <p class="hint">Useful Inputs：Caseを前進させる有効情報。Verified Validations：他者Solutionの実環境検証。Resolved Cases：Voiceとして有意に関与し、解決まで到達したCase。</p>
+          <div id="voice-history" class="stack" hidden></div>
         </details>
-        <details id="maker-status" class="participation-panel">
-          <summary><strong>Maker Status</strong> — 詳細を見る</summary>
-          <div class="chips"><span class="chip">Solutions <strong id="maker-solutions">0</strong></span><span class="chip">Releases <strong id="maker-releases">0</strong></span><span class="chip">Validations <strong id="maker-validations">0</strong></span><span class="chip">Outcomes <strong id="maker-outcomes">0</strong></span></div>
-          <p class="hint">提案しただけではSolutionsに数えません。明示的なSolution責任・Release・Validation・Outcomeのcanonical evidenceのみ対象です。</p>
-          <div id="maker-history" class="stack"></div>
+        <details id="maker-status" class="participation-panel" open>
+          <summary><strong>Maker Status</strong> — Light → Mid → Heavy</summary>
+          <div class="chips">
+            <span class="chip">Applied Contributions</span>
+            <span class="chip">Resolved Cases</span>
+            <span class="chip">Proven Reuse</span>
+          </div>
+          <p class="hint">Applied Contributions：Solutionに採用された具体的な提案・修正。Resolved Cases：Maker contributionが実問題の解決につながったCase。Proven Reuse：同じSolutionが独立した複数Caseで解決を生んだ実績。</p>
+          <div id="maker-history" class="stack" hidden></div>
         </details>
       </div>
     </section>
