@@ -131,10 +131,13 @@
     </section>
 
     <section class="card">
-      <p class="eyebrow">History / Contributions</p>
-      <h2>最近の活動</h2>
-      <p class="hint">Tester / Contributorなど過去の事実は履歴として残せますが、Voice / Makerと並ぶ恒久ステータスにはしません。</p>
-      <div id="recent-history" class="stack"></div>
+      <p class="eyebrow">Status Details</p>
+      <h2>ステータスの加算根拠</h2>
+      <p class="hint">各Statusが増えたときに、「どのCase / Solutionで、何が根拠になって加算されたか」を確認する場所です。単なる投稿数や最近の活動ログはここには混ぜません。</p>
+      <div class="participation-panel">
+        <p class="hint">現在はステータス項目のみ実装中です。加算ロジックを実装した後、Statusに紐づく詳細根拠だけをここへ表示します。</p>
+      </div>
+      <div id="recent-history" class="stack" hidden></div>
     </section>
     </div>
   </main>
