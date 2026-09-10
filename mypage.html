@@ -105,31 +105,29 @@
     <section class="card">
       <p class="eyebrow">Contribution Status · Early Access</p>
       <h2>Voice / Maker</h2>
-      <p class="hint">VoiceとMakerは排他的な役割ではありません。同じ人が両方の実績を持てます。カウンターは活動量ではなく、BOYAKIが証拠を確認できたContributionをCase単位で集計します。</p>
-      <div id="contribution-status-state" class="hint" role="status" aria-live="polite">Verified contributionを読み込み中…</div>
+      <p class="hint">現在はステータス項目の定義のみです。自動検知・カウンター加算ロジックはまだ実装していません。</p>
       <div class="stack">
         <details id="voice-status" class="participation-panel" open>
           <summary><strong>Voice Status</strong> — Light → Mid → Heavy</summary>
           <div class="chips">
-            <span class="chip">Useful Inputs <strong id="voice-useful-inputs">0</strong></span>
-            <span class="chip">Verified Validations <strong id="voice-verified-validations">0</strong></span>
-            <span class="chip">Resolved Cases <strong id="voice-resolved-cases">0</strong></span>
+            <span class="chip">Useful Inputs</span>
+            <span class="chip">Verified Validations</span>
+            <span class="chip">Resolved Cases</span>
           </div>
-          <p class="hint">Useful InputsはCaseを前進させた有効情報、Verified Validationsは他者Solutionの実環境検証、Resolved CasesはVoiceとして有意に関与し解決まで到達したCaseです。原則として同一Case・同一Actor・同一指標は1回だけ数えます。</p>
-          <div id="voice-history" class="stack"></div>
+          <p class="hint">Useful Inputs：Caseを前進させる有効情報。Verified Validations：他者Solutionの実環境検証。Resolved Cases：Voiceとして有意に関与し、解決まで到達したCase。</p>
+          <div id="voice-history" class="stack" hidden></div>
         </details>
         <details id="maker-status" class="participation-panel" open>
           <summary><strong>Maker Status</strong> — Light → Mid → Heavy</summary>
           <div class="chips">
-            <span class="chip">Applied Contributions <strong id="maker-applied-contributions">0</strong></span>
-            <span class="chip">Resolved Cases <strong id="maker-resolved-cases">0</strong></span>
-            <span class="chip">Proven Reuse <strong id="maker-proven-reuse">0</strong></span>
+            <span class="chip">Applied Contributions</span>
+            <span class="chip">Resolved Cases</span>
+            <span class="chip">Proven Reuse</span>
           </div>
-          <p class="hint">Applied ContributionsはSolutionへ採用された具体的寄与、Resolved CasesはそのMaker contributionが実問題の解決につながったCase、Proven Reuseは同じcanonical Solutionが独立した複数Caseで解決を生んだ実績です。</p>
-          <div id="maker-history" class="stack"></div>
+          <p class="hint">Applied Contributions：Solutionに採用された具体的な提案・修正。Resolved Cases：Maker contributionが実問題の解決につながったCase。Proven Reuse：同じSolutionが独立した複数Caseで解決を生んだ実績。</p>
+          <div id="maker-history" class="stack" hidden></div>
         </details>
       </div>
-      <p class="hint"><strong>Commercial metrics are separate.</strong> 売上・購入者数などの商業実績はContribution Statusへ混ぜず、公開プロフィールにも表示しません。</p>
     </section>
 
     <section class="card">
@@ -143,7 +141,6 @@
   <script type="module" src="./canonical-api.js?v=20260909-live-v1"></script>
   <script type="module" src="./mypage.js?v=20260909-account-canonical-v1"></script>
   <script type="module" src="./canonical-mypage.js?v=20260909-account-canonical-v1"></script>
-  <script type="module" src="./contribution-status-v1.js?v=20260911-ea-v1"></script>
 <script>
 (()=>{window.BOYAKI_AUTH_NAV_V1='1';const loggedIn=!!(localStorage.getItem('boyaki-account-sk')||sessionStorage.getItem('boyaki-account-sk'));if(loggedIn)document.querySelectorAll('[data-auth-register-link]').forEach(x=>x.style.display='none')})();
 </script>
