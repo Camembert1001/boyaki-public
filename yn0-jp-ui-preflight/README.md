@@ -27,6 +27,15 @@ Everything runs locally in the browser. Project strings are not uploaded.
 
 The tool can load the bundled 40-string EN↔JA sample directly into the checker, or you can download `sample.csv`.
 
+## Practical guides
+
+- Japanese UI QA: mechanical checks vs project style rules  
+  https://camembert1001.github.io/boyaki-public/yn0-jp-ui-preflight/japanese-ui-localization-qa.html
+- Godot Japanese localization checklist  
+  https://camembert1001.github.io/boyaki-public/yn0-jp-ui-preflight/godot-japanese-localization-checklist.html
+- Unity Japanese localization checklist  
+  https://camembert1001.github.io/boyaki-public/yn0-jp-ui-preflight/unity-japanese-localization-checklist.html
+
 ## License
 
 The free tool and 40-string sample are available under the MIT terms in `LICENSE.md`.
@@ -41,7 +50,7 @@ https://github.com/Camembert1001/boyaki-public/issues/new?title=JP%20Game%20UI%2
 
 Found a false positive or missing mechanical check? Report it here:
 
-https://github.com/Camembert1001/boyaki-public/issues/new?title=JP%20UI%20Preflight%20feedback&body=Check%20or%20false-positive%3A%20%0AExample%3A%20%0AExpected%3A%20
+https://github.com/Camembert1001/boyaki-public/issues/5
 
 ## Scope
 
