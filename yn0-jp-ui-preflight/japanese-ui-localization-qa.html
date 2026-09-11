@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Japanese UI Localization QA: Mechanical Checks vs Style Rules</title>
+<meta name="description" content="A practical framework for Japanese UI localization QA: placeholders, Japanese spacing, half-width kana, kinsoku line breaks, punctuation consistency, UI width risk, terminology and register.">
+<link rel="canonical" href="https://camembert1001.github.io/boyaki-public/yn0-jp-ui-preflight/japanese-ui-localization-qa.html">
+<meta property="og:title" content="Japanese UI Localization QA: Mechanical Checks vs Style Rules">
+<meta property="og:description" content="A practical framework for separating deterministic Japanese UI preflight checks from project-specific localization style rules.">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://camembert1001.github.io/boyaki-public/yn0-jp-ui-preflight/japanese-ui-localization-qa.html">
+<style>
+:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#0f1115;color:#edf1f6;font-family:system-ui,-apple-system,sans-serif;line-height:1.7}main{max-width:860px;margin:auto;padding:48px 20px 80px}h1{font-size:clamp(36px,6vw,62px);line-height:1.05}h2{margin-top:44px}h3{margin-top:28px}.lead{font-size:20px;color:#bac4d3}.card{background:#171b22;border:1px solid #2c3340;border-radius:14px;padding:18px;margin:18px 0}.good{border-left:4px solid #8be0a5}.warn{border-left:4px solid #ffd284}.human{border-left:4px solid #a8c8ff}code{background:#1d222b;padding:2px 5px;border-radius:5px;color:#c9ddff}a{color:#a8c8ff}.btn{display:inline-block;background:#eef2f7;color:#101318;text-decoration:none;font-weight:750;padding:11px 15px;border-radius:9px;margin:8px 8px 8px 0}.muted{color:#939eaf}table{width:100%;border-collapse:collapse}th,td{padding:10px 8px;border-bottom:1px solid #2a303a;text-align:left;vertical-align:top}@media(max-width:650px){table{font-size:14px}}
+</style>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"TechArticle","headline":"Japanese UI Localization QA: Mechanical Checks vs Style Rules","description":"A practical framework for separating deterministic Japanese UI preflight checks from project-specific localization style rules.","datePublished":"2026-09-11","dateModified":"2026-09-11","inLanguage":"en"}
+</script>
+</head>
+<body><main>
+<p><a href="./">← JP UI Preflight</a></p>
+<h1>Japanese UI Localization QA: Mechanical Checks vs Style Rules</h1>
+<p class="lead">The safest automation for Japanese UI localization is not “judge whether the Japanese is good.” It is to catch narrow, explainable implementation risks automatically and leave semantic quality, tone, and context to human review.</p>
+
+<div class="card good">
+<strong>Short version:</strong> automate what can be defined mechanically; make style-guide rules configurable; never present heuristic output as native-language validation.
+</div>
+
+<h2>1. Three layers of Japanese UI QA</h2>
+<table>
+<tr><th>Layer</th><th>Examples</th><th>Good automation target?</th></tr>
+<tr><td>Mechanical integrity</td><td>Missing keys, empty values, placeholder drift, control characters</td><td>Yes — usually deterministic</td></tr>
+<tr><td>Japanese typography / implementation risk</td><td>Half-width kana, ideographic spaces, explicit kinsoku violations, punctuation mixing, layout pressure</td><td>Yes — usually warning-level</td></tr>
+<tr><td>Language quality and UX</td><td>Natural wording, politeness, terminology, character voice, platform convention, in-context fit</td><td>Not as a hard automated verdict</td></tr>
+</table>
+
+<h2>2. Mechanical checks should be boring and reliable</h2>
+<p>The highest-value checks are often the least glamorous. They catch mistakes that can break runtime behavior or silently ship inconsistent data.</p>
+
+<h3>Placeholder parity</h3>
+<p>If the English source contains <code>{count}</code> and the Japanese target contains <code>{value}</code>, the translation may render incorrectly even if the sentence reads naturally. Placeholder comparison should normalize and compare the token sets rather than judging prose.</p>
+
+<h3>Missing or empty target values</h3>
+<p>A locale key that exists in the source but not in Japanese should be an error. An empty Japanese value is usually an error too. These checks do not require linguistic judgment.</p>
+
+<h3>Suspicious control characters and edge whitespace</h3>
+<p>Leading/trailing whitespace and invisible control characters are easy to introduce through spreadsheets, copy/paste, or vendor exports. Flag them, show the exact key, and let the reviewer approve intentional exceptions.</p>
+
+<h2>3. Japanese-specific checks should usually warn, not auto-fix</h2>
+<p>Japanese typography has real constraints, but project conventions differ. A preflight should expose risk without pretending there is one universal house style.</p>
+
+<h3>Half-width katakana</h3>
+<p>Half-width katakana can be accidental mojibake-like residue or an intentional retro/aesthetic choice. A warning is safer than an automatic normalization.</p>
+
+<h3>Ideographic space (U+3000)</h3>
+<p>Full-width spaces can be intentional, but they are also a common source of alignment and copy/paste surprises in compact UI. Report the exact code point and location.</p>
+
+<h3>Kinsoku around explicit line breaks</h3>
+<p>Japanese line-breaking conventions prohibit certain punctuation, closing brackets, small kana, and related characters from appearing at particular line positions. Rendering engines may handle dynamic wrapping differently, so a simple static checker should focus on <em>explicit</em> line breaks it can actually observe.</p>
+<p>For deeper typographic reference, see the W3C document <a href="https://www.w3.org/TR/jlreq/" target="_blank" rel="noopener">Requirements for Japanese Text Layout (JLREQ)</a>.</p>
+
+<h3>Punctuation-style mixing</h3>
+<p>A single project may legitimately choose ASCII <code>?</code>/<code>!</code> or full-width <code>？</code>/<code>！</code>. The useful signal is not “one is always wrong”; it is that multiple styles appear in the same locale and may deserve a consistency review.</p>
+
+<h2>4. Project-specific Japanese rules belong in a profile</h2>
+<div class="card warn">
+Rules such as colon spacing, preferred long-vowel spellings, terminology dictionaries, or whether buttons use noun form versus dictionary form should usually be configurable rather than hard-coded as universal Japanese errors.
+</div>
+<p>This matters because two good Japanese products can intentionally choose different conventions. A linter becomes more trustworthy when it distinguishes “mechanically suspicious” from “violates this project’s style guide.”</p>
+
+<h2>5. Register consistency is valuable, but heuristic</h2>
+<p>Japanese UI often looks inconsistent when adjacent controls mix forms such as <code>保存</code>, <code>保存する</code>, <code>保存します</code>, and <code>保存してください</code>. That does not mean any one form is universally wrong. Component role and product voice matter.</p>
+<p>A useful tool can group likely button-like keys and show ending/register patterns for review, but should not call the result a translation error without context.</p>
+
+<h2>6. Width risk is not pixel measurement</h2>
+<p>Counting characters is not the same as rendering a real UI. Font, size, fallback glyphs, container width, DPI, and engine behavior all matter. A cheap preflight can estimate East Asian display width and highlight unusually long strings, but final overflow and visual balance still require in-context LQA.</p>
+
+<h2>7. A practical severity model</h2>
+<table>
+<tr><th>Severity</th><th>Use it for</th></tr>
+<tr><td>Error</td><td>Missing target keys, empty required values, placeholder mismatch, malformed data, explicit clearly-invalid line-break patterns</td></tr>
+<tr><td>Warning</td><td>Half-width kana, U+3000 spaces, unusual width, mixed punctuation, suspicious whitespace</td></tr>
+<tr><td>Info</td><td>Source equals target, line-break count changes, terminology/register patterns that require context</td></tr>
+</table>
+
+<h2>8. What automation should not claim</h2>
+<div class="card human">
+A mechanical preflight is not a native reviewer. It cannot reliably decide whether a sentence sounds natural, whether a joke works, whether a character voice is right, or whether a short label is appropriate on the actual screen.
+</div>
+<p>The best workflow is layered: deterministic preflight → project-style checks → in-context linguistic/visual QA.</p>
+
+<h2>Try the free preflight</h2>
+<p><strong>JP UI Preflight</strong> is a small client-side prototype for flat EN/JA JSON locale maps. It checks the mechanical and Japanese-specific risk categories described above without uploading project strings.</p>
+<a class="btn" href="./">Run JP UI Preflight</a>
+<a class="btn" href="sample.csv" download>Download the 40-string sample</a>
+<p class="muted">The tool and free sample are MIT-licensed. A separate 410-string EN↔JA game UI starter kit is being validated at a planned $5 launch price.</p>
+
+<h2>Feedback</h2>
+<p>Found a false positive, a missing deterministic check, or a Japanese rule that should be project-configurable? <a href="https://github.com/Camembert1001/boyaki-public/issues/5">Join the public feedback issue</a>.</p>
+</main></body></html>
