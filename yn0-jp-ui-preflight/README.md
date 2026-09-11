@@ -36,21 +36,29 @@ The tool can load the bundled 40-string EN↔JA sample directly into the checker
 - Unity Japanese localization checklist  
   https://camembert1001.github.io/boyaki-public/yn0-jp-ui-preflight/unity-japanese-localization-checklist.html
 
-## License
-
-The free tool and 40-string sample are available under the MIT terms in `LICENSE.md`.
-
 ## Paid companion being validated
 
 **JP Game UI Kit** expands the starter set to 410 EN↔JA game UI strings and adds Godot / Unity-ready CSVs, Japanese UI style guidance, engine import notes, and a release checklist. Planned launch price: **$5**.
 
-If that would be useful, signal interest here:
+Product page:
+https://camembert1001.github.io/boyaki-public/yn0-jp-ui-preflight/jp-game-ui-kit.html
 
+If that would be useful, signal interest here:
 https://github.com/Camembert1001/boyaki-public/issues/new?title=JP%20Game%20UI%20Kit%20interest&body=I%27m%20interested%20in%20the%20full%20410-string%20JP%20Game%20UI%20Kit.
 
-Found a false positive or missing mechanical check? Report it here:
+## Feedback
 
+Found a false positive or missing mechanical check?
 https://github.com/Camembert1001/boyaki-public/issues/5
+
+## License
+
+The free tool and 40-string sample are available under the MIT terms in `LICENSE.md`.
+
+## Discovery
+
+Sitemap:
+https://camembert1001.github.io/boyaki-public/yn0-jp-ui-preflight/sitemap.xml
 
 ## Scope
 
