@@ -4,6 +4,12 @@ Free, offline Japanese game UI preflight for indie developers.
 
 **Public tool:** https://camembert1001.github.io/boyaki-public/yn0-jp-ui-preflight/
 
+## Why it exists
+
+Japanese game UI can be mechanically valid while still shipping with avoidable implementation risks: placeholder drift, kinsoku line-break problems, half-width kana, ideographic spaces, inconsistent punctuation, and layout pressure.
+
+JP UI Preflight catches those deterministic / heuristic risks before in-game linguistic and visual LQA.
+
 ## Checks
 
 - missing / empty Japanese values
@@ -15,20 +21,30 @@ Free, offline Japanese game UI preflight for indie developers.
 - approximate display-width risk
 - mixed punctuation styles
 
-The checker runs locally in the browser. Project strings are not uploaded.
+Everything runs locally in the browser. Project strings are not uploaded.
 
-## Free sample
+## Try the real sample
 
-The same directory contains `sample.csv` with 40 common EN↔JA game UI strings.
+The tool can load the bundled 40-string EN↔JA sample directly into the checker, or you can download `sample.csv`.
+
+## License
+
+The free tool and 40-string sample are available under the MIT terms in `LICENSE.md`.
 
 ## Paid companion being validated
 
-**JP Game UI Kit** expands the starter set to 410 EN↔JA UI strings and adds Godot / Unity-ready CSVs, Japanese UI style guidance, engine notes, and a release checklist. Planned launch price: **$5**.
+**JP Game UI Kit** expands the starter set to 410 EN↔JA game UI strings and adds Godot / Unity-ready CSVs, Japanese UI style guidance, engine import notes, and a release checklist. Planned launch price: **$5**.
 
-If that would be useful, open an interest issue:
+If that would be useful, signal interest here:
 
 https://github.com/Camembert1001/boyaki-public/issues/new?title=JP%20Game%20UI%20Kit%20interest&body=I%27m%20interested%20in%20the%20full%20410-string%20JP%20Game%20UI%20Kit.
+
+Found a false positive or missing mechanical check? Report it here:
+
+https://github.com/Camembert1001/boyaki-public/issues/new?title=JP%20UI%20Preflight%20feedback&body=Check%20or%20false-positive%3A%20%0AExample%3A%20%0AExpected%3A%20
 
 ## Scope
 
 This is AI-assisted production tooling, not professional human localization. Heuristics can produce false positives; run in-context linguistic and visual LQA before release.
+
+Keywords: Japanese game localization, Japanese UI, gamedev localization QA, Godot localization, Unity Localization, kinsoku, Japanese typography.
