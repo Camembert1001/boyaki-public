@@ -1,0 +1,41 @@
+key,category,context,en,ja
+continue,navigation,Main menu: resume current game,Continue,つづきから
+new_game,navigation,Main menu: start a new game,New Game,はじめから
+settings,navigation,Main menu or pause menu,Settings,設定
+save_game,navigation,Pause/menu: save progress,Save Game,セーブ
+load_game,navigation,Main menu: load save,Load Game,ロード
+back,navigation,Generic navigation,Back,戻る
+confirm,navigation,Generic confirmation,Confirm,決定
+cancel,navigation,Generic cancellation,Cancel,キャンセル
+saving,save_load,Saving progress,Saving...,セーブ中…
+loading,save_load,Loading data,Loading...,ロード中…
+save_complete,save_load,Save success,Game saved.,セーブしました。
+load_failed,save_load,Load failure,Failed to load.,ロードに失敗しました。
+overwrite_save,save_load,Confirm overwrite,Overwrite this save?,このセーブデータを上書きしますか？
+master_volume,settings_audio,Audio setting,Master Volume,全体音量
+music_volume,settings_audio,Audio setting,Music Volume,BGM音量
+subtitles,settings_audio,Subtitle toggle,Subtitles,字幕
+resolution,settings_video,Video setting,Resolution,解像度
+fullscreen,settings_video,Video mode,Fullscreen,フルスクリーン
+brightness,settings_video,Video setting,Brightness,明るさ
+controls,controls,Settings category,Controls,操作
+key_bindings,controls,Control setting,Key Bindings,キー設定
+jump,controls,Action label,Jump,ジャンプ
+interact,controls,Action label,Interact,調べる
+yes,system_confirmations,Binary choice,Yes,はい
+no,system_confirmations,Binary choice,No,いいえ
+are_you_sure,system_confirmations,Destructive confirmation,Are you sure?,よろしいですか？
+connection_failed,network_online,Network error,Connection failed.,接続に失敗しました。
+maintenance,network_online,Server status,Under Maintenance,メンテナンス中
+multiplayer,multiplayer,Mode label,Multiplayer,マルチプレイ
+join_game,multiplayer,Lobby action,Join Game,ゲームに参加
+inventory,inventory_shop,Inventory title,Inventory,インベントリ
+buy,inventory_shop,Shop action,Buy,購入
+not_enough_money,inventory_shop,Shop error,Not enough currency.,所持金が足りません。
+level_up,combat_progression,Progression event,Level Up!,レベルアップ！
+victory,combat_progression,Combat result,Victory!,勝利！
+quest_complete,quest_tutorial,Quest event,Quest Complete!,クエスト達成！
+accessibility,accessibility_language,Settings category,Accessibility,アクセシビリティ
+text_size,accessibility_language,Accessibility setting,Text Size,文字サイズ
+sign_in,account_profile,Account action,Sign In,ログイン
+achievement_unlocked,account_profile,Achievement event,Achievement Unlocked!,実績を解除しました！
