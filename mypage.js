@@ -22,11 +22,7 @@ function legacyIdentity(){
 }
 function signed(template,id){return finalizeEvent({...template,created_at:template.created_at??unix()},id.sk)}
 async function publishExact(ev){const out=await Promise.allSettled(pool.publish(RELAYS,ev));if(!out.some(x=>x.status==='fulfilled'))throw new Error('relay publish failed');return ev}
-function setText(id,value){const node=$(id);if(node)node.textContent=String(value)}
-function historyRow(label,ev){const p=document.createElement('p');p.className='hint';const text=(ev.content||'').trim();p.textContent=`${label} · ${fmt(ev.created_at)}${text?` · ${text.slice(0,120)}`:''}`;return p}
-function canonicalCounterTag(ev,name){return tag(ev,'boyaki_counter')===name||tag(ev,'counter')===name}
 function deletionTargets(ev){return (ev.tags||[]).filter(t=>t[0]==='e').map(t=>t[1])}
-function allTags(ev,k){return (ev.tags||[]).filter(t=>t[0]===k).map(t=>t[1]).filter(Boolean)}
 function isLinkEvent(ev){return ev?.kind===LINK_KIND&&tag(ev,'schema')===LINK_SCHEMA&&tag(ev,'account')&&tag(ev,'legacy')}
 async function publishLinkPair(account,legacy){
   const common=[['app','boyaki-web'],['schema',LINK_SCHEMA],['account',account.pk],['legacy',legacy.pk]];
@@ -87,26 +83,15 @@ function renderOwnPosts(raw,knownDeletionIds,accountIdentity,legacyLocal){
   }
 }
 
-async function loadEvidence(identity){
+async function loadOwnedPosts(identity){
   const since=unix()-60*60*24*365;
   const linked=await linkedLegacyPubkeys(identity.pk);
   const authors=[identity.pk,...linked];
-  const rows=await pool.querySync(RELAYS,{authors,kinds:[1,5,7,1984,30023],since,limit:1000});
+  const rows=await pool.querySync(RELAYS,{authors,kinds:[1,5],since,limit:1000});
   const deduped=[...new Map(rows.map(x=>[x.id,x])).values()].sort((a,b)=>b.created_at-a.created_at);
   const deletions=deduped.filter(e=>e.kind===5&&authors.includes(e.pubkey));
   const deletedIds=new Set(deletions.flatMap(deletionTargets));
   const raw=deduped.filter(e=>e.kind===1&&tag(e,'t')==='boyaki-raw');
-  const activeRaw=raw.filter(e=>!deletedIds.has(e.id));
-  const voiceValidations=deduped.filter(e=>canonicalCounterTag(e,'voice-validation'));
-  const voiceResolved=deduped.filter(e=>canonicalCounterTag(e,'voice-resolved')||canonicalCounterTag(e,'voice-improved'));
-  const makerSolutions=deduped.filter(e=>canonicalCounterTag(e,'maker-solution'));
-  const makerReleases=deduped.filter(e=>canonicalCounterTag(e,'maker-release'));
-  const makerValidations=deduped.filter(e=>canonicalCounterTag(e,'maker-validation'));
-  const makerOutcomes=deduped.filter(e=>canonicalCounterTag(e,'maker-outcome'));
-  setText('#voice-boyaki',activeRaw.length);setText('#voice-validations',voiceValidations.length);setText('#voice-resolved',voiceResolved.length);setText('#maker-solutions',makerSolutions.length);setText('#maker-releases',makerReleases.length);setText('#maker-validations',makerValidations.length);setText('#maker-outcomes',makerOutcomes.length);
-  const voiceHistory=$('#voice-history');[...activeRaw,...voiceValidations,...voiceResolved].sort((a,b)=>b.created_at-a.created_at).slice(0,8).forEach(ev=>voiceHistory.append(historyRow('Voice evidence',ev)));if(!voiceHistory.children.length)voiceHistory.innerHTML='<p class="hint">まだVoiceのcanonical evidenceはありません。</p>';
-  const makerHistory=$('#maker-history');[...makerSolutions,...makerReleases,...makerValidations,...makerOutcomes].sort((a,b)=>b.created_at-a.created_at).slice(0,8).forEach(ev=>makerHistory.append(historyRow('Maker evidence',ev)));if(!makerHistory.children.length)makerHistory.innerHTML='<p class="hint">まだMakerのcanonical evidenceはありません。</p>';
-  const recent=$('#recent-history');deduped.slice(0,12).forEach(ev=>recent.append(historyRow(tag(ev,'role')||tag(ev,'t')||`kind-${ev.kind}`,ev)));if(!recent.children.length)recent.innerHTML='<p class="hint">このブラウザIDに紐づく最近の活動はありません。</p>';
   renderOwnPosts(raw,deletedIds,identity,legacyIdentity());
 }
 
@@ -251,6 +236,6 @@ async function main(){
   }
   const profile=await loadProfile(identity);
   if(profile.displayName){$('#profile-name').textContent=profile.displayName;$('#profile-about').textContent=profile.about||'';$('#profile-state').textContent='BOYAKIアカウントにログイン中です。';$('#profile-actions').innerHTML='<a id="profile-edit-link" class="button-link" href="./profile-edit.html?v=20260904-v2">プロフィールを編集</a><button id="logout-button" type="button">ログアウト</button>';setTimeout(()=>{const b=$('#logout-button');if(b)b.addEventListener('click',()=>{localStorage.removeItem('boyaki-account-sk');sessionStorage.removeItem('boyaki-account-sk');location.reload()})},0)}else{$('#profile-name').textContent='プロフィール未登録';$('#profile-state').textContent='アカウント鍵はありますが、プロフィールを取得できませんでした。';$('#profile-actions').innerHTML='<a class="button-link" href="./register.html">プロフィールを作る</a>'}
-  try{await loadEvidence(identity)}catch{$('#recent-history').innerHTML='<p class="hint">活動データを取得できませんでした。通信状態を確認して再読み込みしてください。</p>';$('#own-posts').innerHTML='<p class="hint">投稿管理データを取得できませんでした。</p>'}
+  try{await loadOwnedPosts(identity)}catch(err){console.error('owned posts load failed',err);$('#own-posts').innerHTML='<p class="hint">投稿管理データを取得できませんでした。</p>'}
 }
 main();
