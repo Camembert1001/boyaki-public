@@ -8,6 +8,11 @@
   <meta name="robots" content="noindex,follow" />
   <link rel="stylesheet" href="./styles.css" />
   <title>Maker Space — BOYAKI</title>
+  <style>
+    .solution-room-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:16px}
+    .solution-room-button{min-height:72px;font-size:1.05rem;font-weight:700}
+    @media(max-width:640px){.solution-room-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.solution-room-button{min-height:64px}}
+  </style>
 </head>
 <body>
   <header class="shell topbar">
@@ -27,109 +32,51 @@
       <p class="lead">BOYAKIスレッドで「解く価値がある」と見えた問題を、Maker Space内のSolution RoomでVoiceとMakerが一緒に詰めます。ここで積み上がるやり取りがSolution Logになり、後のContribution Historyの根拠になります。</p>
       <div class="principles-grid">
         <div><strong>Thread → Room</strong><span>探索段階の会話から、解決を具体化する段階へ切り替える。</span></div>
-        <div><strong>Voice + Maker</strong><span>困りごとの文脈と、解決を作る力を同じCaseに集める。</span></div>
-        <div><strong>Solution Log</strong><span>試したこと、失敗、修正、検証を時系列で残す。</span></div>
-        <div><strong>Case → History</strong><span>完成したCaseをMaker / Voice Contribution Historyの根拠に使う。</span></div>
+        <div><strong>Voice + Maker</strong><span>困りごとの文脈と、解決を作る力を同じRoomに集める。</span></div>
+        <div><strong>Solution Log</strong><span>Room内のやり取りを時系列で残し、後から復元できるようにする。</span></div>
+        <div><strong>Case → History</strong><span>残したい成果をCaseとしてContribution Historyから参照する。</span></div>
       </div>
-      <p class="hint">このステージング版では既存のSolution CandidateをSolution Roomとして扱い、既存の公開活動ログをSolution Logとして継続利用します。BOYAKIスレッドからのRoom新規作成・招待フローは次の実装対象です。</p>
     </section>
 
-    <section class="section-head">
-      <div>
-        <p class="eyebrow">Solution Rooms</p>
-        <h2>Solution Room</h2>
-        <p class="hint">1 Room = 1 Solution Case。中での作業履歴がそのままCaseの証拠になります。</p>
+    <section class="card">
+      <p class="eyebrow">Solution Rooms</p>
+      <h2>Solution Room</h2>
+      <p class="hint">入室するRoomを選びます。Roomを開くと、そのRoomのチャットとSolution Logを復元して続きから話せる形にしていきます。</p>
+      <div class="solution-room-grid" aria-label="Solution Rooms">
+        <button class="solution-room-button" type="button" data-room="1">Room 1</button>
+        <button class="solution-room-button" type="button" data-room="2">Room 2</button>
+        <button class="solution-room-button" type="button" data-room="3">Room 3</button>
+        <button class="solution-room-button" type="button" data-room="4">Room 4</button>
+        <button class="solution-room-button" type="button" data-room="5">Room 5</button>
+        <button class="solution-room-button" type="button" data-room="6">Room 6</button>
+        <button class="solution-room-button" type="button" data-room="7">Room 7</button>
+        <button class="solution-room-button" type="button" data-room="8">Room 8</button>
+        <button class="solution-room-button" type="button" data-room="9">Room 9</button>
       </div>
-      <button id="maker-refresh" type="button">更新</button>
-    </section>
-    <div id="candidate-list" class="stack"></div>
-
-    <section id="join-panel" class="card participation-panel" hidden>
-      <p class="eyebrow">Join Solution Room</p>
-      <h2 id="join-title">Solution Roomに参加</h2>
-      <p class="hint">参加情報はCaseに残ります。Maker / Voiceのどちらとして関わったかを選び、必要なら一言だけ役割を補足してください。</p>
-      <form id="join-form" class="maker-form">
-        <label>役割 / Role
-          <select id="join-role" required>
-            <option value="maker">Maker — 解決を作る</option>
-            <option value="voice">Voice — 課題・検証・フィードバックを提供する</option>
-            <option value="contributor">Contributor — 調査・レビューなどで補助する</option>
-          </select>
-        </label>
-        <label>公開表示名 / Public display name (optional)
-          <input id="join-name" maxlength="60" autocomplete="off" placeholder="例: Nicolas" />
-        </label>
-        <label>このCaseでできること / What can you help with? (optional)
-          <textarea id="join-note" maxlength="400" rows="4" placeholder="例: 実機で再現確認できます / 実装を担当します"></textarea>
-        </label>
-        <div class="actions">
-          <button type="submit">Solution Roomに参加</button>
-          <button id="join-cancel" type="button">閉じる</button>
-        </div>
-      </form>
-      <div id="join-status" class="hint" role="status" aria-live="polite"></div>
-    </section>
-
-    <section id="activity-panel" class="card participation-panel" hidden>
-      <p class="eyebrow">Solution Log</p>
-      <h2 id="activity-title">Solution Logを追加</h2>
-      <p class="hint">後からCaseを読んだ人が「どう解決に近づいたか」を追えるように、行動・発見・失敗・検証を残します。</p>
-      <form id="activity-form" class="maker-form">
-        <label>ログ種別 / Log type
-          <select id="activity-type" required>
-            <option value="research">Problem / Research</option>
-            <option value="build-progress">Build / Implementation</option>
-            <option value="test-result">Test / Validation</option>
-            <option value="review">Voice feedback / Review</option>
-            <option value="blocked">Blocked / Limitation</option>
-          </select>
-        </label>
-        <label>公開表示名 / Public display name (optional)
-          <input id="activity-name" maxlength="60" autocomplete="off" />
-        </label>
-        <label>Solution Log
-          <textarea id="activity-note" maxlength="700" rows="5" required placeholder="何を試したか / 何が分かったか / 何が変わったか / 次に何をするか"></textarea>
-        </label>
-        <div class="actions">
-          <button type="submit">Solution Logに追加</button>
-          <button id="activity-cancel" type="button">閉じる</button>
-        </div>
-      </form>
-      <div id="activity-status" class="hint" role="status" aria-live="polite"></div>
+      <div id="room-status" class="hint" role="status" aria-live="polite"></div>
     </section>
 
     <section class="card identity-card">
-      <p class="eyebrow">Case identity</p>
+      <p class="eyebrow">Room identity</p>
       <h2>この活動を誰の履歴として残すか</h2>
-      <p class="hint">BOYAKI Accountでログイン済みならAccount IDで署名します。未ログイン時だけ、このブラウザの旧仮IDをフォールバックとして使います。Contribution Historyへ接続する本流はAccount IDです。</p>
+      <p class="hint">BOYAKI AccountをSolution Roomの本人identityとして使います。Contribution Historyへ接続する本流も同じAccount IDです。</p>
       <code id="device-id">loading…</code>
     </section>
   </main>
 
-  <template id="candidate-template">
-    <article class="card candidate-card">
-      <div class="candidate-topline">
-        <div><p class="eyebrow candidate-status"></p><h2 class="candidate-title"></h2></div>
-        <span class="candidate-id chip"></span>
-      </div>
-      <p class="candidate-summary"></p>
-      <div class="candidate-block"><strong>Current solution</strong><p class="candidate-current"></p></div>
-      <div class="candidate-block verified"><strong>Verified / 確認できたこと</strong><p class="candidate-verified"></p></div>
-      <div class="candidate-block limitation"><strong>Open questions / 未解決</strong><p class="candidate-limitations"></p></div>
-      <div class="candidate-block"><strong>Help wanted</strong><div class="candidate-help chips"></div></div>
-      <div class="candidate-stats"></div>
-      <div class="actions candidate-actions">
-        <button data-action="join" type="button">Roomに参加</button>
-        <button data-action="activity" type="button">Solution Logを追加</button>
-        <a data-action="source" class="button-link" target="_blank" rel="noopener noreferrer">Sourceを見る</a>
-      </div>
-      <div class="candidate-people"></div>
-      <div class="candidate-activity"></div>
-    </article>
-  </template>
-
-  <script src="./legacy-write-freeze.js?v=20260909-canonical-cutover-v1"></script>
-  <script type="module" src="./maker-space.js?v=20260914-solution-room-v1"></script>
+  <script type="module">
+    import { getPublicKey } from 'https://esm.sh/nostr-tools@2.17.0';
+    const fromHex=hex=>new Uint8Array((hex.match(/.{1,2}/g)||[]).map(b=>parseInt(b,16)));
+    const accountHex=localStorage.getItem('boyaki-account-sk')||sessionStorage.getItem('boyaki-account-sk');
+    const device=document.querySelector('#device-id');
+    if(accountHex){
+      try{const pk=getPublicKey(fromHex(accountHex));device.textContent=`${pk.slice(0,8)}…${pk.slice(-6)}`}catch{device.textContent='invalid account'}
+    }else{device.textContent='not logged in'}
+    document.querySelectorAll('[data-room]').forEach(button=>button.addEventListener('click',()=>{
+      const room=button.dataset.room;
+      document.querySelector('#room-status').textContent=`Room ${room} を選択しました。チャット復元・入室機能は次の実装で接続します。`;
+    }));
+  </script>
 <script>
 (()=>{window.BOYAKI_AUTH_NAV_V1='1';const loggedIn=!!(localStorage.getItem('boyaki-account-sk')||sessionStorage.getItem('boyaki-account-sk'));if(loggedIn)document.querySelectorAll('[data-auth-register-link]').forEach(x=>x.style.display='none')})();
 </script>
