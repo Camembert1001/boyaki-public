@@ -41,7 +41,7 @@
     <section class="card">
       <p class="eyebrow">Solution Rooms</p>
       <h2>Solution Room</h2>
-      <p class="hint">入室するRoomを選びます。Roomを開くと、そのRoomのチャットとSolution Logを復元して続きから話せる形にしていきます。</p>
+      <p class="hint">入室するRoomを選びます。Roomを開くと、そのRoomのチャットとSolution Logを復元して続きから話せます。</p>
       <div class="solution-room-grid" aria-label="Solution Rooms">
         <button class="solution-room-button" type="button" data-room="1">Room 1</button>
         <button class="solution-room-button" type="button" data-room="2">Room 2</button>
@@ -74,7 +74,8 @@
     }else{device.textContent='not logged in'}
     document.querySelectorAll('[data-room]').forEach(button=>button.addEventListener('click',()=>{
       const room=button.dataset.room;
-      document.querySelector('#room-status').textContent=`Room ${room} を選択しました。チャット復元・入室機能は次の実装で接続します。`;
+      document.querySelector('#room-status').textContent=`Room ${room} に入室します…`;
+      location.href=`./solution-room.html?room=${encodeURIComponent(room)}`;
     }));
   </script>
 <script>
