@@ -39,6 +39,7 @@ function parseContent(ev){
 function candidateEvents(id){return events.filter(e=>tag(e,'candidate_id')===id)}
 function participantEvents(id){return candidateEvents(id).filter(e=>tag(e,'t')==='boyaki-candidate-participation')}
 function activityEvents(id){return candidateEvents(id).filter(e=>tag(e,'t')==='boyaki-candidate-activity')}
+function messageEvents(id){return candidateEvents(id).filter(e=>tag(e,'t')==='boyaki-solution-room-message')}
 function latestParticipants(id){
   const map=new Map();
   for(const ev of participantEvents(id).sort((a,b)=>a.created_at-b.created_at||String(a.id||'').localeCompare(String(b.id||'')))){
@@ -92,7 +93,7 @@ async function loadRegistry(){
 async function loadEvents(){
   const since=unix()-60*60*24*365;
   const [work,deletions]=await Promise.all([
-    pool.querySync(RELAYS,{kinds:[1],'#t':['boyaki-candidate-participation','boyaki-candidate-activity'],since,limit:1000}),
+    pool.querySync(RELAYS,{kinds:[1],'#t':['boyaki-candidate-participation','boyaki-candidate-activity','boyaki-solution-room-message'],since,limit:1500}),
     pool.querySync(RELAYS,{kinds:[5],since,limit:1000})
   ]);
   const deletedByOwner=new Map();
@@ -151,6 +152,41 @@ function renderActivity(card,candidate){
   }
   wrap.append(list);
 }
+function renderChat(card,candidate){
+  const wrap=document.createElement('section');
+  wrap.className='candidate-block solution-room-chat';
+  wrap.innerHTML='<strong>Room chat / ルームチャット</strong><p class="hint">このSolution Roomについて公開で会話できます。秘密情報・認証情報・個人情報は書かないでください。</p>';
+
+  const xs=messageEvents(candidate.id).sort((a,b)=>a.created_at-b.created_at||String(a.id||'').localeCompare(String(b.id||'')));
+  const list=document.createElement('div'); list.className='activity-list';
+  if(!xs.length){list.innerHTML='<p class="hint">まだ会話はありません。最初のメッセージを送れます。</p>'}
+  for(const ev of xs){
+    const c=parseContent(ev),message=String(c.message||c.note||'').trim();
+    if(!message)continue;
+    const name=c.displayName?.trim()||short(ev.pubkey),mine=ev.pubkey===identity.pk,item=document.createElement('div');
+    item.className='activity-item';
+    const roles=participantRoles(candidate.id,ev.pubkey),roleBadges=roles.length?roles.map(r=>` <span class="chip">${escapeHtml(r)}</span>`).join(''):'';
+    item.innerHTML=`<div class="activity-meta"><strong>${escapeHtml(name)}</strong>${roleBadges} · ${escapeHtml(fmt(ev.created_at))}${mine?' · you':''}</div><p>${escapeHtml(message)}</p>`;
+    if(mine){const b=document.createElement('button');b.type='button';b.textContent='取り下げ';b.addEventListener('click',()=>withdraw(ev));item.append(b)}
+    list.append(item);
+  }
+  wrap.append(list);
+
+  const form=document.createElement('form'); form.className='maker-form';
+  form.innerHTML=`<label>公開表示名 / Public display name (optional)<input name="displayName" maxlength="60" autocomplete="off" value="${escapeHtml(localStorage.getItem('boyaki-maker-display-name')||'')}"></label><label>メッセージ / Message<textarea name="message" maxlength="500" rows="3" required placeholder="このSolution Roomについて話す"></textarea></label><div class="actions"><button type="submit">送信 / Send</button></div><div class="hint" data-chat-status role="status" aria-live="polite"></div>`;
+  form.addEventListener('submit',async e=>{
+    e.preventDefault();
+    const button=e.submitter,status=$('[data-chat-status]',form),displayName=form.elements.displayName.value.trim(),message=form.elements.message.value.trim();
+    if(!message){status.textContent='メッセージを書いてください。';return}
+    button.disabled=true; status.textContent='送信しています…';
+    try{
+      await publish({kind:1,content:JSON.stringify({displayName,message}),tags:[['t','boyaki-solution-room-message'],['candidate_id',candidate.id],['app','boyaki-web'],['schema','solution-room-message-v1']]});
+      localStorage.setItem('boyaki-maker-display-name',displayName); form.elements.message.value=''; status.textContent='送信しました。'; await refresh();
+    }catch{status.textContent='送信できませんでした。少し後で再試行してください。'}finally{button.disabled=false}
+  });
+  wrap.append(form);
+  card.append(wrap);
+}
 function renderCandidate(candidate){
   const card=$('#candidate-template').content.firstElementChild.cloneNode(true);
   $('.candidate-status',card).textContent=`${candidate.status_label_ja} / ${candidate.status_label_en}`;
@@ -180,7 +216,7 @@ function renderCandidate(candidate){
   if(candidate.upstream?.follow_up_pr){const a=document.createElement('a');a.className='button-link';a.target='_blank';a.rel='noopener noreferrer';a.href=candidate.upstream.follow_up_pr;a.textContent='follow-up PR #58';actions.append(a)}
   $('[data-action="join"]',card).addEventListener('click',()=>openJoin(candidate));
   $('[data-action="activity"]',card).addEventListener('click',()=>openActivity(candidate));
-  renderParticipants(card,candidate); renderActivity(card,candidate); return card;
+  renderParticipants(card,candidate); renderActivity(card,candidate); renderChat(card,candidate); return card;
 }
 function render(){
   const list=$('#candidate-list'); list.innerHTML='';
