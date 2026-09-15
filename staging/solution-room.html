@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="./styles.css" />
   <title>Solution Room — BOYAKI</title>
   <style>
-    .room-shell{padding-bottom:60px}.room-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.room-back{display:inline-flex;margin:10px 0 14px}.room-log{display:grid;gap:8px;margin:14px 0}.room-message{background:#f9fafb;border:1px solid #e5e7eb;border-radius:14px;padding:12px}.room-message.mine{border-left:4px solid #111827}.room-meta{font-size:12px;color:#6b7280;margin-bottom:6px}.room-message p{margin:0;white-space:pre-wrap;line-height:1.55}.room-compose{display:grid;gap:10px;margin-top:14px}.room-compose textarea{width:100%;border:1px solid #d1d5db;border-radius:12px;padding:12px;font:inherit;resize:vertical}.room-actions{display:flex;gap:8px;align-items:center}.room-status{min-height:1.4em}.room-empty{padding:18px 0}
+    .room-shell{padding-bottom:60px}.room-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.room-back{display:inline-flex;margin:10px 0 14px}.room-log{display:grid;gap:8px;margin:14px 0}.room-message{background:#f9fafb;border:1px solid #e5e7eb;border-radius:14px;padding:12px}.room-message.mine{border-left:4px solid #111827}.room-meta{font-size:12px;color:#6b7280;margin-bottom:6px}.room-message p{margin:0;white-space:pre-wrap;line-height:1.55}.room-compose{display:grid;gap:10px;margin-top:14px}.room-compose textarea{width:100%;border:1px solid #d1d5db;border-radius:12px;padding:12px;font:inherit;resize:vertical}.room-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.room-status{min-height:1.4em}.room-empty{padding:18px 0}
   </style>
 </head>
 <body>
@@ -46,6 +46,8 @@
         <div class="room-actions">
           <button type="submit">送信</button>
           <button type="button" id="room-refresh">更新</button>
+          <button type="button" id="room-report">ルーム/メッセージを通報する</button>
+          <button type="button" id="solution-case-create">ソリューションケース作成</button>
         </div>
         <div id="room-status" class="hint room-status" role="status" aria-live="polite"></div>
       </form>
@@ -59,6 +61,6 @@
     </section>
   </main>
 
-  <script type="module" src="./solution-room.js?v=20260915-room-entry-v1"></script>
+  <script type="module" src="./solution-room.js?v=20260915-room-controls-v2"></script>
 </body>
 </html>
