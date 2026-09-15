@@ -26,6 +26,11 @@ if(!validRoom){
 
 $('#room-identity').textContent=identity?`${identity.pk.slice(0,8)}…${identity.pk.slice(-6)}`:'not logged in';
 const submit=$('#room-form button[type="submit"]');
+const actions=$('.room-actions');
+if(actions){
+  if(!$('#room-report')){const b=document.createElement('button');b.type='button';b.id='room-report';b.textContent='ルーム/メッセージを通報する';actions.append(b)}
+  if(!$('#solution-case-create')){const b=document.createElement('button');b.type='button';b.id='solution-case-create';b.textContent='ソリューションケース作成';actions.append(b)}
+}
 if(!identity){submit.disabled=true;$('#room-status').textContent='送信するにはBOYAKI Accountでログインしてください。'}
 
 function parse(ev){try{return JSON.parse(ev.content||'{}')}catch{return {message:ev.content||''}}}
@@ -71,4 +76,6 @@ $('#room-form').addEventListener('submit',async e=>{
   finally{submit.disabled=false}
 });
 $('#room-refresh').addEventListener('click',()=>load());
+$('#room-report')?.addEventListener('click',()=>{$('#room-status').textContent='通報対象の選択フローは次の実装で接続します。'});
+$('#solution-case-create')?.addEventListener('click',()=>{$('#room-status').textContent='ソリューションケース作成フローは次の実装で接続します。'});
 load();
