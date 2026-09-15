@@ -8,7 +8,7 @@ const room=String(params.get('room')||'').trim();
 const validRoom=/^[1-9]$/.test(room);
 const fromHex=hex=>new Uint8Array((hex.match(/.{1,2}/g)||[]).map(b=>parseInt(b,16)));
 const escapeHtml=(s='')=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const fmt=ts=>new Date(ts*1000).toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
+const fmt=ts=>new Date(ts*1000).toLocaleString('ja-JP',{month:'numeric',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 const accountHex=localStorage.getItem('boyaki-account-sk')||sessionStorage.getItem('boyaki-account-sk');
 let identity=null;
 if(accountHex){try{const sk=fromHex(accountHex);identity={sk,pk:getPublicKey(sk)}}catch{}}
@@ -28,7 +28,6 @@ $('#room-identity').textContent=identity?`${identity.pk.slice(0,8)}…${identity
 const submit=$('#room-form button[type="submit"]');
 if(!identity){submit.disabled=true;$('#room-status').textContent='送信するにはBOYAKI Accountでログインしてください。'}
 
-function tag(ev,key){return (ev.tags||[]).find(t=>t[0]===key)?.[1]||''}
 function parse(ev){try{return JSON.parse(ev.content||'{}')}catch{return {message:ev.content||''}}}
 async function load(){
   if(!validRoom)return;
@@ -50,7 +49,6 @@ async function load(){
       const mine=identity?.pk===ev.pubkey;
       const item=document.createElement('div');item.className=`room-message${mine?' mine':''}`;
       item.innerHTML=`<div class="room-meta">${escapeHtml(data.displayName||`${ev.pubkey.slice(0,8)}…${ev.pubkey.slice(-6)}`)} · ${escapeHtml(fmt(ev.created_at))}${mine?' · you':''}</div><p>${escapeHtml(message)}</p>`;
-      if(mine){const b=document.createElement('button');b.type='button';b.textContent='取り下げ';b.addEventListener('click',()=>withdraw(ev));item.append(b)}
       log.append(item);
     }
   }catch(err){log.innerHTML=`<p class="hint">Solution Logを復元できませんでした。${escapeHtml(err?.message||'')}</p>`}
@@ -62,12 +60,6 @@ async function publishMessage(message){
   const ev=finalizeEvent({kind:1,created_at:Math.floor(Date.now()/1000),content:JSON.stringify({message,displayName:profileName}),tags:[['t','boyaki-solution-room-message'],['room_id',room],['app','boyaki-web'],['schema','solution-room-message-v1']]},identity.sk);
   const out=await Promise.allSettled(pool.publish(RELAYS,ev));
   if(!out.some(x=>x.status==='fulfilled'))throw new Error('relay publish failed');
-}
-async function withdraw(ev){
-  if(!identity||ev.pubkey!==identity.pk)return;
-  const del=finalizeEvent({kind:5,created_at:Math.floor(Date.now()/1000),content:'withdraw BOYAKI Solution Room message',tags:[['e',ev.id],['k',String(ev.kind)],['room_id',room],['app','boyaki-web'],['schema','solution-room-withdraw-v1']]},identity.sk);
-  const out=await Promise.allSettled(pool.publish(RELAYS,del));
-  if(out.some(x=>x.status==='fulfilled'))await load();
 }
 
 $('#room-form').addEventListener('submit',async e=>{
