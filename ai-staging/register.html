@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#111827" />
+  <meta name="description" content="BOYAKI 新規登録 — 匿名参加はそのままに、実績を残したい人向けの仮名プロフィール登録。" />
+  <meta name="robots" content="index,follow" />
+  <link rel="stylesheet" href="./styles.css" />
+  <title>新規登録 — BOYAKI</title>
+</head>
+<body>
+  <header class="shell topbar">
+    <a class="brand" href="./">BOYAKI</a>
+    <nav>
+      <a class="nav-link" href="./">ホーム</a>
+            <a class="nav-link" href="./mypage.html">ログイン / マイページ</a>
+      <a class="nav-link active" data-auth-register-link href="./register.html">新規登録</a>
+    </nav>
+  </header>
+
+  <main class="shell maker-space">
+    <section class="card hero maker-hero">
+      <p class="eyebrow">BOYAKI Account — Phase 1</p>
+      <h1>アカウントを作る</h1>
+      <p class="lead">匿名のままでもBOYAKIは使えます。複数端末でも同じMy Pageを使いたい人は、ここで持続的なBOYAKIアカウントを作れます。</p>
+      <p class="hint"><strong>メール・電話番号・本名は不要です。</strong><br>アカウント鍵を作成し、パスワードで暗号化したログインキーを発行します。そのログインキーとパスワードがあれば、別端末から同じアカウントへログインできます。</p>
+    </section>
+
+    <section class="card participation-panel">
+      <p class="eyebrow">Create account</p>
+      <h2>アカウント登録</h2>
+      <form id="register-form" class="maker-form">
+        <label>表示名 / Display name
+          <input id="register-name" maxlength="40" autocomplete="nickname" placeholder="例: @username / Nicolas" required />
+        </label>
+        <label>主に興味があること / Main interest
+          <select id="register-interest">
+            <option value="both">Voice と Maker の両方</option>
+            <option value="voice">Voice — 困りごと・検証側</option>
+            <option value="maker">Maker — 解決を作る側</option>
+          </select>
+        </label>
+        <label>パスワード / Password
+          <input id="register-password" type="password" minlength="10" autocomplete="new-password" placeholder="10文字以上" required />
+        </label>
+        <label>パスワード確認
+          <input id="register-password-confirm" type="password" minlength="10" autocomplete="new-password" required />
+        </label>
+        <label>ひとこと / About (optional)
+          <textarea id="register-about" maxlength="240" rows="4" placeholder="何に困っているか、何を作れるかなど。個人情報や秘密は書かないでください。"></textarea>
+        </label>
+        <div class="actions">
+          <button type="submit">アカウントを作成する</button>
+        </div>
+      </form>
+      <div id="register-status" class="hint" role="status" aria-live="polite"></div>
+    </section>
+
+    <section class="card identity-card" id="account-result" hidden>
+      <p class="eyebrow">Login key</p>
+      <h2>ログインキーを保存</h2>
+      <p class="hint">この文字列は別端末でログインするときに必要です。パスワードとは別に安全な場所へ保存してください。BOYAKIはこのキーを復元できません。</p>
+      <textarea id="account-login-key" rows="4" readonly></textarea>
+      <div class="actions"><button type="button" id="copy-login-key">ログインキーをコピー</button><a class="button-link" href="./mypage.html">マイページへ</a></div>
+    </section>
+
+    <section class="card identity-card">
+      <p class="eyebrow">Current credential</p>
+      <h2>このブラウザの旧BOYAKI ID</h2>
+      <p class="hint">既存の匿名参加との互換性のため、このブラウザIDは残します。新しいアカウントはこれとは別の持続的identityです。過去browser IDの活動をアカウントへ引き継ぐ機能は次工程です。</p>
+      <code id="device-id">loading…</code>
+      <div class="actions"><a class="button-link" href="./mypage.html">ログイン / マイページを開く</a></div>
+    </section>
+
+    <section class="card">
+      <p class="eyebrow">No lock-in</p>
+      <h2>登録しなくても使える。</h2>
+      <p class="hint">BOYAKIは、ぼやく・見る・参加する入口を登録必須にはしません。プロフィール登録は「活動を自分の実績として残していきたい」と思った人向けの入口です。</p>
+      <div class="actions">
+        <a class="button-link" href="./">ホームを見る</a>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="./register.js?v=20260906-canonical-relay-set-v1"></script>
+<script>
+(()=>{window.BOYAKI_AUTH_NAV_V1='1';const loggedIn=!!(localStorage.getItem('boyaki-account-sk')||sessionStorage.getItem('boyaki-account-sk'));if(loggedIn)document.querySelectorAll('[data-auth-register-link]').forEach(x=>x.style.display='none')})();
+</script>
+</body>
+</html>

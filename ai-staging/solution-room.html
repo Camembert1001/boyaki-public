@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#111827" />
+  <meta name="robots" content="noindex,follow" />
+  <link rel="stylesheet" href="./styles.css" />
+  <title>Solution Room — BOYAKI</title>
+  <style>
+    .room-shell{padding-bottom:60px}.room-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.room-back{display:inline-flex;margin:10px 0 14px}.room-log{display:grid;gap:8px;margin:14px 0}.room-message{background:#f9fafb;border:1px solid #e5e7eb;border-radius:14px;padding:12px}.room-message.mine{border-left:4px solid #111827}.room-meta{font-size:12px;color:#6b7280;margin-bottom:6px}.room-message p{margin:0;white-space:pre-wrap;line-height:1.55}.room-compose{display:grid;gap:10px;margin-top:14px}.room-compose textarea{width:100%;border:1px solid #d1d5db;border-radius:12px;padding:12px;font:inherit;resize:vertical}.room-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.room-status{min-height:1.4em}.room-empty{padding:18px 0}
+  </style>
+</head>
+<body>
+  <header class="shell topbar">
+    <a class="brand" href="./">BOYAKI</a>
+    <nav>
+      <a class="nav-link" href="./">ホーム</a>
+      <a class="nav-link" href="./mypage.html#maker">マイページ</a>
+      <a class="nav-link active" href="./makers.html">Maker Space</a>
+    </nav>
+  </header>
+
+  <main class="shell room-shell">
+    <a class="button-link room-back" href="./makers.html">← Solution Roomsへ戻る</a>
+
+    <section class="card hero">
+      <div class="room-head">
+        <div>
+          <p class="eyebrow">Solution Room</p>
+          <h1 id="room-title">Room</h1>
+        </div>
+        <span class="chip" id="room-id"></span>
+      </div>
+      <p class="lead">VoiceとMakerが、このRoomの文脈を引き継いで解決を詰める場所。</p>
+      <p class="hint">このRoomの会話はSolution Logとして時系列で復元されます。</p>
+    </section>
+
+    <section class="card">
+      <p class="eyebrow">Solution Log</p>
+      <h2>Room chat</h2>
+      <div id="room-log" class="room-log" aria-live="polite"></div>
+      <form id="room-form" class="room-compose">
+        <label for="room-message"><strong>メッセージ</strong></label>
+        <textarea id="room-message" maxlength="500" rows="4" placeholder="このRoomで続きから話す" required></textarea>
+        <div class="room-actions">
+          <button type="submit">送信</button>
+          <button type="button" id="room-refresh">更新</button>
+          <button type="button" id="room-report">ルーム/メッセージを通報する</button>
+          <button type="button" id="solution-case-create">ソリューションケース作成</button>
+        </div>
+        <div id="room-status" class="hint room-status" role="status" aria-live="polite"></div>
+      </form>
+    </section>
+
+    <section class="card identity-card">
+      <p class="eyebrow">Room identity</p>
+      <h2>この活動を誰の履歴として残すか</h2>
+      <p class="hint">BOYAKI AccountをこのRoomの本人identityとして使います。未ログインでもRoomは閲覧できますが、送信にはログインが必要です。</p>
+      <code id="room-identity">loading…</code>
+    </section>
+  </main>
+
+  <script type="module" src="./solution-room.js?v=20260915-room-controls-v2"></script>
+</body>
+</html>

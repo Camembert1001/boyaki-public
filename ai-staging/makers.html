@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#111827" />
+  <meta name="description" content="BOYAKI Maker Space — Solution RoomでVoiceとMakerが問題を詰め、Solution Logを残す場所。" />
+  <meta name="robots" content="noindex,follow" />
+  <link rel="stylesheet" href="./styles.css" />
+  <title>Maker Space — BOYAKI</title>
+  <style>
+    .solution-room-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:16px}
+    .solution-room-button{min-height:72px;font-size:1.05rem;font-weight:700}
+    @media(max-width:640px){.solution-room-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.solution-room-button{min-height:64px}}
+  </style>
+</head>
+<body>
+  <header class="shell topbar">
+    <a class="brand" href="./">BOYAKI</a>
+    <nav>
+      <a class="nav-link" href="./">ホーム</a>
+      <a class="nav-link" href="./mypage.html#maker">マイページ</a>
+      <a class="nav-link active" href="./makers.html">Maker Space</a>
+      <a class="nav-link" data-auth-register-link href="./register.html">新規登録</a>
+    </nav>
+  </header>
+
+  <main class="shell maker-space">
+    <section class="card hero maker-hero">
+      <p class="eyebrow">BOYAKI Maker Space</p>
+      <h1>解決を、Caseとして残す場所。</h1>
+      <p class="lead">BOYAKIスレッドで「解く価値がある」と見えた問題を、Maker Space内のSolution RoomでVoiceとMakerが一緒に詰めます。ここで積み上がるやり取りがSolution Logになり、後のContribution Historyの根拠になります。</p>
+      <div class="principles-grid">
+        <div><strong>Thread → Room</strong><span>探索段階の会話から、解決を具体化する段階へ切り替える。</span></div>
+        <div><strong>Voice + Maker</strong><span>困りごとの文脈と、解決を作る力を同じRoomに集める。</span></div>
+        <div><strong>Solution Log</strong><span>Room内のやり取りを時系列で残し、後から復元できるようにする。</span></div>
+        <div><strong>Case → History</strong><span>残したい成果をCaseとしてContribution Historyから参照する。</span></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <p class="eyebrow">Solution Rooms</p>
+      <h2>Solution Room</h2>
+      <p class="hint">入室するRoomを選びます。Roomを開くと、そのRoomのチャットとSolution Logを復元して続きから話せます。</p>
+      <div class="solution-room-grid" aria-label="Solution Rooms">
+        <button class="solution-room-button" type="button" data-room="1">Room 1</button>
+        <button class="solution-room-button" type="button" data-room="2">Room 2</button>
+        <button class="solution-room-button" type="button" data-room="3">Room 3</button>
+        <button class="solution-room-button" type="button" data-room="4">Room 4</button>
+        <button class="solution-room-button" type="button" data-room="5">Room 5</button>
+        <button class="solution-room-button" type="button" data-room="6">Room 6</button>
+        <button class="solution-room-button" type="button" data-room="7">Room 7</button>
+        <button class="solution-room-button" type="button" data-room="8">Room 8</button>
+        <button class="solution-room-button" type="button" data-room="9">Room 9</button>
+      </div>
+      <div id="room-status" class="hint" role="status" aria-live="polite"></div>
+    </section>
+
+    <section class="card identity-card">
+      <p class="eyebrow">Room identity</p>
+      <h2>この活動を誰の履歴として残すか</h2>
+      <p class="hint">BOYAKI AccountをSolution Roomの本人identityとして使います。Contribution Historyへ接続する本流も同じAccount IDです。</p>
+      <code id="device-id">loading…</code>
+    </section>
+  </main>
+
+  <script type="module">
+    import { getPublicKey } from 'https://esm.sh/nostr-tools@2.17.0';
+    const fromHex=hex=>new Uint8Array((hex.match(/.{1,2}/g)||[]).map(b=>parseInt(b,16)));
+    const accountHex=localStorage.getItem('boyaki-account-sk')||sessionStorage.getItem('boyaki-account-sk');
+    const device=document.querySelector('#device-id');
+    if(accountHex){
+      try{const pk=getPublicKey(fromHex(accountHex));device.textContent=`${pk.slice(0,8)}…${pk.slice(-6)}`}catch{device.textContent='invalid account'}
+    }else{device.textContent='not logged in'}
+    document.querySelectorAll('[data-room]').forEach(button=>button.addEventListener('click',()=>{
+      const room=button.dataset.room;
+      document.querySelector('#room-status').textContent=`Room ${room} に入室します…`;
+      location.href=`./solution-room.html?room=${encodeURIComponent(room)}`;
+    }));
+  </script>
+<script>
+(()=>{window.BOYAKI_AUTH_NAV_V1='1';const loggedIn=!!(localStorage.getItem('boyaki-account-sk')||sessionStorage.getItem('boyaki-account-sk'));if(loggedIn)document.querySelectorAll('[data-auth-register-link]').forEach(x=>x.style.display='none')})();
+</script>
+</body>
+</html>
