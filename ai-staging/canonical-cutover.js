@@ -2,6 +2,7 @@ const DRAFT_KEY='boyaki-private-draft-v53';
 const UUID_RE=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const NOSTR_ID_RE=/^[0-9a-f]{64}$/i;
 let lastPosts=[];
+let ownedIds=new Set();
 let rendering=false;
 let refreshTimer=null;
 
@@ -126,13 +127,13 @@ async function hydrateCanonicalThread(article,post){
 
   const roleKey=`boyaki-thread-role:${post.id}`;
   const applyRole=role=>{
-    localStorage.setItem(roleKey,role);
+    window.BOYAKI_STORAGE.local.setItem(roleKey,role);
     roleStatus.textContent=role==='voice'?'Voiceとして参加中です。困りごとの補足・検証に参加できます。':role==='maker'?'Makerとして参加中です。質問・解決案の提案に参加できます。':'参加する役割を選んでください。';
     clarifyDetails.hidden=!role;
     proposalDetails.hidden=role!=='maker';
   };
   voice.addEventListener('click',()=>applyRole('voice'));maker.addEventListener('click',()=>applyRole('maker'));
-  applyRole(localStorage.getItem(roleKey)||'');
+  applyRole(window.BOYAKI_STORAGE.local.getItem(roleKey)||'');
 
   if(mount.dataset.canonicalThreadSubmitBound!=='1'){
     mount.dataset.canonicalThreadSubmitBound='1';
@@ -159,33 +160,23 @@ function canonicalCard(post,{detail=false}={}){
   const meta=document.createElement('div');meta.className='meta';meta.textContent=`${fmt(post.created_at)} · ${short(post.author_pubkey)} · BOYAKI canonical`;article.append(meta);
   const raw=document.createElement('p');raw.className='raw';raw.textContent=post.content||'';article.append(raw);
   const chips=document.createElement('div');chips.className='chips';
-  const canonical=document.createElement('span');canonical.className='chip';canonical.textContent='Account単位で管理可能';chips.append(canonical);article.append(chips);
+  const canonical=document.createElement('span');canonical.className='chip';canonical.textContent='AI-STAGING';chips.append(canonical);article.append(chips);
   if(detail){
-    const note=document.createElement('p');note.className='hint';note.textContent='この投稿本文と新しいスレッド本文はBOYAKIの管理DBを正本として保存します。Nostr plaintextには新規送信しません。';article.append(note);
+    const note=document.createElement('p');note.className='hint';note.textContent='このBOYAKIのスレッドで会話できます。';article.append(note);
     const mount=document.createElement('div');mount.dataset.canonicalThreadMount='1';article.append(mount);
     queueMicrotask(()=>hydrateCanonicalThread(article,post).catch(err=>console.warn('canonical thread hydrate failed',err)));
   }else{
     const actions=document.createElement('div');actions.className='actions';
     const open=document.createElement('a');open.className='button-link';open.href=`?problem=${encodeURIComponent(post.id)}`;open.textContent='このBOYAKIを開く';actions.append(open);article.append(actions);
   }
+  if(ownedIds.has(post.id)){
+    const actions=document.createElement('div');actions.className='actions';
+    const del=document.createElement('button');del.type='button';del.textContent='自分の投稿を削除';del.dataset.canonicalPostDelete=post.id;
+    del.addEventListener('click',async()=>{del.disabled=true;try{await(await api()).deletePost(post.id);status('投稿とスレッドを削除しました。');await renderHybrid()}catch(err){status(`削除できませんでした: ${String(err.message)}`);del.disabled=false}});
+    actions.append(del);article.append(actions);
+  }
   const permalink=document.createElement('a');permalink.className='permalink';permalink.rel='nofollow';permalink.href=`?problem=${encodeURIComponent(post.id)}`;permalink.textContent='この問題のURL';article.append(permalink);
   return article;
-}
-
-async function applyLegacyControlFilter(client){
-  const cards=[...document.querySelectorAll('.problem-card:not([data-canonical-post-card])')];
-  const rows=[];
-  for(const card of cards){
-    const link=card.querySelector('.permalink[href],a[href*="problem="]');if(!link)continue;
-    let id='';try{id=new URL(link.href,location.href).searchParams.get('problem')||''}catch{}
-    if(NOSTR_ID_RE.test(id))rows.push({id,card});
-  }
-  if(!rows.length)return;
-  try{
-    const result=await client.legacyControls(rows.map(x=>x.id));
-    const states=new Map((result.controls||[]).map(x=>[x.nostr_event_id,x.status]));
-    for(const row of rows){const state=states.get(row.id);if(state&&state!=='active')row.card.remove()}
-  }catch(err){console.warn('legacy control filter unavailable',err)}
 }
 
 function renderDetailIfNeeded(){
@@ -204,10 +195,10 @@ async function renderHybrid(){
   if(rendering)return;rendering=true;
   try{
     const client=await api();if(window.BOYAKI_CANONICAL_BACKEND_READY!==true)return;
-    const result=await client.listPosts(100);lastPosts=result.posts||[];
+    const [result,mine]=await Promise.all([client.listPosts(100),client.listMine()]);lastPosts=result.posts||[];ownedIds=new Set((mine.posts||[]).filter(p=>p.status==='active').map(p=>p.id));
     if(renderDetailIfNeeded())return;
-    const feed=document.querySelector('#feed');if(feed){feed.querySelectorAll('[data-canonical-post-card]').forEach(x=>x.remove());for(const post of [...lastPosts].reverse())feed.prepend(canonicalCard(post))}
-    await applyLegacyControlFilter(client);
+    const feed=document.querySelector('#feed');if(feed){feed.replaceChildren();for(const post of lastPosts)feed.append(canonicalCard(post));if(!lastPosts.length)feed.textContent='まだBOYAKIがありません。'}
+    const makers=document.querySelector('#maker-list');if(makers){makers.replaceChildren();const q=document.querySelector('#maker-search')?.value?.trim().toLowerCase()||'';for(const p of lastPosts.filter(p=>p.content.toLowerCase().includes(q)))makers.append(canonicalCard(p))}
   }catch(err){console.warn('canonical feed unavailable',err)}finally{rendering=false}
 }
 function scheduleHybrid(delay=120){clearTimeout(refreshTimer);refreshTimer=setTimeout(()=>renderHybrid(),delay)}
@@ -223,16 +214,17 @@ async function activate(){
     document.addEventListener('click',async e=>{
       const button=e.target?.closest?.('[data-v53-publish="1"]');if(!button||window.BOYAKI_CANONICAL_ROOT_WRITE_CUTOVER_ACTIVE!==true)return;
       e.preventDefault();e.stopImmediatePropagation();
-      let draft=null;try{draft=JSON.parse(localStorage.getItem(DRAFT_KEY)||'null')}catch{}
+      let draft=null;try{draft=JSON.parse(window.BOYAKI_STORAGE.local.getItem(DRAFT_KEY)||'null')}catch{}
       const text=(draft?.raw||document.querySelector('#raw')?.value||'').trim();if(!text)return;
       button.disabled=true;button.textContent='公開処理中…';status('BOYAKIの管理DBへ公開しています…');
       try{
-        const result=await client.createPost(text);localStorage.removeItem(DRAFT_KEY);
+        const result=await client.createPost(text);window.BOYAKI_STORAGE.local.removeItem(DRAFT_KEY);
         const panel=document.querySelector('#private-chat-v53');if(panel){panel.hidden=true;panel.replaceChildren()}
-        const input=document.querySelector('#raw');if(input)input.value='';window.BOYAKI_STAGING_LAST_PUBLISH_ERROR='';status('公開しました。Account単位で管理できるBOYAKIとして保存されました。');await renderHybrid();if(result?.post?.id)history.replaceState(null,'',location.pathname);
-      }catch(err){const code=String(err?.message||err||'unknown_error');window.BOYAKI_STAGING_LAST_PUBLISH_ERROR=code;console.error('canonical publish failed',err);status(`公開できませんでした。E2E診断: ${code}（下書きはこの端末に残っています）`);button.disabled=false;button.textContent='解決候補として公開する'}
+        const input=document.querySelector('#raw');if(input)input.value='';window.BOYAKI_AI_STAGING_LAST_PUBLISH_ERROR='';status('公開しました。自分の投稿は画面から削除できます。');await renderHybrid();if(result?.post?.id)history.replaceState(null,'',location.pathname);
+      }catch(err){const code=String(err?.message||err||'unknown_error');window.BOYAKI_AI_STAGING_LAST_PUBLISH_ERROR=code;console.error('canonical publish failed',err);status(`公開できませんでした。E2E診断: ${code}（下書きはこの端末に残っています）`);button.disabled=false;button.textContent='解決候補として公開する'}
     },true);
     const feed=document.querySelector('#feed');if(feed)new MutationObserver(()=>{if(!rendering&&lastPosts.length&&!feed.querySelector('[data-canonical-post-card]'))scheduleHybrid(200)}).observe(feed,{childList:true});
+    window.addEventListener('boyaki-feed-refresh',()=>scheduleHybrid(0));
     document.querySelector('#refresh')?.addEventListener('click',()=>scheduleHybrid(1200));
     await renderHybrid();
   }catch(err){

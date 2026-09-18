@@ -10,9 +10,9 @@ form.addEventListener('submit',e=>{
   button.disabled=true;
   const key='boyaki-maker-solution-cases-v1';
   let cases=[];
-  try{cases=JSON.parse(localStorage.getItem(key)||'[]')}catch{}
+  try{cases=JSON.parse(window.BOYAKI_STORAGE.local.getItem(key)||'[]')}catch{}
   cases.unshift({id:`local-${Date.now()}`,title,contribution,room_id:room,created_at:Math.floor(Date.now()/1000)});
-  localStorage.setItem(key,JSON.stringify(cases.slice(0,200)));
-  status.textContent='作成しました。Maker Contribution Historyへ移動します。';
+  window.BOYAKI_STORAGE.local.setItem(key,JSON.stringify(cases.slice(0,200)));
+  status.textContent='このAI-STAGINGブラウザに保存しました。Maker Contribution Historyへ移動します。';
   setTimeout(()=>location.href='./mypage.html#maker',250);
 });

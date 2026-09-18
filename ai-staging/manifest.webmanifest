@@ -1,9 +1,11 @@
 {
-  "name": "BOYAKI",
-  "short_name": "BOYAKI",
+  "name": "BOYAKI AI-STAGING",
+  "short_name": "AI-STAGING",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#f3f4f6",
   "theme_color": "#111827",
-  "lang": "ja"
+  "lang": "ja",
+  "id": "./",
+  "scope": "./"
 }

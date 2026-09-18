@@ -9,12 +9,12 @@ const fmt=ts=>new Date(ts*1000).toLocaleString(undefined,{year:'numeric',month:'
 function toHex(bytes){return [...bytes].map(b=>b.toString(16).padStart(2,'0')).join('')}
 function fromHex(hex){return new Uint8Array((hex.match(/.{1,2}/g)||[]).map(b=>parseInt(b,16)))}
 function getIdentity(){
-  const accountHex=localStorage.getItem('boyaki-account-sk')||sessionStorage.getItem('boyaki-account-sk');
+  const accountHex=window.BOYAKI_STORAGE.local.getItem('boyaki-account-sk')||window.BOYAKI_STORAGE.session.getItem('boyaki-account-sk');
   if(accountHex){
     try{const sk=fromHex(accountHex);return {sk,pk:getPublicKey(sk),type:'account'}}catch{}
   }
-  let hex=localStorage.getItem('boyaki-device-sk');
-  if(!hex){hex=toHex(generateSecretKey());localStorage.setItem('boyaki-device-sk',hex)}
+  let hex=window.BOYAKI_STORAGE.local.getItem('boyaki-device-sk');
+  if(!hex){hex=toHex(generateSecretKey());window.BOYAKI_STORAGE.local.setItem('boyaki-device-sk',hex)}
   const sk=fromHex(hex); return {sk,pk:getPublicKey(sk),type:'legacy-browser'};
 }
 const identity=getIdentity();
@@ -188,7 +188,7 @@ $('#join-form').addEventListener('submit',async e=>{
   button.disabled=true;$('#join-status').textContent='Solution Roomへ参加を記録しています…';
   try{
     await publish({kind:1,content:JSON.stringify({displayName,note}),tags:[['t','boyaki-candidate-participation'],['candidate_id',selectedCandidate.id],['role',role],['app','boyaki-web'],['schema','candidate-participant-v1']]});
-    localStorage.setItem('boyaki-maker-display-name',displayName);$('#join-note').value='';$('#join-status').textContent='参加を記録しました。このCaseのParticipantsに残ります。';await refresh();
+    window.BOYAKI_STORAGE.local.setItem('boyaki-maker-display-name',displayName);$('#join-note').value='';$('#join-status').textContent='参加を記録しました。このCaseのParticipantsに残ります。';await refresh();
   }catch{$('#join-status').textContent='記録できませんでした。少し後で再試行してください。'}finally{button.disabled=false}
 });
 $('#activity-form').addEventListener('submit',async e=>{
@@ -198,10 +198,10 @@ $('#activity-form').addEventListener('submit',async e=>{
   button.disabled=true;$('#activity-status').textContent='Solution Logへ追加しています…';
   try{
     await publish({kind:1,content:JSON.stringify({displayName,activityType,note}),tags:[['t','boyaki-candidate-activity'],['candidate_id',selectedCandidate.id],['activity_type',activityType],['app','boyaki-web'],['schema','candidate-activity-v1']]});
-    localStorage.setItem('boyaki-maker-display-name',displayName);$('#activity-note').value='';$('#activity-status').textContent='Solution Logに追加しました。このCaseの証拠として残ります。';await refresh();
+    window.BOYAKI_STORAGE.local.setItem('boyaki-maker-display-name',displayName);$('#activity-note').value='';$('#activity-status').textContent='Solution Logに追加しました。このCaseの証拠として残ります。';await refresh();
   }catch{$('#activity-status').textContent='追加できませんでした。少し後で再試行してください。'}finally{button.disabled=false}
 });
 async function refresh(){await Promise.all([loadRegistry(),loadEvents()]);render()}
-const savedName=localStorage.getItem('boyaki-maker-display-name')||'';$('#join-name').value=savedName;$('#activity-name').value=savedName;
+const savedName=window.BOYAKI_STORAGE.local.getItem('boyaki-maker-display-name')||'';$('#join-name').value=savedName;$('#activity-name').value=savedName;
 $('#maker-refresh').addEventListener('click',()=>refresh().catch(()=>{}));
 refresh().catch(err=>{$('#candidate-list').innerHTML=`<div class="card">Maker Spaceを読み込めませんでした。${escapeHtml(err.message||'')}</div>`});

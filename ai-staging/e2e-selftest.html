@@ -2,9 +2,12 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8" />
+<meta http-equiv="Content-Security-Policy" content="connect-src https://camembert1001.github.io/boyaki-public/ai-staging/ https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/ai-staging-boyaki-api https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/ai-staging-boyaki-api/ https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/ai-staging-boyaki-thread-api https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/ai-staging-boyaki-thread-api/ https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/ai-staging-e2e-runner https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/ai-staging-e2e-runner/; base-uri 'none'; form-action 'none'; object-src 'none'">
+<script src="./ai-environment.js?v=20260918-ai-v1"></script>
+
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="robots" content="noindex,nofollow" />
-  <title>BOYAKI STAGING E2E Self-test</title>
+  <title>BOYAKI AI-STAGING E2E Self-test</title>
   <style>
     body{font-family:system-ui,sans-serif;margin:0;background:#f6f7f9;color:#111827}
     main{max-width:900px;margin:0 auto;padding:32px 20px}
@@ -18,16 +21,17 @@
   </style>
 </head>
 <body>
-  <div class="banner">STAGING / AUTOMATED E2E — 本番ではありません</div>
+
   <main>
     <section class="card">
-      <h1>BOYAKI STAGING E2E Self-test</h1>
-      <p class="hint">実ユーザーのAccountやログインキーは使いません。毎回その場で一時的な暗号鍵を生成し、STAGING Supabaseだけを対象に Account所有・跨端末権限・旧browser ID引継ぎ・通報・canonical thread（追加質問/解決案/投稿者返答）・Nostr plaintext freeze guardを検証します。本番project refが検出された場合は実行を拒否します。</p>
+      <h1>BOYAKI AI-STAGING E2E Self-test</h1>
+      <p class="hint">AI-STAGING専用runnerで一時的なAccountの署名を使い、投稿・スレッド・権限・削除とAccount保存を実HTTPで検証します。テスト本文は専用APIで削除します。</p>
       <p><button id="run" type="button">E2Eを実行</button></p>
       <div id="summary" role="status" aria-live="polite"></div>
       <pre id="output">待機中</pre>
+      <p><button id="inspect" type="button">分離状態を確認</button></p><pre id="diagnostics">保存キー名・接続先・キャッシュだけを表示します。認証情報や投稿本文は表示しません。</pre>
     </section>
   </main>
-  <script type="module" src="./e2e-selftest.js?v=20260909-v2"></script>
+  <script type="module" src="./e2e-selftest.js?v=20260918-ai-v1"></script>
 </body>
 </html>

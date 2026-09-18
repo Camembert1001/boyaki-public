@@ -1,15 +1,12 @@
-const CACHE='boyaki-shell-v8';
-const ASSETS=['./index.html','./styles.css','./app.js','./canonical-api.js','./canonical-cutover.js','./quality-index-gate.js','./makers.html','./maker-space.js','./solution-candidates.json','./manifest.webmanifest'];
-self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())));
-self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
+const PREFIX='ai-staging:boyaki:shell:';
+const CACHE=PREFIX+'20260918-v1';
+const ROOT=new URL('./',self.location.href);
+const ASSETS=['index.html','styles.css','ai-environment.js'];
+self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS.map(p=>new URL(p,ROOT).href))).then(()=>self.skipWaiting())));
+self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith(PREFIX)&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{
-  if(e.request.method!=='GET')return;
   const u=new URL(e.request.url);
-  const isNavigation=e.request.mode==='navigate'||e.request.destination==='document';
-  const alwaysFresh=isNavigation||/\/(mypage|profile-edit|register|index|app|canonical-api|canonical-cutover|canonical-mypage|quality-index-gate)(\.html|\.js)$/.test(u.pathname);
-  if(alwaysFresh){
-    e.respondWith(fetch(e.request,{cache:'no-store'}).catch(()=>caches.match('./index.html')));
-    return;
-  }
-  e.respondWith(fetch(e.request).then(r=>{const copy=r.clone();caches.open(CACHE).then(c=>c.put(e.request,copy));return r}).catch(()=>caches.match(e.request)));
+  // Never cache API responses, credentials, external resources or other environments.
+  if(e.request.method!=='GET'||u.origin!==ROOT.origin||!u.pathname.startsWith(ROOT.pathname))return;
+  e.respondWith(fetch(e.request,{cache:'no-store'}).then(async r=>{if(r.ok&&r.type==='basic')await(await caches.open(CACHE)).put(e.request,r.clone());return r}).catch(async()=>await(await caches.open(CACHE)).match(e.request)||new Response('AI-STAGING: 接続できません。オンラインで再読込してください。',{status:503,headers:{'content-type':'text/plain;charset=utf-8'}})));
 });

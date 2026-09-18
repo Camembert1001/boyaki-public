@@ -1,36 +1,25 @@
-import { SimplePool, getPublicKey, finalizeEvent } from 'https://esm.sh/nostr-tools@2.17.0';
-import { RELAYS } from './relays.js';
-const pool=new SimplePool();
+import { getPublicKey } from 'https://esm.sh/nostr-tools@2.17.0';
+import { client } from './canonical-api.js?v=20260918-ai-v1';
 const $=s=>document.querySelector(s);
 const fromHex=hex=>new Uint8Array((hex.match(/.{1,2}/g)||[]).map(b=>parseInt(b,16)));
 const unix=()=>Math.floor(Date.now()/1000);
 function currentIdentity(){
-  const hex=localStorage.getItem('boyaki-account-sk')||sessionStorage.getItem('boyaki-account-sk');
+  const hex=window.BOYAKI_STORAGE.local.getItem('boyaki-account-sk')||window.BOYAKI_STORAGE.session.getItem('boyaki-account-sk');
   if(!hex)return null;
   try{const sk=fromHex(hex);return {sk,pk:getPublicKey(sk)}}catch{return null}
 }
-function signed(template,id){return finalizeEvent({...template,created_at:template.created_at??unix()},id.sk)}
-async function publishProfile(profile,id){
-  const ev=signed({kind:0,content:JSON.stringify({
-    name:profile.displayName,display_name:profile.displayName,about:profile.about,
-    boyaki_interest:profile.interest,boyaki_schema:'account-profile-v1'
-  }),tags:[['app','boyaki-web'],['schema','boyaki-account-profile-v1']]},id);
-  const out=await Promise.allSettled(pool.publish(RELAYS,ev));
-  if(!out.some(x=>x.status==='fulfilled'))throw new Error('relay publish failed');
-}
+async function publishProfile(profile,id){return client.saveAccount(profile,id)}
 async function main(){
   const id=currentIdentity();
   if(!id){$('#edit-state').textContent='ログインしていません。マイページからログインしてください。';$('#profile-edit-form').hidden=true;return}
   let p={};
   try{
-    const rows=await pool.querySync(RELAYS,{kinds:[0],authors:[id.pk],limit:20});
-    const latest=rows.sort((a,b)=>b.created_at-a.created_at)[0];
-    if(latest)p=JSON.parse(latest.content||'{}');
+    const result=await client.getAccount();const p0=result.account.profile; p={display_name:p0.displayName,boyaki_interest:p0.interest,about:p0.about};
   }catch{}
-  $('#edit-name').value=p.display_name||p.name||localStorage.getItem('boyaki-profile-display-name')||'';
-  const interest=p.boyaki_interest||localStorage.getItem('boyaki-profile-interest')||'both';
+  $('#edit-name').value=p.display_name||p.name||window.BOYAKI_STORAGE.local.getItem('boyaki-profile-display-name')||'';
+  const interest=p.boyaki_interest||window.BOYAKI_STORAGE.local.getItem('boyaki-profile-interest')||'both';
   $('#edit-interest').value=['voice','maker','both'].includes(interest)?interest:'both';
-  $('#edit-about').value=typeof p.about==='string'?p.about:(localStorage.getItem('boyaki-profile-about')||'');
+  $('#edit-about').value=typeof p.about==='string'?p.about:(window.BOYAKI_STORAGE.local.getItem('boyaki-profile-about')||'');
   $('#edit-state').textContent='ログイン中のアカウントプロフィールを編集しています。';
 }
 $('#profile-edit-form').addEventListener('submit',async e=>{
@@ -41,9 +30,9 @@ $('#profile-edit-form').addEventListener('submit',async e=>{
   button.disabled=true;$('#edit-state').textContent='更新しています…';
   try{
     await publishProfile({displayName,interest,about},id);
-    localStorage.setItem('boyaki-profile-display-name',displayName);
-    localStorage.setItem('boyaki-profile-interest',interest);
-    localStorage.setItem('boyaki-profile-about',about);
+    window.BOYAKI_STORAGE.local.setItem('boyaki-profile-display-name',displayName);
+    window.BOYAKI_STORAGE.local.setItem('boyaki-profile-interest',interest);
+    window.BOYAKI_STORAGE.local.setItem('boyaki-profile-about',about);
     $('#edit-state').textContent='更新しました。マイページへ戻ります…';
     setTimeout(()=>location.href='./mypage.html',500);
   }catch(err){console.error(err);$('#edit-state').textContent='更新できませんでした。通信状態を確認して再試行してください。';}

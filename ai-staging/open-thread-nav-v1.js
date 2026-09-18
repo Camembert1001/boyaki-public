@@ -1,5 +1,5 @@
 const VERSION='20260909-open-thread-nav-v1';
-window.BOYAKI_STAGING_OPEN_THREAD_NAV_VERSION=VERSION;
+window.BOYAKI_AI_STAGING_OPEN_THREAD_NAV_VERSION=VERSION;
 
 function problemUrlFromCard(card){
   const link=card?.querySelector?.('.permalink[href],a[href*="problem="]');

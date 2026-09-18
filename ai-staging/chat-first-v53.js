@@ -20,11 +20,11 @@
 
   function setStatus(text){if(pageStatus)pageStatus.textContent=text}
   function loadDraft(){
-    try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'null')}catch{return null}
+    try{return JSON.parse(window.BOYAKI_STORAGE.local.getItem(STORAGE_KEY)||'null')}catch{return null}
   }
   function saveDraft(draft){
     try{
-      localStorage.setItem(STORAGE_KEY,JSON.stringify(draft));
+      window.BOYAKI_STORAGE.local.setItem(STORAGE_KEY,JSON.stringify(draft));
       return true;
     }catch{
       setStatus('このブラウザでは下書きを保存できません。内容は公開されていません。');
@@ -32,7 +32,7 @@
     }
   }
   function clearDraft(){
-    try{localStorage.removeItem(STORAGE_KEY)}catch{}
+    try{window.BOYAKI_STORAGE.local.removeItem(STORAGE_KEY)}catch{}
     panel.hidden=true;
     panel.replaceChildren();
     rawInput.value='';

@@ -2,10 +2,13 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8" />
+<meta http-equiv="Content-Security-Policy" content="connect-src https://camembert1001.github.io/boyaki-public/ai-staging/ https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/ai-staging-boyaki-api https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/ai-staging-boyaki-api/ https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/ai-staging-boyaki-thread-api https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/ai-staging-boyaki-thread-api/ https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/ai-staging-e2e-runner https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/ai-staging-e2e-runner/; base-uri 'none'; form-action 'none'; object-src 'none'">
+<script src="./ai-environment.js?v=20260918-ai-v1"></script>
+
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <meta name="theme-color" content="#111827" />
   <meta name="description" content="BOYAKI 新規登録 — 匿名参加はそのままに、実績を残したい人向けの仮名プロフィール登録。" />
-  <meta name="robots" content="index,follow" />
+  <meta name="robots" content="noindex,nofollow" />
   <link rel="stylesheet" href="./styles.css" />
   <title>新規登録 — BOYAKI</title>
 </head>
@@ -67,8 +70,8 @@
 
     <section class="card identity-card">
       <p class="eyebrow">Current credential</p>
-      <h2>このブラウザの旧BOYAKI ID</h2>
-      <p class="hint">既存の匿名参加との互換性のため、このブラウザIDは残します。新しいアカウントはこれとは別の持続的identityです。過去browser IDの活動をアカウントへ引き継ぐ機能は次工程です。</p>
+      <h2>このAI-STAGINGブラウザのBOYAKI ID</h2>
+      <p class="hint">このAI-STAGING内の匿名投稿は、マイページで新しいアカウントに引き継ぎます。本番・STAGINGの投稿やIDを取り込みません。</p>
       <code id="device-id">loading…</code>
       <div class="actions"><a class="button-link" href="./mypage.html">ログイン / マイページを開く</a></div>
     </section>
@@ -83,9 +86,9 @@
     </section>
   </main>
 
-  <script type="module" src="./register.js?v=20260906-canonical-relay-set-v1"></script>
+  <script type="module" src="./register.js?v=20260918-ai-v1"></script>
 <script>
-(()=>{window.BOYAKI_AUTH_NAV_V1='1';const loggedIn=!!(localStorage.getItem('boyaki-account-sk')||sessionStorage.getItem('boyaki-account-sk'));if(loggedIn)document.querySelectorAll('[data-auth-register-link]').forEach(x=>x.style.display='none')})();
+(()=>{window.BOYAKI_AUTH_NAV_V1='1';const loggedIn=!!(window.BOYAKI_STORAGE.local.getItem('boyaki-account-sk')||window.BOYAKI_STORAGE.session.getItem('boyaki-account-sk'));if(loggedIn)document.querySelectorAll('[data-auth-register-link]').forEach(x=>x.style.display='none')})();
 </script>
 </body>
 </html>

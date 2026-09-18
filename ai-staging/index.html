@@ -2,16 +2,19 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8" />
+<meta http-equiv="Content-Security-Policy" content="connect-src https://camembert1001.github.io/boyaki-public/ai-staging/ https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/ai-staging-boyaki-api https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/ai-staging-boyaki-api/ https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/ai-staging-boyaki-thread-api https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/ai-staging-boyaki-thread-api/ https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/ai-staging-e2e-runner https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/ai-staging-e2e-runner/; base-uri 'none'; form-action 'none'; object-src 'none'">
+<script src="./ai-environment.js?v=20260918-ai-v1"></script>
+
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <meta name="theme-color" content="#111827" />
   <meta name="description" content="BOYAKI — 困ったことをそのまま話して、まず整理。望めば解決候補として公開し、似た人や作れる人を集める場所。" />
-  <meta name="robots" content="index,follow" id="robots-meta" />
+  <meta name="robots" content="noindex,nofollow" id="robots-meta" />
   <script>if(new URLSearchParams(location.search).has('problem'))document.getElementById('robots-meta').setAttribute('content','noindex,follow');</script>
   <link rel="manifest" href="./manifest.webmanifest" />
   <link rel="stylesheet" href="./styles.css" />
   <script>
   (()=>{try{
-    const loggedIn=!!(localStorage.getItem('boyaki-account-sk')||sessionStorage.getItem('boyaki-account-sk'));
+    const loggedIn=!!(window.BOYAKI_STORAGE.local.getItem('boyaki-account-sk')||window.BOYAKI_STORAGE.session.getItem('boyaki-account-sk'));
     document.documentElement.dataset.boyakiAuthState=loggedIn?'in':'out';
   }catch{document.documentElement.dataset.boyakiAuthState='out'}})();
   </script>
@@ -102,11 +105,10 @@
     </article>
   </template>
 
-  <script src="./chat-first-v53.js"></script>
-  <script src="./onboarding.js?v=20260907-onboarding-v1"></script>
-  <script type="module" src="./canonical-api.js?v=20260909-staging-client-v7"></script>
-  <script type="module" src="./app.js?v=20260906-canonical-relay-set-v1"></script>
-  <script type="module" src="./external-attestation.js"></script>
+  <script src="./chat-first-v53.js?v=20260918-ai-v1"></script>
+  <script src="./onboarding.js?v=20260918-ai-v1"></script>
+  <script type="module" src="./canonical-api.js?v=20260918-ai-v1"></script>
+  <script type="module" src="./app.js?v=20260918-ai-v1"></script>
   <script>
   (()=>{
     const campaigns={
@@ -143,12 +145,12 @@
     if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>scan());else scan();
   })();
   </script>
-  <script src="./quality-index-gate.js?v=20260909-staging-guard-v6"></script>
+  <script src="./quality-index-gate.js?v=20260918-ai-v1"></script>
 <script>
 (()=>{const fix=()=>{const b=document.querySelector('[data-onboarding-open]');if(b&&b.textContent.trim()!=='BOYAKIとは？')b.textContent='BOYAKIとは？'};fix();new MutationObserver(fix).observe(document.documentElement,{childList:true,subtree:true,characterData:true})})();
 </script>
 <script>
-(()=>{window.BOYAKI_AUTH_NAV_V2='1';const loggedIn=!!(localStorage.getItem('boyaki-account-sk')||sessionStorage.getItem('boyaki-account-sk'));document.querySelectorAll('[data-auth-register-link]').forEach(x=>{if(loggedIn){x.hidden=true;x.style.removeProperty('display')}else{x.hidden=false;x.style.removeProperty('display')}})})();
+(()=>{window.BOYAKI_AUTH_NAV_V2='1';const loggedIn=!!(window.BOYAKI_STORAGE.local.getItem('boyaki-account-sk')||window.BOYAKI_STORAGE.session.getItem('boyaki-account-sk'));document.querySelectorAll('[data-auth-register-link]').forEach(x=>{if(loggedIn){x.hidden=true;x.style.removeProperty('display')}else{x.hidden=false;x.style.removeProperty('display')}})})();
 </script>
 </body>
 </html>

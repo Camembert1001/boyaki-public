@@ -1,7 +1,7 @@
 const box=document.querySelector('[data-contribution-role="maker"]');
 if(box){
   let cases=[];
-  try{cases=JSON.parse(localStorage.getItem('boyaki-maker-solution-cases-v1')||'[]')}catch{}
+  try{cases=JSON.parse(window.BOYAKI_STORAGE.local.getItem('boyaki-maker-solution-cases-v1')||'[]')}catch{}
   if(cases.length){
     box.innerHTML='';
     for(const c of cases){

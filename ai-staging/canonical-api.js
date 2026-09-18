@@ -1,12 +1,46 @@
-import { finalizeEvent, getPublicKey } from 'https://esm.sh/nostr-tools@2.17.0';
+import { finalizeEvent, getPublicKey, generateSecretKey } from 'https://esm.sh/nostr-tools@2.17.0';
 const API='https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/ai-staging-boyaki-api';
 const THREAD='https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/ai-staging-boyaki-thread-api';
-const fromHex=h=>new Uint8Array((h.match(/.{1,2}/g)||[]).map(b=>parseInt(b,16))),unix=()=>Math.floor(Date.now()/1000);
-window.BOYAKI_STAGING=true;window.BOYAKI_AI_STAGING=true;window.BOYAKI_ENVIRONMENT='ai-staging';window.BOYAKI_STAGING_CLIENT_VERSION='20260917-ai-v1';
-const robots=document.querySelector('meta[name="robots"]');if(robots)robots.setAttribute('content','noindex,nofollow');
-if(!document.querySelector('[data-boyaki-ai-staging-banner]')){const b=document.createElement('div');b.dataset.boyakiAiStagingBanner='1';b.textContent='AI-STAGING — AI実装・破壊テスト環境 / STAGING・本番ではありません';b.style.cssText='position:sticky;top:0;z-index:2147483646;padding:8px 12px;text-align:center;font:700 13px/1.3 system-ui;background:#f3e8ff;color:#581c87;border-bottom:1px solid #c084fc';document.body.prepend(b)}
-function identity(){const h=localStorage.getItem('boyaki-account-sk')||sessionStorage.getItem('boyaki-account-sk');if(h){const sk=fromHex(h);return{sk,pk:getPublicKey(sk),kind:'account'}}const l=localStorage.getItem('boyaki-device-sk');if(!l)return null;const sk=fromHex(l);return{sk,pk:getPublicKey(sk),kind:'legacy_browser'}}
-async function sha(s){const d=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return[...new Uint8Array(d)].map(b=>b.toString(16).padStart(2,'0')).join('')}function b64(s){const x=new TextEncoder().encode(s);let z='';for(const b of x)z+=String.fromCharCode(b);return btoa(z)}async function headers(url,method,raw=''){const i=identity();if(!i)throw Error('boyaki_identity_missing');const tags=[['u',url],['method',method.toUpperCase()]];if(raw)tags.push(['payload',await sha(raw)]);const e=finalizeEvent({kind:27235,created_at:unix(),content:'',tags},i.sk);return{Authorization:`Nostr ${b64(JSON.stringify(e))}`,'Content-Type':'application/json'}}async function req(base,path,{method='GET',body=null,signed=false}={}){const url=base+(path.startsWith('/')?path:'/'+path),raw=body===null?'':JSON.stringify(body),h=signed?await headers(url,method,raw):{'Content-Type':'application/json'},r=await fetch(url,{method,headers:h,body:raw||undefined,cache:'no-store'});let p={};try{p=await r.json()}catch{}if(!r.ok)throw Error(p?.error||`canonical_api_${r.status}`);return p}
-const main=(p,o)=>req(API,p,o),thread=(p,o)=>req(THREAD,p,o);async function health(){return main('/health')}async function listPosts(n=100){return main(`/posts?limit=${Math.max(1,Math.min(Number(n)||100,100))}`)}async function listMine(){return main('/me/posts',{signed:true})}async function createPost(content){const i=identity();if(!i)throw Error('boyaki_identity_missing');return main('/posts',{method:'POST',signed:true,body:{content,identity_kind:i.kind}})}async function deletePost(id){return main(`/posts/${encodeURIComponent(id)}`,{method:'DELETE',signed:true})}async function verifyIdentityLink(legacyClaim,accountAcceptance){return main('/identity-links/verify',{method:'POST',body:{legacy_claim:legacyClaim,account_acceptance:accountAcceptance}})}async function report(t,id,r='other',d=''){return main('/reports',{method:'POST',signed:true,body:{target_type:t,target_id:id,reason_code:r,detail:d}})}async function threadHealth(){return thread('/health')}async function listThread(id){return thread(`/posts/${encodeURIComponent(id)}/thread`)}async function threadAccess(id){return thread(`/posts/${encodeURIComponent(id)}/thread/access`,{signed:true})}async function createThread(id,eventType,content,parentEventId=null){const i=identity();if(!i)throw Error('boyaki_identity_missing');return thread(`/posts/${encodeURIComponent(id)}/thread`,{method:'POST',signed:true,body:{event_type:eventType,content,parent_event_id:parentEventId||null,identity_kind:i.kind}})}async function deleteThread(id){return thread(`/thread/${encodeURIComponent(id)}`,{method:'DELETE',signed:true})}
-async function initialize(){try{const s=await health(),ok=s?.ok===true&&s?.environment==='AI-STAGING';window.BOYAKI_CANONICAL_BACKEND_READY=ok;return ok}catch(e){window.BOYAKI_CANONICAL_BACKEND_READY=false;window.BOYAKI_STAGING_LAST_INIT_ERROR=String(e?.message||e);return false}}async function initializeThreads(){try{const s=await threadHealth(),ok=s?.ok===true&&s?.environment==='AI-STAGING';window.BOYAKI_CANONICAL_THREAD_BACKEND_READY=ok;return ok}catch(e){window.BOYAKI_CANONICAL_THREAD_BACKEND_READY=false;return false}}
-window.BOYAKI_CANONICAL={apiBase:()=>API,threadApiBase:()=>THREAD,identity,health,listPosts,listMine,createPost,deletePost,verifyIdentityLink,report,threadHealth,listThread,threadAccess,createThread,deleteThread,initialize,initializeThreads};initialize().then(async ok=>{if(ok){try{await import('./canonical-cutover.js?v=20260917-ai-v1')}catch(e){console.error('AI staging cutover failed',e)}}});
+const store=window.BOYAKI_STORAGE;
+export const fromHex=h=>new Uint8Array((h.match(/.{1,2}/g)||[]).map(b=>parseInt(b,16)));
+export const toHex=bytes=>[...bytes].map(b=>b.toString(16).padStart(2,'0')).join('');
+window.BOYAKI_AI_STAGING_CLIENT_VERSION='20260918-ai-v1';
+function identity(){
+  const h=store.local.getItem('boyaki-account-sk')||store.session.getItem('boyaki-account-sk');
+  if(h){const sk=fromHex(h);return{sk,pk:getPublicKey(sk),kind:'account'}}
+  let device=store.local.getItem('boyaki-device-sk');if(!device){device=toHex(generateSecretKey());store.local.setItem('boyaki-device-sk',device)}
+  const sk=fromHex(device);return{sk,pk:getPublicKey(sk),kind:'legacy_browser'};
+}
+async function sha(s){const d=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return toHex(new Uint8Array(d))}
+async function headers(url,method,raw,signer){
+  const i=signer||identity(),tags=[['u',url],['method',method],['nonce',crypto.randomUUID()]];
+  if(raw)tags.push(['payload',await sha(raw)]);
+  const e=finalizeEvent({kind:27235,created_at:Math.floor(Date.now()/1000),content:'',tags},i.sk);
+  return{Authorization:`Nostr ${btoa(JSON.stringify(e))}`,'Content-Type':'application/json'};
+}
+async function req(base,path,{method='GET',body=null,signed=false,signer=null}={}){
+  const url=base+path,raw=body===null?'':JSON.stringify(body),h=signed?await headers(url,method,raw,signer):{'Content-Type':'application/json'};
+  const r=await fetch(url,{method,headers:h,body:raw||undefined,cache:'no-store'}),p=await r.json();
+  if(!r.ok)throw Error(p?.error||`ai_api_${r.status}`);return p;
+}
+const main=(p,o)=>req(API,p,o),thread=(p,o)=>req(THREAD,p,o);
+async function initialize(){try{const h=await main('/health');return window.BOYAKI_CANONICAL_BACKEND_READY=h.ok===true&&h.environment==='AI-STAGING'}catch(e){window.BOYAKI_AI_STAGING_LAST_INIT_ERROR=String(e.message);return window.BOYAKI_CANONICAL_BACKEND_READY=false}}
+async function initializeThreads(){try{const h=await thread('/health');return window.BOYAKI_CANONICAL_THREAD_BACKEND_READY=h.ok===true&&h.environment==='AI-STAGING'}catch(e){window.BOYAKI_AI_STAGING_LAST_THREAD_INIT_ERROR=String(e.message);return window.BOYAKI_CANONICAL_THREAD_BACKEND_READY=false}}
+export const client={
+  apiBase:()=>API,threadApiBase:()=>THREAD,identity,initialize,initializeThreads,
+  health:()=>main('/health'),threadHealth:()=>thread('/health'),
+  getAccount:(signer=null)=>main('/me/account',{signed:true,signer}),
+  saveAccount:(profile,signer=null)=>main('/me/account',{method:'POST',signed:true,signer,body:{profile}}),
+  listPosts:(n=100)=>main(`/posts?limit=${Math.max(1,Math.min(Number(n)||100,100))}`),
+  listMine:()=>main('/me/posts',{signed:true}),
+  createPost:content=>main('/posts',{method:'POST',signed:true,body:{content,identity_kind:identity().kind}}),
+  deletePost:id=>main(`/posts/${encodeURIComponent(id)}`,{method:'DELETE',signed:true}),
+  verifyIdentityLink:(legacy_claim,account_acceptance)=>main('/identity-links/verify',{method:'POST',body:{legacy_claim,account_acceptance}}),
+  report:(target_type,target_id,reason_code='other',detail='')=>main('/reports',{method:'POST',signed:true,body:{target_type,target_id,reason_code,detail}}),
+  listThread:id=>thread(`/posts/${encodeURIComponent(id)}/thread`),
+  threadAccess:id=>thread(`/posts/${encodeURIComponent(id)}/thread/access`,{signed:true}),
+  createThread:(id,event_type,content,parent_event_id=null,extra={})=>thread(`/posts/${encodeURIComponent(id)}/thread`,{method:'POST',signed:true,body:{...extra,event_type,content,parent_event_id,identity_kind:identity().kind}}),
+  deleteThread:id=>thread(`/thread/${encodeURIComponent(id)}`,{method:'DELETE',signed:true})
+};
+window.BOYAKI_CANONICAL=client;
+if(document.querySelector('#feed'))initialize().then(async ok=>{if(ok)await import('./canonical-cutover.js?v=20260918-ai-v1')}).catch(e=>console.error('AI-STAGING initialization failed',e));

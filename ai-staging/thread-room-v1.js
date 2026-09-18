@@ -1,10 +1,9 @@
-import { finalizeEvent } from 'https://esm.sh/nostr-tools@2.17.0';
 
 const VERSION='20260909-room-v1';
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const short=value=>value?`${value.slice(0,8)}…${value.slice(-6)}`:'guest';
 
-window.BOYAKI_STAGING_THREAD_ROOM_VERSION=VERSION;
+window.BOYAKI_AI_STAGING_THREAD_ROOM_VERSION=VERSION;
 
 async function client(){
   for(let i=0;i<60;i++){
@@ -14,26 +13,10 @@ async function client(){
   throw new Error('canonical_client_missing');
 }
 
-async function sha256Hex(text){
-  const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text));
-  return [...new Uint8Array(digest)].map(b=>b.toString(16).padStart(2,'0')).join('');
-}
-function b64Utf8(text){const bytes=new TextEncoder().encode(text);let binary='';for(const b of bytes)binary+=String.fromCharCode(b);return btoa(binary)}
-async function createRoomMessage(api,postId,content,role,displayName){
-  const id=api.identity();if(!id)throw new Error('boyaki_identity_missing');
-  const base=api.threadApiBase().replace(/\/$/,'');
-  const url=`${base}/posts/${encodeURIComponent(postId)}/thread`;
-  const raw=JSON.stringify({event_type:'message',content,parent_event_id:null,identity_kind:id.kind,participant_role:role,display_name:displayName});
-  const tags=[['u',url],['method','POST'],['payload',await sha256Hex(raw)]];
-  const ev=finalizeEvent({kind:27235,created_at:Math.floor(Date.now()/1000),content:'',tags},id.sk);
-  const response=await fetch(url,{method:'POST',headers:{Authorization:`Nostr ${b64Utf8(JSON.stringify(ev))}`,'Content-Type':'application/json'},body:raw,cache:'no-store'});
-  let payload={};try{payload=await response.json()}catch{}
-  if(!response.ok)throw new Error(payload?.error||`thread_room_${response.status}`);
-  return payload;
-}
+async function createRoomMessage(api,postId,content,role,displayName){return api.createThread(postId,'message',content,null,{participant_role:role,display_name:displayName})}
 
 function localDisplayName(){
-  return (localStorage.getItem('boyaki-profile-display-name')||localStorage.getItem('boyaki-maker-display-name')||'').trim();
+  return (window.BOYAKI_STORAGE.local.getItem('boyaki-profile-display-name')||window.BOYAKI_STORAGE.local.getItem('boyaki-maker-display-name')||'').trim();
 }
 function roleLabel(role){return role==='maker'?'Maker':'Voice'}
 function identityKey(ev){return ev.owner_account_pubkey||ev.author_pubkey}
@@ -87,7 +70,7 @@ function addMessages(room,events,post,deletable,api,rerender){
   }
   if(!messages.length){const empty=document.createElement('p');empty.className='hint';empty.textContent='まだ会話は始まっていません。';list.append(empty)}
   const legacyCount=events.length-messages.length;
-  if(legacyCount>0){const note=document.createElement('p');note.className='hint';note.textContent=`STAGINGの旧形式テスト会話 ${legacyCount}件は新しいルーム表示から外しています。`;list.append(note)}
+  if(legacyCount>0){const note=document.createElement('p');note.className='hint';note.textContent=`AI-STAGINGの旧形式テスト会話 ${legacyCount}件は新しいルーム表示から外しています。`;list.append(note)}
   room.append(list);
 }
 
@@ -119,7 +102,7 @@ async function renderMount(mount){
     const p=document.createElement('p');p.className='hint';p.textContent='閲覧は自由です。発言する場合はBOYAKIのidentityで参加してください。';speak.append(p);
   }else{
     const roleKey=`boyaki-room-role:${postId}`;
-    let selected=localStorage.getItem(roleKey)||access.current_role||'';
+    let selected=window.BOYAKI_STORAGE.local.getItem(roleKey)||access.current_role||'';
     if(!['voice','maker'].includes(selected))selected='';
     const title=document.createElement('p');title.className='hint';title.innerHTML='<strong>発言するときの役割</strong>';
     const actions=document.createElement('div');actions.className='actions';
@@ -130,7 +113,7 @@ async function renderMount(mount){
     const input=document.createElement('input');input.maxLength=240;input.placeholder='メッセージを入力';input.required=true;
     const send=document.createElement('button');send.type='submit';send.textContent='送信';form.append(input,send);
     const applyRole=role=>{
-      selected=role;localStorage.setItem(roleKey,role);
+      selected=role;window.BOYAKI_STORAGE.local.setItem(roleKey,role);
       voice.setAttribute('aria-pressed',role==='voice'?'true':'false');maker.setAttribute('aria-pressed',role==='maker'?'true':'false');
       state.textContent=`${roleLabel(role)}として発言します。役割はこのBOYAKIルーム内だけのものです。`;
       form.hidden=false;

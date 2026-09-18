@@ -2,10 +2,13 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8" />
+<meta http-equiv="Content-Security-Policy" content="connect-src https://camembert1001.github.io/boyaki-public/ai-staging/ https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/ai-staging-boyaki-api https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/ai-staging-boyaki-api/ https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/ai-staging-boyaki-thread-api https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/ai-staging-boyaki-thread-api/ https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/ai-staging-e2e-runner https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/ai-staging-e2e-runner/; base-uri 'none'; form-action 'none'; object-src 'none'">
+<script src="./ai-environment.js?v=20260918-ai-v1"></script>
+
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <meta name="theme-color" content="#111827" />
   <meta name="description" content="BOYAKI Maker Space — Solution RoomでVoiceとMakerが問題を詰め、Solution Logを残す場所。" />
-  <meta name="robots" content="noindex,follow" />
+  <meta name="robots" content="noindex,nofollow" />
   <link rel="stylesheet" href="./styles.css" />
   <title>Maker Space — BOYAKI</title>
   <style>
@@ -67,7 +70,7 @@
   <script type="module">
     import { getPublicKey } from 'https://esm.sh/nostr-tools@2.17.0';
     const fromHex=hex=>new Uint8Array((hex.match(/.{1,2}/g)||[]).map(b=>parseInt(b,16)));
-    const accountHex=localStorage.getItem('boyaki-account-sk')||sessionStorage.getItem('boyaki-account-sk');
+    const accountHex=window.BOYAKI_STORAGE.local.getItem('boyaki-account-sk')||window.BOYAKI_STORAGE.session.getItem('boyaki-account-sk');
     const device=document.querySelector('#device-id');
     if(accountHex){
       try{const pk=getPublicKey(fromHex(accountHex));device.textContent=`${pk.slice(0,8)}…${pk.slice(-6)}`}catch{device.textContent='invalid account'}
@@ -79,7 +82,7 @@
     }));
   </script>
 <script>
-(()=>{window.BOYAKI_AUTH_NAV_V1='1';const loggedIn=!!(localStorage.getItem('boyaki-account-sk')||sessionStorage.getItem('boyaki-account-sk'));if(loggedIn)document.querySelectorAll('[data-auth-register-link]').forEach(x=>x.style.display='none')})();
+(()=>{window.BOYAKI_AUTH_NAV_V1='1';const loggedIn=!!(window.BOYAKI_STORAGE.local.getItem('boyaki-account-sk')||window.BOYAKI_STORAGE.session.getItem('boyaki-account-sk'));if(loggedIn)document.querySelectorAll('[data-auth-register-link]').forEach(x=>x.style.display='none')})();
 </script>
 </body>
 </html>
