@@ -284,8 +284,6 @@ No dependencies, no install step, no network. Node 22 built-ins only.
   validation** above. Retune them before treating a bucket as a decision.
 - `advisoryRules` is a fixed list, not a CLI option. Widening it is a judgement about which
   rules are house style rather than defects, and belongs in review, not in a flag.
-- Orrery, one of the five issue #9 benchmarks, was never identified and so was validated
-  only as a pinned shape, not against a live checkout.
 - Locale discovery is name-based. A project that stores Japanese in a file with no `ja`
   tag in its path is invisible to the scanner.
 - One EN and one JA file per group are scanned; alternates are reported, not compared.
