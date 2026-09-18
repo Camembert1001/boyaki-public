@@ -1,0 +1,8 @@
+{
+  "greeting": "Hello, {{name}}!",
+  "items": "You have {count} items.",
+  "hp": "HP %d",
+  "exp": "EXP: {0}",
+  "gold": "Gold: {0}",
+  "level": "Level {0}"
+}

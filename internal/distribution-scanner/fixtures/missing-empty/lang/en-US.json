@@ -1,0 +1,12 @@
+{
+  "start": "Start",
+  "continue": "Continue",
+  "options": "Options",
+  "quit": "Quit",
+  "back": "Back",
+  "confirm": "Confirm",
+  "cancel": "Cancel",
+  "loading": "Loading",
+  "saving": "Saving",
+  "deleting": "Deleting"
+}

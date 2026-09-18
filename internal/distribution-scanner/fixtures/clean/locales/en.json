@@ -1,0 +1,5 @@
+{
+  "menu": {"save": "Save", "load": "Load"},
+  "hud": {"score": "Score: {count}", "time": "Time %d"},
+  "dialog": {"confirm": "Are you sure?"}
+}
