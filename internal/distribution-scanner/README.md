@@ -244,6 +244,7 @@ below are what was observed on the day, not fixed properties of those projects.
 | `wakayamachannel/PocketRoles` `lang/` | 1,069 | 48 (1 / 47) | `HIGH_FIT` | 1 placeholder mismatch + many intentional edge spaces |
 | `toast-studio/critterdex-localisation` | 492 | 0 (0 / 0) | `CLEAN` | 492 keys, 0 current-rule findings |
 | `deadlock-mod-manager/deadlock-mod-manager` `apps/desktop/src/locales/` | 2,694 | 1,995 (1,995 / 0) | `TOO_NOISY` | too noisy / incomplete |
+| `chipi/orrery` `messages/` | 3,114 | 0 (0 / 0) | `CLEAN` | 3,114 keys, 0 current-rule findings |
 
 Notes on the run:
 
@@ -258,10 +259,9 @@ Notes on the run:
 - **Counts have drifted since the issue was written.** Blocks Beyond the Stars read 4,530
   keys then and 4,292 across three pairs now; Deadlock read 2,504 keys / 1,630 empty then
   and 2,694 / 1,765 now. The buckets are unchanged, which is what the validation was for.
-- **Orrery could not be identified.** No repository named Orrery with an EN/JA locale pair
-  was locatable from the issue's description alone, so its 3,114-key / 0-finding shape was
-  not reproduced against a live checkout. It is the same shape as CritterDex, which was
-  reproduced, and both are pinned in the benchmark test.
+- **Orrery was independently identified and checked as `chipi/orrery`.** Its current
+  `messages/en-US.json` and `messages/ja.json` each flatten to 3,114 keys and produce
+  0 current-rule findings, so it lands in `CLEAN` as documented in issue #9.
 
 The observed shapes are pinned as a test (`observed benchmark shapes land in their
 documented buckets`) so a future threshold change has to restate its effect on them.
