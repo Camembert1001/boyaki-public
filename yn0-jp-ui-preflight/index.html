@@ -42,9 +42,11 @@
 <div class="metrics"><a href="https://hits.sh/camembert1001.github.io/boyaki-public/yn0-jp-ui-preflight/landing/" target="_blank" rel="noopener"><img alt="aggregate page views" src="https://hits.sh/camembert1001.github.io/boyaki-public/yn0-jp-ui-preflight/landing.svg?label=views&view=today-total&style=flat-square"></a><span class="muted">Aggregate request counters by Hits are used for page/CTA funnel measurement; locale text is never sent to the counter.</span></div>
 <p class="footer">Scope: preflight only. Heuristics can produce false positives. This does not evaluate semantic translation quality and does not replace professional localization or in-game visual/LQA review.</p>
 
+<script src="metrics.js"></script>
 <script>
+const legacyMetric=window.metric;
 const $=x=>document.getElementById(x),ph=s=>[...String(s).matchAll(/\{\{[^{}]+\}\}|\{[^{}]+\}|%\d+\$[sdf]|%[sdf]/g)].map(m=>m[0]).sort(),badStart=/^[、。，．・：；？！ー）］｝〉》」』】〕〗〙〛ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ々〻]/,badEnd=/[（［｛〈《「『【〔〖〘〚]$/,sev={ERROR:0,WARN:1,INFO:2};
-function metric(name){try{const i=new Image();i.src='https://hits.sh/camembert1001.github.io/boyaki-public/yn0-jp-ui-preflight/'+encodeURIComponent(name)+'.svg?view=total&t='+Date.now()}catch(e){}}
+function metric(name){if(legacyMetric)legacyMetric(name)}
 function width(s){let n=0;for(const c of [...String(s)]){let p=c.codePointAt(0);n+=((p>=0x1100&&p<=0x115f)||(p>=0x2e80&&p<=0xa4cf)||(p>=0xac00&&p<=0xd7a3)||(p>=0xf900&&p<=0xfaff)||(p>=0xfe10&&p<=0xfe6f)||(p>=0xff01&&p<=0xff60)||(p>=0xffe0&&p<=0xffe6)||(p>=0x1f300&&p<=0x1faff))?2:1}return n}
 function esc(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function add(a,s,k,c,d){a.push({s,k,c,d})}
