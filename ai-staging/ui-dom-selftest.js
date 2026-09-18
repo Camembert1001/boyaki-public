@@ -22,7 +22,7 @@ async function run(){
     await waitFor(()=>window.__BOYAKI_UI_E2E_EVENTS.some(e=>e.event_type==='clarify'),'clarify-ui-submit');pass('clarify-ui-submit');
     await waitFor(()=>document.querySelector('.thread-item[data-event-type="boyaki-clarify"]'),'clarify-render');pass('clarify-render');
 
-    proposal.open=true;form=proposal.querySelector('form[data-canonical-event-type="proposal"]');form.querySelector('input').value='自動転記にする案';requestSubmit(form);
+    const currentProposal=card.querySelector('details.proposal');currentProposal.open=true;form=currentProposal.querySelector('form[data-canonical-event-type="proposal"]');form.querySelector('input').value='自動転記にする案';requestSubmit(form);
     await waitFor(()=>window.__BOYAKI_UI_E2E_EVENTS.some(e=>e.event_type==='proposal'),'proposal-ui-submit');pass('proposal-ui-submit');
     await waitFor(()=>document.querySelector('.thread-item[data-event-type="boyaki-proposal"]'),'proposal-render');pass('proposal-render');
 
