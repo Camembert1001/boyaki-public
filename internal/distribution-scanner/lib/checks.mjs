@@ -28,6 +28,13 @@ export const RULES = {
 // Findings that mean "this locale is not translated yet" rather than "this string looks wrong".
 export const BLANK_RULES = ['missing-ja', 'empty-ja'];
 
+// Findings that are reported in full but do not drive prospect classification, because the
+// project may well have written them on purpose. Only edge whitespace qualifies: the issue's
+// false-positive discipline calls it out by name, and PocketRoles pads 47 of 1,069 strings
+// deliberately for concatenation, which is not 47 reasons to contact its maintainers.
+// Half-width katakana and U+3000 stay classifying - those are defect claims, not padding.
+export const ADVISORY_RULES = ['edge-whitespace'];
+
 export const SEVERITY_ORDER = {ERROR: 0, WARN: 1, INFO: 2};
 
 export const placeholders = value => [...String(value).matchAll(PLACEHOLDER_PATTERN)].map(m => m[0]).sort();

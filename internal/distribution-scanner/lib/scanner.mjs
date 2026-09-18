@@ -6,7 +6,7 @@
 import {readFile, stat} from 'node:fs/promises';
 import path from 'node:path';
 import {walk, pairLocaleFiles} from './discover.mjs';
-import {checkPair, flatten, RULES, BLANK_RULES} from './checks.mjs';
+import {checkPair, flatten, RULES, BLANK_RULES, ADVISORY_RULES} from './checks.mjs';
 
 export const SCHEMA = 'yn0-distribution-scanner-report-v1';
 
@@ -38,8 +38,16 @@ async function readLocale(root, relPath) {
 
 // Bucket one pair. Order matters: an incomplete locale is judged before finding counts,
 // because hundreds of untranslated strings are not a review queue.
+//
+// Counts are taken over *classifying* findings only - every finding except the advisory
+// rules (see ADVISORY_RULES). Advisory findings are still reported, sampled and counted in
+// `totalFindings`; they just do not decide the bucket, so a project that pads strings on
+// purpose is not pushed out of HIGH_FIT by its own house style.
 export function classify(stats, thresholds) {
- const {enKeyCount, totalFindings, blankFindings, blankRatio} = stats;
+ const {enKeyCount, classifyingFindings, advisoryFindings, blankFindings, blankRatio} = stats;
+ const advisoryNote = advisoryFindings
+  ? ' ' + advisoryFindings + ' advisory finding' + (advisoryFindings === 1 ? '' : 's') + ' reported but not classified.'
+  : '';
  if (enKeyCount === 0) {
   return {classification: 'REVIEW', reason: 'EN locale has no string entries to compare.'};
  }
@@ -50,21 +58,26 @@ export function classify(stats, thresholds) {
     ' >= ' + percent(thresholds.noisyBlankRatio) + '); the locale looks incomplete rather than defective.'
   };
  }
- if (totalFindings > thresholds.reviewMax) {
-  return {classification: 'TOO_NOISY', reason: totalFindings + ' findings exceed the review ceiling of ' + thresholds.reviewMax + '.'};
+ if (classifyingFindings > thresholds.reviewMax) {
+  return {
+   classification: 'TOO_NOISY',
+   reason: classifyingFindings + ' classifying findings exceed the review ceiling of ' + thresholds.reviewMax + '.' + advisoryNote
+  };
  }
- if (totalFindings === 0) {
-  return {classification: 'CLEAN', reason: 'No findings under the current rule set.'};
+ if (classifyingFindings === 0) {
+  return {classification: 'CLEAN', reason: 'No classifying findings under the current rule set.' + advisoryNote};
  }
- if (totalFindings <= thresholds.highFitMax) {
+ if (classifyingFindings <= thresholds.highFitMax) {
   return {
    classification: 'HIGH_FIT',
-   reason: totalFindings + ' finding' + (totalFindings === 1 ? '' : 's') + ' within the 1-' + thresholds.highFitMax + ' high-fit band.'
+   reason: classifyingFindings + ' classifying finding' + (classifyingFindings === 1 ? '' : 's') +
+    ' within the 1-' + thresholds.highFitMax + ' high-fit band.' + advisoryNote
   };
  }
  return {
   classification: 'REVIEW',
-  reason: totalFindings + ' findings above the high-fit band of ' + thresholds.highFitMax + ' but within the review ceiling of ' + thresholds.reviewMax + '.'
+  reason: classifyingFindings + ' classifying findings above the high-fit band of ' + thresholds.highFitMax +
+   ' but within the review ceiling of ' + thresholds.reviewMax + '.' + advisoryNote
  };
 }
 
@@ -91,9 +104,12 @@ export async function scan(rootPath, options = {}) {
 
   const enKeyCount = Object.keys(en.entries).length;
   const blankFindings = BLANK_RULES.reduce((sum, rule) => sum + (findingsByRule[rule] || 0), 0);
+  const advisoryFindings = ADVISORY_RULES.reduce((sum, rule) => sum + (findingsByRule[rule] || 0), 0);
   const stats = {
    enKeyCount,
    totalFindings: findings.length,
+   advisoryFindings,
+   classifyingFindings: findings.length - advisoryFindings,
    blankFindings,
    blankRatio: enKeyCount ? blankFindings / enKeyCount : 0
   };
@@ -104,6 +120,8 @@ export async function scan(rootPath, options = {}) {
    enKeyCount,
    jaKeyCount: Object.keys(ja.entries).length,
    totalFindings: findings.length,
+   classifyingFindings: stats.classifyingFindings,
+   advisoryFindings,
    findingsByRule: Object.fromEntries(Object.keys(findingsByRule).sort().map(rule => [rule, findingsByRule[rule]])),
    blankFindings,
    blankRatio: round(stats.blankRatio),
@@ -120,6 +138,7 @@ export async function scan(rootPath, options = {}) {
   thresholds,
   sampleLimit,
   rules: Object.fromEntries(Object.keys(RULES).sort().map(rule => [rule, RULES[rule]])),
+  advisoryRules: [...ADVISORY_RULES].sort(),
   pairCount: pairs.length,
   summary,
   pairs,
@@ -138,7 +157,8 @@ export function renderText(report) {
   lines.push('');
   lines.push('[' + pair.classification + '] ' + pair.en + ' <-> ' + pair.ja);
   lines.push('  keys: EN ' + pair.enKeyCount + ' - JA ' + pair.jaKeyCount +
-   ' - findings ' + pair.totalFindings + ' (untranslated ' + pair.blankFindings + ', ' + percent(pair.blankRatio) + ')');
+   ' - findings ' + pair.totalFindings + ' (classifying ' + pair.classifyingFindings + ', advisory ' + pair.advisoryFindings +
+   ', untranslated ' + pair.blankFindings + ', ' + percent(pair.blankRatio) + ')');
   const rules = Object.keys(pair.findingsByRule);
   lines.push('  rules: ' + (rules.length ? rules.map(rule => rule + ' ' + pair.findingsByRule[rule]).join(' - ') : 'none'));
   lines.push('  reason: ' + pair.reason);

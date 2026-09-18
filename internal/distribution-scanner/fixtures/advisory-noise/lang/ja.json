@@ -1,0 +1,17 @@
+{
+  "cmd.rl.crew": "クルー ",
+  "cmd.rl.imp": "インポスター ",
+  "cmd.rl.neu": "第三陣営 ",
+  "cmd.opt.fail": "失敗 ",
+  "cmd.opt.ok": "成功 ",
+  "hud.sep": " / ",
+  "hud.prefix": "Lv. ",
+  "hud.suffix": " ポイント",
+  "hud.round": "ラウンド ",
+  "hud.alive": " 生存",
+  "hud.dead": " 死亡",
+  "hud.spectator": "観戦中 ",
+  "kill.worship": "{0}は倒れた。{0}の敗北。",
+  "menu.start": "開始",
+  "menu.quit": "終了"
+}

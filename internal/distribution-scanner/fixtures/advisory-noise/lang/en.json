@@ -1,0 +1,17 @@
+{
+  "cmd.rl.crew": "Crew ",
+  "cmd.rl.imp": "Impostor ",
+  "cmd.rl.neu": "Neutral ",
+  "cmd.opt.fail": "failed ",
+  "cmd.opt.ok": "ok ",
+  "hud.sep": " / ",
+  "hud.prefix": "Lv. ",
+  "hud.suffix": " pts",
+  "hud.round": "Round ",
+  "hud.alive": " alive",
+  "hud.dead": " dead",
+  "hud.spectator": "Spectating ",
+  "kill.worship": "{0} was struck down.",
+  "menu.start": "Start",
+  "menu.quit": "Quit"
+}
