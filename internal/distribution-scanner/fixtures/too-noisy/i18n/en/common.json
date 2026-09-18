@@ -1,0 +1,14 @@
+{
+  "ok": "OK",
+  "cancel": "Cancel",
+  "install": "Install",
+  "uninstall": "Uninstall",
+  "update": "Update",
+  "settings": "Settings",
+  "profile": "Profile",
+  "about": "About",
+  "help": "Help",
+  "search": "Search",
+  "refresh": "Refresh",
+  "close": "Close"
+}
