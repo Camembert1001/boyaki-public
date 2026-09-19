@@ -1,20 +1,43 @@
 import { getPublicKey, finalizeEvent } from 'https://esm.sh/nostr-tools@2.17.0';
 import * as nip49 from 'https://esm.sh/nostr-tools@2.17.0/nip49';
-import { client,fromHex,toHex } from './canonical-api.js?v=20260918-ai-v1';
+import { client,fromHex,toHex } from './canonical-api.js?v=20260919-shared-identity-v1';
 import { loadOwnedPosts } from './canonical-mypage.js?v=20260918-ai-v1';
 const $=s=>document.querySelector(s),short=pk=>`${pk.slice(0,8)}…${pk.slice(-6)}`;
 const store=window.BOYAKI_STORAGE;
 function currentIdentity(){const i=client.identity();return i.kind==='account'?i:null}
 function cacheProfile(profile){for(const [key,value] of Object.entries({'display-name':profile.displayName,interest:profile.interest,about:profile.about}))store.local.setItem('boyaki-profile-'+key,value||'')}
 function clearLogin(){for(const s of [store.local,store.session])for(const key of ['boyaki-account-sk','boyaki-account-login-key','boyaki-account-pk','boyaki-profile-display-name','boyaki-profile-interest','boyaki-profile-about'])s.removeItem(key)}
+const SHARED_IDENTITY_RESOLVE='https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/boyaki-api/account-credentials/resolve';
+async function sha256Hex(text){
+  const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text));
+  return [...new Uint8Array(digest)].map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+async function resolveSharedCredential(loginKey){
+  const hash=await sha256Hex(loginKey);
+  const response=await fetch(`${SHARED_IDENTITY_RESOLVE}?login_key_hash=${encodeURIComponent(hash)}`,{cache:'no-store'});
+  if(response.status===404)return {encryptedSecret:loginKey,accountPubkey:null,shared:false};
+  let payload={};try{payload=await response.json()}catch{}
+  if(!response.ok)throw new Error(payload?.error||`shared_identity_${response.status}`);
+  return {encryptedSecret:payload.encrypted_secret,accountPubkey:payload.account_pubkey,shared:true};
+}
 $('#login-form').addEventListener('submit',async e=>{
   e.preventDefault();const button=e.submitter;button.disabled=true;$('#profile-state').textContent='ログイン中…';
   try{
-    const key=$('#login-key').value.trim(),sk=nip49.decrypt(key,$('#login-password').value),id={sk,pk:getPublicKey(sk),kind:'account'};
-    const result=await client.getAccount(id); // AI account must exist; never import another environment's profile.
+    const key=$('#login-key').value.trim(),password=$('#login-password').value;
+    const resolved=await resolveSharedCredential(key);
+    const sk=nip49.decrypt(resolved.encryptedSecret,password),pk=getPublicKey(sk);
+    if(resolved.accountPubkey&&resolved.accountPubkey!==pk)throw new Error('shared_identity_mismatch');
+    const id={sk,pk,kind:'account'};
+    const result=await client.getAccount(id); // Existing AI account or STAGING identity auto-provisioned as an AI-STAGING shadow account.
     clearLogin();const target=$('#remember-login').checked?store.local:store.session;
     target.setItem('boyaki-account-sk',toHex(sk));target.setItem('boyaki-account-login-key',key);target.setItem('boyaki-account-pk',id.pk);cacheProfile(result.account.profile);$('#login-form').reset();location.reload();
-  }catch{ $('#profile-state').textContent='ログインできませんでした。AI-STAGINGのログインキー・パスワードと通信状態を確認してください。' }
+  }catch(err){
+    console.error('AI-STAGING login failed',err);
+    const code=String(err?.message||err);
+    $('#profile-state').textContent=code==='shared_account_not_found'||code==='ai_account_not_found'
+      ?'このアカウントはSTAGINGにもAI-STAGINGにも登録されていません。'
+      :'ログインできませんでした。STAGINGと同じログインキー・パスワードと通信状態を確認してください。';
+  }
   finally{button.disabled=false}
 });
 async function linkDevice(account,links){
