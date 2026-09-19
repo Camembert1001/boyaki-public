@@ -1,5 +1,7 @@
 # YN0 Contact State (internal)
 
+> Recovery entrypoint: read [`CHECKPOINT.md`](CHECKPOINT.md) first. It records the current YN0 operating position; this README defines the state model.
+
 A minimal state machine for the YN0 validation pipeline. It answers three questions
 about one contact, mechanically:
 
