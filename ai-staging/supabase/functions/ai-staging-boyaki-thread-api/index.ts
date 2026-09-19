@@ -201,6 +201,32 @@ async function listMySolutionCases(req:Request){
   });
   return json(req,200,{cases:enriched,environment:'AI-STAGING'});
 }
+async function listMyVoiceHistory(req:Request){
+  const event=await auth(req),account=(await linked(event.pubkey))||event.pubkey;
+  const{data:events,error}=await db.from(T('boyaki_thread_events'))
+    .select('id,post_id,event_type,participant_role,display_name,content,status,created_at')
+    .eq('owner_account_pubkey',account).eq('participant_role','voice').eq('status','active')
+    .order('created_at',{ascending:false}).limit(300);
+  if(error)throw Error(error.message);
+  const{data:demand,error:demandError}=await db.from(T('boyaki_demand_signals'))
+    .select('id,post_id,signal,amount_yen,condition_text,created_at,updated_at')
+    .eq('actor_pubkey',account).order('updated_at',{ascending:false}).limit(300);
+  if(demandError)throw Error(demandError.message);
+  const postIds=[...new Set([...(events||[]).map((x:any)=>x.post_id),...(demand||[]).map((x:any)=>x.post_id)].filter(Boolean))];
+  let posts:any[]=[];
+  if(postIds.length){
+    const out=await db.from(T('boyaki_posts')).select('id,content,status,created_at').in('id',postIds);
+    if(out.error)throw Error(out.error.message);posts=out.data||[];
+  }
+  const postMap=new Map(posts.map((x:any)=>[x.id,x]));
+  return json(req,200,{
+    account_pubkey:account,
+    thread_contributions:(events||[]).map((x:any)=>({...x,post:postMap.get(x.post_id)||null})),
+    demand_signals:(demand||[]).map((x:any)=>({...x,post:postMap.get(x.post_id)||null})),
+    environment:'AI-STAGING'
+  });
+}
+
 async function deleteSolutionCase(req:Request,id:string){
   const event=await auth(req);await consume(event,req);
   const {data:item,error:lookupError}=await db.from(T('boyaki_solution_cases')).select('maker_account_pubkey,status').eq('id',id).maybeSingle();
@@ -220,7 +246,7 @@ Deno.serve(async req=>{
   try{
     if(req.method==='GET'&&path==='/health')return json(req,200,{
       ok:true,service:'ai-staging-boyaki-thread-api',canonical_threads:true,room_chat:true,
-      post_bound_solution_rooms:true,solution_cases:true,environment:'AI-STAGING',version:'ai-staging-solution-flow-v3'
+      post_bound_solution_rooms:true,solution_cases:true,voice_history:true,environment:'AI-STAGING',version:'ai-staging-contribution-history-v4'
     });
 
     const threadMatch=/^\/posts\/([0-9a-f-]+)\/thread$/i.exec(path);
@@ -236,6 +262,7 @@ Deno.serve(async req=>{
     if(req.method==='GET'&&roomMatch&&roomId(roomMatch[1]))return getSolutionRoom(req,roomMatch[1]);
     if(req.method==='GET'&&roomMessageMatch&&roomId(roomMessageMatch[1]))return listRoomMessages(req,roomMessageMatch[1]);
     if(req.method==='GET'&&path==='/me/solution-cases')return listMySolutionCases(req);
+    if(req.method==='GET'&&path==='/me/voice-history')return listMyVoiceHistory(req);
 
     if(req.method==='GET'&&threadMatch&&uuid(threadMatch[1])){
       const {data:post}=await db.from(T('boyaki_posts')).select('id,author_pubkey,owner_account_pubkey,status').eq('id',threadMatch[1]).maybeSingle();
