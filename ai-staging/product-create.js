@@ -42,7 +42,7 @@ $('#product-form').addEventListener('submit',async e=>{
   button.disabled=true;button.textContent='公開中…';$('#product-status').textContent='AI-STAGINGの商品として公開しています…';
   try{
     const result=await client.createProduct(caseRow.id,title,description,price,delivery);
-    $('#product-status').textContent='プロダクトを公開しました。商品ページへ移動します…';
+    $('#product-status').textContent='プロダクトをMaker Spaceに公開しました。商品ページで元のBOYAKIスレッドへの掲載を選べます…';
     setTimeout(()=>location.href=`./product.html?id=${encodeURIComponent(result.product.id)}`,500);
   }catch(err){
     console.error(err);const code=String(err?.message||err);
