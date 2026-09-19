@@ -39,6 +39,10 @@ export const REOPEN_CONDITIONS = [
  'NEVER'           // opted out
 ];
 
+// The four things a contact can teach us. They double as the possible values of
+// `waiting_for_axis`: "waiting on the workflow question" and "waiting on the price
+// question" are different waits, and reading one as the other is the same class of
+// mistake this module exists to stop.
 export const VALIDATION_AXES = ['problem', 'usefulness', 'workflow', 'payer'];
 
 export const VALIDATION_STATUSES = ['UNKNOWN', 'POSITIVE', 'NEGATIVE', 'AMBIGUOUS'];
@@ -115,13 +119,15 @@ export function emptyConversation() {
   human_reply: false,
   conversation_status: 'DISCOVERED',
   waiting_for: 'NOTHING',
+  waiting_for_axis: null, // which validation axis the outstanding answer would settle
   waiting_for_reply: false,
   reply_waived: false,   // we told them an answer is not needed
   follow_up_allowed: false,
   reopen_condition: 'NOT_APPLICABLE',
   closed_reason: null,
   inbound_since_close: false, // an opted-out contact wrote to us; a human must look
-  last_inbound_at: null,
+  last_inbound_at: null,      // last message from a *person*; never an autoresponder
+  last_auto_inbound_at: null, // last automated acknowledgement, which is not a reply
   last_outbound_at: null
  };
 }
@@ -150,6 +156,9 @@ export function normalizeContact(raw) {
   human_reply: Boolean(conversation.human_reply ?? base.human_reply),
   conversation_status: assertEnum(conversation.conversation_status ?? base.conversation_status, CONVERSATION_STATUSES, 'conversation.conversation_status'),
   waiting_for: assertEnum(conversation.waiting_for ?? base.waiting_for, WAITING_FOR, 'conversation.waiting_for'),
+  waiting_for_axis: conversation.waiting_for_axis === undefined || conversation.waiting_for_axis === null
+   ? base.waiting_for_axis
+   : assertEnum(conversation.waiting_for_axis, VALIDATION_AXES, 'conversation.waiting_for_axis'),
   waiting_for_reply: Boolean(conversation.waiting_for_reply ?? base.waiting_for_reply),
   reply_waived: Boolean(conversation.reply_waived ?? base.reply_waived),
   follow_up_allowed: Boolean(conversation.follow_up_allowed ?? base.follow_up_allowed),
@@ -157,6 +166,7 @@ export function normalizeContact(raw) {
   inbound_since_close: Boolean(conversation.inbound_since_close ?? base.inbound_since_close),
   closed_reason: conversation.closed_reason === undefined || conversation.closed_reason === null ? null : assertString(conversation.closed_reason, 'conversation.closed_reason'),
   last_inbound_at: conversation.last_inbound_at === undefined || conversation.last_inbound_at === null ? null : assertInstant(conversation.last_inbound_at, 'conversation.last_inbound_at'),
+  last_auto_inbound_at: conversation.last_auto_inbound_at === undefined || conversation.last_auto_inbound_at === null ? null : assertInstant(conversation.last_auto_inbound_at, 'conversation.last_auto_inbound_at'),
   last_outbound_at: conversation.last_outbound_at === undefined || conversation.last_outbound_at === null ? null : assertInstant(conversation.last_outbound_at, 'conversation.last_outbound_at')
  };
  const validation = raw.validation ?? {};

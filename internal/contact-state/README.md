@@ -43,12 +43,12 @@ contradiction), `2` bad arguments.
 Sample output:
 
 ```
-[CLOSE] muraoka (Muraoka)
-  conversation: STALLED - outreach SENT - human_reply true - in 2026-09-09T00:41:00Z - out 2026-09-11T08:00:00Z
+[DO_NOT_CONTACT] waived-then-closed (Prospect F) - Example localization vendor
+  conversation: CLOSED - outreach SENT - human_reply true - in 2026-09-09T00:41:00Z - out 2026-09-18T09:00:00Z
   flags: waiting_for_reply=false - waiting_for=NOTHING - follow_up_allowed=false - reopen=INBOUND_ONLY
   validation: problem UNKNOWN(0) - usefulness UNKNOWN(0) - workflow UNKNOWN(0) - payer UNKNOWN(0)
   derived: waiting false - can_follow_up false - validated false - payer_validated false - needs_attention false
-  reason: we told them no reply is needed, so no answer is outstanding
+  reason: conversation is CLOSED (we released them from answering; nothing is outstanding); reopen only on inbound
 ```
 
 The report carries no timestamp and no randomness, so two runs over the same store are
@@ -56,9 +56,17 @@ byte-identical.
 
 ## Where the real store lives
 
-`fixtures/contacts.json` is fixtures, not data. **Real contact records do not belong in
-this public repository.** Keep the live store in an untracked file — `*.local.json` in
-this directory is gitignored — and point the CLI at it:
+There is exactly one canonical store of real contacts, and it is not in this repository:
+
+| File | Holds | Tracked |
+| --- | --- | --- |
+| `contacts.local.json` | the real contacts, and the only current answer to "what state is X in?" | **no** — gitignored |
+| `fixtures/contacts.json` | invented scenarios that exercise the model | yes |
+| [`CHECKPOINT.md`](CHECKPOINT.md) | the operating position a new session restores from | yes |
+
+**Real contact records do not belong in this public repository.** Keep the live store in
+an untracked file — `*.local.json` in this directory is gitignored — and point the CLI at
+it:
 
 ```
 node internal/contact-state/state.mjs internal/contact-state/contacts.local.json
@@ -67,6 +75,12 @@ node internal/contact-state/state.mjs internal/contact-state/contacts.local.json
 Even there, keep identities to what the channel already shows (a handle, a project name)
 and evidence to a short quote or summary. The model never needs an email address: the
 channel and a message id are enough to find the thread again.
+
+**Fixtures are not a stale copy of the real contacts — they are not those contacts at
+all.** Every fixture id names a conversation *shape* and every fixture name is
+`Prospect <letter>`; a test enforces both, so a fixture row can never be read as one
+person's current state. If the local store is missing, the answer is to rebuild it from
+the source threads, never to fall back to `fixtures/contacts.json`.
 
 ## Store format
 
@@ -78,15 +92,15 @@ carrying both is rejected, because that is two sources of truth for one contact.
   "schema": "yn0-contact-state-v1",
   "contacts": [
     {
-      "id": "muraoka",
-      "name": "Muraoka",
+      "id": "some-contact",
+      "name": "Handle or project name",
       "channel": "GMAIL",
       "events": [
         {"type": "OUTREACH_SENT", "at": "2026-09-08T09:00:00Z", "waiting_for": "FIRST_REPLY"},
         {"type": "INBOUND_REPLY", "at": "2026-09-09T00:41:00Z"},
         {"type": "QUESTION_SENT", "at": "2026-09-09T09:05:00Z", "waiting_for": "PAYER_ANSWER"},
         {"type": "REPLY_WAIVED", "at": "2026-09-11T08:00:00Z"},
-        {"type": "NO_REPLY_TIMEOUT", "at": "2026-09-18T09:00:00Z"}
+        {"type": "CONVERSATION_ENDED", "at": "2026-09-18T09:00:00Z", "direction": "outbound"}
       ]
     }
   ]
@@ -116,18 +130,32 @@ human records, not a clock deciding that silence has gone on long enough.
 | `human_reply` | a human (not a bot, not a bounce) has written to us |
 | `conversation_status` | `DISCOVERED`, `CONTACTED`, `AWAITING_REPLY`, `REPLIED`, `VALIDATING`, `STALLED`, `CLOSED` |
 | `waiting_for` | `NOTHING`, `FIRST_REPLY`, `VALIDATION_ANSWER`, `PAYER_ANSWER` |
+| `waiting_for_axis` | which axis the outstanding answer would settle, or `null` |
 | `waiting_for_reply` | an answer is genuinely outstanding |
 | `reply_waived` | we told them an answer is not needed |
 | `follow_up_allowed` | we may send again |
 | `reopen_condition` | `NOT_APPLICABLE`, `INBOUND_ONLY`, `NEVER` |
 | `closed_reason` | why the thread ended, or `null` |
 | `inbound_since_close` | an opted-out contact wrote to us; a human must look |
-| `last_inbound_at`, `last_outbound_at` | ISO instants or `null` |
+| `last_inbound_at` | last message from a **person**, or `null` |
+| `last_auto_inbound_at` | last automated acknowledgement, or `null` |
+| `last_outbound_at` | ISO instant or `null` |
 
 `CONTACTED` is outreach that asked nothing; `AWAITING_REPLY` is outreach that asked and
 has not been answered. "We sent the question" is `last_outbound_at` plus `waiting_for`;
 "an answer is owed" is `waiting_for_reply`. They are set by different events and cleared
 by different events.
+
+`waiting_for_axis` exists because "waiting on the workflow question" and "waiting on the
+price question" are different waits. A `PAYER_ANSWER` always carries the `payer` axis
+(the model sets it, and refuses any other value); a `VALIDATION_ANSWER` may name
+`problem`, `usefulness` or `workflow`, and a `VALIDATION_ANSWER` on the `payer` axis is
+rejected as a contradiction. A contact validated on problem and usefulness, waiting on a
+workflow question, with `payer` still `UNKNOWN`, is therefore recorded as exactly that —
+and never reported as an outstanding price question.
+
+`last_inbound_at` is human-only, on purpose: it is what `owes_response` reads, and an
+autoresponder is not someone we owe an answer to.
 
 ### validation — what we learned
 
@@ -159,8 +187,9 @@ anything and stays `UNKNOWN`.
 | `FOLLOW_UP_SENT` | `follow_up_allowed`, not `CLOSED`, not waived | re-enters `AWAITING_REPLY`/`VALIDATING`; `waiting_for_reply = true` |
 | `REPLY_WAIVED` | not `CLOSED`/opted out | `reply_waived = true`; `waiting_for_reply = false`; `waiting_for = NOTHING`; `follow_up_allowed = false` |
 | `INBOUND_REPLY` | any state except opted out | `REPLIED`; `human_reply = true`; clears waiting, waiver and `closed_reason`; `follow_up_allowed = true`; reopens a contact closed under `INBOUND_ONLY` |
+| `INBOUND_REPLY` with `human: false` | any state | records `last_auto_inbound_at` and **nothing else** |
 | `NO_REPLY_TIMEOUT` | contacted, not `CLOSED` | `STALLED`; `waiting_for_reply = false`; `follow_up_allowed = !reply_waived`; `reopen_condition = INBOUND_ONLY` |
-| `CONVERSATION_ENDED` | any live state | `CLOSED`; `follow_up_allowed = false`; `reopen_condition = INBOUND_ONLY` |
+| `CONVERSATION_ENDED` | any live state; `direction: inbound` needs a human | `CLOSED`; `follow_up_allowed = false`; `reopen_condition = INBOUND_ONLY` |
 | `OPT_OUT` | any live state | `CLOSED`; `reopen_condition = NEVER` |
 | `VALIDATION_RECORDED` | evidence present unless `UNKNOWN` | sets one axis; **touches no conversation field** |
 
@@ -171,6 +200,12 @@ record a follow-up that the state does not permit.
 
 An `INBOUND_REPLY` from an opted-out contact does not reopen anything. It records the
 message, sets `inbound_since_close`, and routes to `REVIEW` for a human.
+
+**An automated acknowledgement is not a reply.** `INBOUND_REPLY` with `human: false` — a
+ticket receipt, an out-of-office, a bot — writes `last_auto_inbound_at` and touches no
+other field. It cannot set `human_reply`, cannot clear a wait or a waiver, cannot make us
+owe a response, and cannot reopen a contact closed under `INBOUND_ONLY`. A contact closed
+that way reopens on a human inbound and on nothing else.
 
 ## Derived state
 
@@ -214,14 +249,18 @@ and what to send.
 
 Contradictions between stored fields are reported, not repaired, and force `REVIEW` — the
 one outcome that sends nothing. Checked: waiting while `CLOSED`/`STALLED`/`DISCOVERED`;
-waiting for `NOTHING`; waiting after a waiver; waiting with no outreach sent;
-`follow_up_allowed` on a closed or opted-out contact; a closed or stalled contact with no
-`reopen_condition`; timestamps that disagree with `outreach_status` / `human_reply`; and
-any validation axis that left `UNKNOWN` without evidence or without a human reply.
+waiting for `NOTHING`; waiting after a waiver; waiting with no outreach sent; an axis on a
+wait that has none, or a price question filed as a generic one; `follow_up_allowed` on a
+closed or opted-out contact; a closed or stalled contact with no `reopen_condition`;
+timestamps that disagree with `outreach_status` / `human_reply`; and any validation axis
+that left `UNKNOWN` without evidence or without a human reply.
 
 ## Fixtures
 
-`fixtures/contacts.json` holds one contact per scenario the pipeline actually produced:
+> **These are invented scenarios, not contacts.** Every id names a conversation shape and
+> every name is `Prospect <letter>`. Nothing here reflects the state of any real contact;
+> that lives only in the untracked `contacts.local.json`. A test enforces this, so a
+> fixture row cannot silently start reading as someone's current state.
 
 | Contact | Shape | Result |
 | --- | --- | --- |
@@ -229,14 +268,19 @@ any validation axis that left `UNKNOWN` without evidence or without a human repl
 | `useful-payer-unknown` | usefulness yes, payer question open | `usefulness POSITIVE`, `payer UNKNOWN`, `VALIDATING`, `WAIT` |
 | `payer-positive` | "would buy at $5" | `payer POSITIVE`, `RESPOND` |
 | `clearly-not-needed` | explicit "not needed" | `problem`/`usefulness NEGATIVE`, `CLOSE` |
-| `muraoka` | payer question sent, human replied, never answered, reply waived, silence | `payer UNKNOWN`, `STALLED`, `waiting_for_reply = false`, `CLOSE` |
-| `banzai` | thanked us and ended the thread | `usefulness AMBIGUOUS`, `CLOSED`, `DO_NOT_CONTACT` |
-| `atlos` | closed for silence, then wrote to us | reopened to `REPLIED`, `RESPOND` |
+| `waived-then-stalled` | payer question sent, human replied, never answered, reply waived, silence | `payer UNKNOWN`, `STALLED`, `waiting_for_reply = false`, `CLOSE` |
+| `waived-then-closed` | the same, then closed outright | `payer UNKNOWN`, `CLOSED`, `DO_NOT_CONTACT` |
+| `thank-you-only` | thanked us and ended the thread | `usefulness AMBIGUOUS`, `CLOSED`, `DO_NOT_CONTACT` |
+| `useful-payer-ambiguous` | answered every axis, no yes/no on price, ended the thread | `problem`/`usefulness`/`workflow POSITIVE`, `payer AMBIGUOUS`, `CLOSED`, `DO_NOT_CONTACT` |
+| `validating-workflow-answer` | validated, workflow question open | `VALIDATING`, `waiting_for_axis = workflow`, `payer UNKNOWN`, `WAIT` |
+| `reopened-after-close` | closed for silence, then a person wrote to us | reopened to `REPLIED`, `RESPOND` |
+| `auto-ack-only` | outreach, then a ticket autoresponder | `human_reply = false`, still `AWAITING_REPLY`, `WAIT` |
+| `closed-then-auto-ack` | autoresponder after the thread closed | unchanged `CLOSED`, `DO_NOT_CONTACT` |
 
-`muraoka` and `banzai` reproduce the two conversation shapes that motivated this work.
-`atlos` is modelled as the reopen case: the repository holds no record of its actual
-thread, so its timeline is the shape, not the history. Replace all three with the real
-event logs in the untracked local store before treating them as data.
+The last eight are the shapes that motivated this work: a payer question that is not
+outstanding, a contact who validated everything except price, a wait that is a workflow
+question rather than a price question, and a robot that must not be mistaken for a
+person.
 
 ## Tests
 
@@ -245,9 +289,10 @@ node --test internal/contact-state/tests/contact-state.test.mjs
 ```
 
 No dependencies, no install step, no network. Node 22 built-ins only. The suite covers
-the seven fixtures, the transition path, the separation of the two blocks, the evidence
-requirement, refusal of outbound events, reopening, the consistency checker, store
-validation, determinism and the CLI.
+the twelve fixtures and the rule that none of them names a real contact, the transition
+path, the separation of the two blocks, the evidence requirement, the waiting axis,
+automated acknowledgements, refusal of outbound events, reopening under `INBOUND_ONLY`,
+the consistency checker, store validation, determinism and the CLI.
 
 ## Known limitations
 
@@ -266,3 +311,7 @@ validation, determinism and the CLI.
   it does not say it is a good idea, and nothing here writes or sends one.
 - **Evidence is not verified.** The rule is that a judgement cites a message; nothing
   checks that the citation says what the summary claims.
+- **"Automated" is an operator's call.** `human: false` is recorded by whoever read the
+  message. The model has no heuristic for spotting an autoresponder and does not want
+  one; it only guarantees that once a message is marked automated, no rule treats it as
+  a person.

@@ -29,6 +29,17 @@ export function checkConsistency(contact) {
   add('waiting_for=' + c.waiting_for + ' while waiting_for_reply=false');
  }
 
+ // An axis names *which* answer is outstanding, so it only makes sense while one is.
+ if (c.waiting_for_axis !== null && !['VALIDATION_ANSWER', 'PAYER_ANSWER'].includes(c.waiting_for)) {
+  add('waiting_for_axis=' + c.waiting_for_axis + ' while waiting_for=' + c.waiting_for);
+ }
+ if (c.waiting_for === 'PAYER_ANSWER' && c.waiting_for_axis !== 'payer') {
+  add('waiting_for=PAYER_ANSWER but waiting_for_axis=' + c.waiting_for_axis);
+ }
+ if (c.waiting_for === 'VALIDATION_ANSWER' && c.waiting_for_axis === 'payer') {
+  add('waiting_for=VALIDATION_ANSWER on the payer axis; record it as PAYER_ANSWER');
+ }
+
  if (c.conversation_status === 'CLOSED') {
   if (c.follow_up_allowed) add('follow_up_allowed=true on a CLOSED contact');
   if (c.reopen_condition === 'NOT_APPLICABLE') add('CLOSED contact has no reopen_condition');
@@ -127,7 +138,10 @@ function decideNextAction(contact, facts) {
   return ['DO_NOT_CONTACT', 'conversation is CLOSED' + (c.closed_reason ? ' (' + c.closed_reason + ')' : '') + '; reopen only on inbound'];
  }
  if (facts.is_waiting) {
-  return ['WAIT', 'waiting for ' + c.waiting_for + ' since ' + c.last_outbound_at];
+  // The axis is part of the answer to "waiting for what?" - an outstanding workflow
+  // question is not an outstanding price question.
+  const what = c.waiting_for + (c.waiting_for_axis === null ? '' : ' on ' + c.waiting_for_axis);
+  return ['WAIT', 'waiting for ' + what + ' since ' + c.last_outbound_at];
  }
  if (facts.negative) {
   const axis = v.usefulness.status === 'NEGATIVE' ? 'usefulness' : 'problem';

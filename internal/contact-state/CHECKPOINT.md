@@ -16,6 +16,7 @@ Current checks/hypothesis include missing or empty targets, placeholder/control-
 - Live canonical contact data: `internal/contact-state/contacts.local.json`
 - The live file is intentionally gitignored and must not be committed to this public repository.
 - `fixtures/contacts.json` contains test scenarios only. Never treat fixtures as current contact history.
+- Fixture ids name conversation *shapes* (`waived-then-closed`, `validating-workflow-answer`) and fixture names are `Prospect <letter>`. No fixture carries a real contact's name, and a test enforces that. If a fixture ever appears to describe a real contact, the fixture is wrong, not the contact.
 - For disputed contact state, the original Gmail/GitHub thread is authoritative evidence; update the local canonical record from that evidence.
 
 ## Current validated position
@@ -60,6 +61,7 @@ Do not interpret `payer = UNKNOWN` as “payer answer pending.” Conversation s
 - payer: UNKNOWN
 - current outstanding question: why the existing locale checker/schema has not been wired into CI/release checks
 - important: the current wait is a workflow/CI-release question, **not a payer question**
+- recorded as `waiting_for: VALIDATION_ANSWER` with `waiting_for_axis: workflow`; the model refuses to file that as a payer question and reports it as "waiting for VALIDATION_ANSWER on workflow"
 - do not implement a CI/release gate before that answer validates the hypothesis
 
 ### Tashiro / Across
@@ -76,6 +78,7 @@ Do not interpret `payer = UNKNOWN` as “payer answer pending.” Conversation s
 ### Aseprite / Igara Studio
 
 - automated acknowledgement is not a human reply
+- recorded as `INBOUND_REPLY` with `human: false`, which writes `last_auto_inbound_at` and changes nothing else: it cannot set `human_reply`, clear a wait, or reopen a closed thread
 - current action: WAIT unless a human inbound has arrived
 
 ### OyasumiVR
@@ -84,6 +87,25 @@ Do not interpret `payer = UNKNOWN` as “payer answer pending.” Conversation s
 - usefulness: POSITIVE
 - observe only
 - does not count toward payer validation because it is a free product
+
+## Recording those states in the local store
+
+Each canonical state above is expressible as an event log in `contacts.local.json`. The
+equivalent shapes are covered by fixtures, so the model is verified to produce them:
+
+| Canonical state | Event log | Fixture proving the shape |
+| --- | --- | --- |
+| Banzai: CLOSED, three axes POSITIVE, payer AMBIGUOUS, DO_NOT_CONTACT | `OUTREACH_SENT` → `INBOUND_REPLY` → four `VALIDATION_RECORDED` → `CONVERSATION_ENDED` | `useful-payer-ambiguous` |
+| Muraoka: CLOSED, all axes UNKNOWN, no answer outstanding, DO_NOT_CONTACT | `OUTREACH_SENT` → `INBOUND_REPLY` → `QUESTION_SENT` → `REPLY_WAIVED` → `CONVERSATION_ENDED` | `waived-then-closed` |
+| Atlos: VALIDATING, waiting on the workflow question, payer UNKNOWN, WAIT | `OUTREACH_SENT` → `INBOUND_REPLY` → two `VALIDATION_RECORDED` → `QUESTION_SENT` with `waiting_for_axis: workflow` | `validating-workflow-answer` |
+
+Three guarantees the model enforces, so none of these can drift back:
+
+- `payer = UNKNOWN` never produces `is_waiting`. Only an open question on the wire does.
+- Every outbound event against a CLOSED contact is refused, by name; a follow-up that the
+  state does not permit cannot be recorded at all.
+- A CLOSED contact with `reopen_condition: INBOUND_ONLY` reopens on a human inbound and on
+  nothing else — an automated acknowledgement leaves it closed.
 
 ## Technical state
 

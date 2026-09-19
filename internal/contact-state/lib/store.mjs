@@ -77,7 +77,7 @@ const flags = contact => {
  const c = contact.conversation;
  return [
   'waiting_for_reply=' + c.waiting_for_reply,
-  'waiting_for=' + c.waiting_for,
+  'waiting_for=' + c.waiting_for + (c.waiting_for_axis === null ? '' : '/' + c.waiting_for_axis),
   'follow_up_allowed=' + c.follow_up_allowed,
   'reopen=' + c.reopen_condition
  ].join(' - ');
@@ -95,7 +95,8 @@ export function renderText(report, label) {
   lines.push('[' + d.next_action + '] ' + contact.id + (contact.name ? ' (' + contact.name + ')' : '') +
    (contact.organization ? ' - ' + contact.organization : ''));
   lines.push('  conversation: ' + c.conversation_status + ' - outreach ' + c.outreach_status +
-   ' - human_reply ' + c.human_reply + ' - in ' + (c.last_inbound_at ?? '-') + ' - out ' + (c.last_outbound_at ?? '-'));
+   ' - human_reply ' + c.human_reply + ' - in ' + (c.last_inbound_at ?? '-') + ' - out ' + (c.last_outbound_at ?? '-') +
+   (c.last_auto_inbound_at === null ? '' : ' - auto-ack ' + c.last_auto_inbound_at));
   lines.push('  flags: ' + flags(contact));
   lines.push('  validation: ' + ['problem', 'usefulness', 'workflow', 'payer']
    .map(axis => axis + ' ' + contact.validation[axis].status + '(' + contact.validation[axis].evidence.length + ')').join(' - '));

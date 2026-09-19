@@ -1,4 +1,10 @@
 {
+  "_comment": [
+    "TEST SCENARIOS ONLY. Every contact below is invented and every id names a",
+    "conversation SHAPE, not a person. Nothing here is, or reflects, the current",
+    "state of any real contact - that lives in the untracked contacts.local.json.",
+    "Never read a row of this file as contact history."
+  ],
   "schema": "yn0-contact-state-v1",
   "contacts": [
     {
@@ -123,8 +129,9 @@
       ]
     },
     {
-      "id": "muraoka",
-      "name": "Muraoka",
+      "id": "waived-then-stalled",
+      "name": "Prospect E",
+      "organization": "Example localization vendor",
       "channel": "GMAIL",
       "events": [
         {"type": "OUTREACH_SENT", "at": "2026-09-08T09:00:00Z", "waiting_for": "FIRST_REPLY"},
@@ -135,8 +142,27 @@
       ]
     },
     {
-      "id": "banzai",
-      "name": "Banzai",
+      "id": "waived-then-closed",
+      "name": "Prospect F",
+      "organization": "Example localization vendor",
+      "channel": "GMAIL",
+      "events": [
+        {"type": "OUTREACH_SENT", "at": "2026-09-08T09:00:00Z", "waiting_for": "FIRST_REPLY"},
+        {"type": "INBOUND_REPLY", "at": "2026-09-09T00:41:00Z"},
+        {"type": "QUESTION_SENT", "at": "2026-09-09T09:05:00Z", "waiting_for": "PAYER_ANSWER"},
+        {"type": "REPLY_WAIVED", "at": "2026-09-11T08:00:00Z"},
+        {
+          "type": "CONVERSATION_ENDED",
+          "at": "2026-09-18T09:00:00Z",
+          "direction": "outbound",
+          "reason": "we released them from answering; nothing is outstanding"
+        }
+      ]
+    },
+    {
+      "id": "thank-you-only",
+      "name": "Prospect G",
+      "organization": "Example indie game project",
       "channel": "GMAIL",
       "events": [
         {"type": "OUTREACH_SENT", "at": "2026-09-06T09:00:00Z", "waiting_for": "FIRST_REPLY"},
@@ -153,7 +179,7 @@
           "evidence": [
             {
               "source": "gmail",
-              "message_id": "fixture-banzai-1",
+              "message_id": "fixture-g-1",
               "quote_or_summary": "Thanked us for the free tool. Did not say whether it was run, useful, or wanted.",
               "observed_at": "2026-09-07T02:20:00Z"
             }
@@ -162,8 +188,119 @@
       ]
     },
     {
-      "id": "atlos",
-      "name": "Atlos",
+      "id": "useful-payer-ambiguous",
+      "name": "Prospect H",
+      "organization": "Example indie game studio",
+      "channel": "GMAIL",
+      "events": [
+        {"type": "OUTREACH_SENT", "at": "2026-09-06T09:00:00Z", "waiting_for": "FIRST_REPLY"},
+        {"type": "INBOUND_REPLY", "at": "2026-09-07T02:20:00Z"},
+        {
+          "type": "VALIDATION_RECORDED",
+          "axis": "problem",
+          "status": "POSITIVE",
+          "evidence": [
+            {
+              "source": "gmail",
+              "message_id": "fixture-h-1",
+              "quote_or_summary": "Sent their own export files and described the defects they hit shipping them.",
+              "observed_at": "2026-09-07T02:20:00Z"
+            }
+          ]
+        },
+        {
+          "type": "VALIDATION_RECORDED",
+          "axis": "usefulness",
+          "status": "POSITIVE",
+          "evidence": [
+            {
+              "source": "gmail",
+              "message_id": "fixture-h-1",
+              "quote_or_summary": "Said in as many words that the preflight result on their own files was useful.",
+              "observed_at": "2026-09-07T02:20:00Z"
+            }
+          ]
+        },
+        {
+          "type": "VALIDATION_RECORDED",
+          "axis": "workflow",
+          "status": "POSITIVE",
+          "evidence": [
+            {
+              "source": "gmail",
+              "message_id": "fixture-h-1",
+              "quote_or_summary": "Asked for a build that reads their actual export format, which is how they work.",
+              "observed_at": "2026-09-07T02:20:00Z"
+            }
+          ]
+        },
+        {
+          "type": "VALIDATION_RECORDED",
+          "axis": "payer",
+          "status": "AMBIGUOUS",
+          "evidence": [
+            {
+              "source": "gmail",
+              "message_id": "fixture-h-1",
+              "quote_or_summary": "Gave neither a yes nor a no on paying $5, and listed existing editor features that already cover part of it.",
+              "observed_at": "2026-09-07T02:20:00Z"
+            }
+          ]
+        },
+        {
+          "type": "CONVERSATION_ENDED",
+          "at": "2026-09-07T02:20:00Z",
+          "direction": "inbound",
+          "reason": "they answered in full and asked nothing further; do not ask again"
+        }
+      ]
+    },
+    {
+      "id": "validating-workflow-answer",
+      "name": "Prospect I",
+      "organization": "Example open-source tool",
+      "channel": "GITHUB_ISSUE",
+      "events": [
+        {"type": "OUTREACH_SENT", "at": "2026-09-01T09:00:00Z", "waiting_for": "FIRST_REPLY"},
+        {"type": "INBOUND_REPLY", "at": "2026-09-02T10:00:00Z"},
+        {
+          "type": "VALIDATION_RECORDED",
+          "axis": "problem",
+          "status": "POSITIVE",
+          "evidence": [
+            {
+              "source": "github_issue",
+              "message_id": "fixture-i-1",
+              "quote_or_summary": "Confirms locale defects reach their releases.",
+              "observed_at": "2026-09-02T10:00:00Z"
+            }
+          ]
+        },
+        {
+          "type": "VALIDATION_RECORDED",
+          "axis": "usefulness",
+          "status": "POSITIVE",
+          "evidence": [
+            {
+              "source": "github_issue",
+              "message_id": "fixture-i-1",
+              "quote_or_summary": "Says the mechanical check is the part they would want.",
+              "observed_at": "2026-09-02T10:00:00Z"
+            }
+          ]
+        },
+        {
+          "type": "QUESTION_SENT",
+          "at": "2026-09-03T09:00:00Z",
+          "waiting_for": "VALIDATION_ANSWER",
+          "waiting_for_axis": "workflow"
+        }
+      ]
+    },
+    {
+      "id": "reopened-after-close",
+      "name": "Prospect J",
+      "organization": "Example open-source tool",
       "channel": "GITHUB_ISSUE",
       "events": [
         {"type": "OUTREACH_SENT", "at": "2026-09-01T09:00:00Z", "waiting_for": "FIRST_REPLY"},
@@ -175,6 +312,33 @@
           "reason": "no response; shelved"
         },
         {"type": "INBOUND_REPLY", "at": "2026-09-17T23:40:00Z"}
+      ]
+    },
+    {
+      "id": "auto-ack-only",
+      "name": "Prospect K",
+      "organization": "Example issue tracker",
+      "channel": "OTHER",
+      "events": [
+        {"type": "OUTREACH_SENT", "at": "2026-09-05T09:00:00Z", "waiting_for": "FIRST_REPLY"},
+        {"type": "INBOUND_REPLY", "at": "2026-09-05T09:00:30Z", "human": false}
+      ]
+    },
+    {
+      "id": "closed-then-auto-ack",
+      "name": "Prospect L",
+      "organization": "Example issue tracker",
+      "channel": "OTHER",
+      "events": [
+        {"type": "OUTREACH_SENT", "at": "2026-09-01T09:00:00Z", "waiting_for": "FIRST_REPLY"},
+        {"type": "NO_REPLY_TIMEOUT", "at": "2026-09-10T09:00:00Z"},
+        {
+          "type": "CONVERSATION_ENDED",
+          "at": "2026-09-12T09:00:00Z",
+          "direction": "outbound",
+          "reason": "no response; shelved"
+        },
+        {"type": "INBOUND_REPLY", "at": "2026-09-15T04:00:00Z", "human": false}
       ]
     }
   ]

@@ -75,6 +75,27 @@ function applyOutbound(next, at) {
  next.conversation.outreach_status = 'SENT';
 }
 
+// Which axis an outstanding answer would settle. Only a validation question names one,
+// and a payer question always names `payer` - so "waiting on the price answer" can never
+// be recorded as, or mistaken for, "waiting on the workflow answer".
+function resolveWaitingAxis(waitingFor, raw, label) {
+ const axis = raw === undefined || raw === null ? null : assertEnum(raw, VALIDATION_AXES, label);
+ if (waitingFor === 'PAYER_ANSWER') {
+  if (axis !== null && axis !== 'payer') fail(label + ' must be payer when waiting_for=PAYER_ANSWER (got ' + axis + ')');
+  return 'payer';
+ }
+ if (waitingFor === 'VALIDATION_ANSWER') return axis;
+ if (axis !== null) fail(label + ' may only be set when an answer is outstanding (waiting_for=' + waitingFor + ')');
+ return null;
+}
+
+// Nothing is outstanding any more.
+function clearWaiting(c) {
+ c.waiting_for = 'NOTHING';
+ c.waiting_for_axis = null;
+ c.waiting_for_reply = false;
+}
+
 function applyValidation(next, event) {
  const axis = assertEnum(event.axis, VALIDATION_AXES, 'event.axis');
  const status = assertEnum(event.status, VALIDATION_STATUSES, 'event.status');
@@ -97,7 +118,7 @@ export function applyEvent(contact, event) {
  }
 
  const at = assertInstant(event.at, 'event.at');
- if (isBefore(at, c.last_inbound_at) || isBefore(at, c.last_outbound_at)) {
+ if (isBefore(at, c.last_inbound_at) || isBefore(at, c.last_auto_inbound_at) || isBefore(at, c.last_outbound_at)) {
   fail(type + ' at ' + at + ' is older than the contact\'s last recorded message');
  }
  if (OUTBOUND.includes(type)) {
@@ -108,9 +129,12 @@ export function applyEvent(contact, event) {
  switch (type) {
   case 'OUTREACH_SENT': {
    const expectsReply = event.expects_reply ?? true;
+   const waitingFor = expectsReply ? assertEnum(event.waiting_for ?? 'FIRST_REPLY', WAITING_FOR, 'event.waiting_for') : 'NOTHING';
+   const axis = resolveWaitingAxis(waitingFor, event.waiting_for_axis, 'event.waiting_for_axis');
    applyOutbound(next, at);
    c.conversation_status = expectsReply ? 'AWAITING_REPLY' : 'CONTACTED';
-   c.waiting_for = expectsReply ? assertEnum(event.waiting_for ?? 'FIRST_REPLY', WAITING_FOR, 'event.waiting_for') : 'NOTHING';
+   c.waiting_for = waitingFor;
+   c.waiting_for_axis = axis;
    c.waiting_for_reply = Boolean(expectsReply);
    c.follow_up_allowed = true;
    c.reopen_condition = 'NOT_APPLICABLE';
@@ -119,18 +143,24 @@ export function applyEvent(contact, event) {
   case 'QUESTION_SENT': {
    const waitingFor = assertEnum(event.waiting_for ?? 'VALIDATION_ANSWER', WAITING_FOR, 'event.waiting_for');
    if (waitingFor === 'NOTHING') fail('QUESTION_SENT.waiting_for must name what the answer would answer');
+   const axis = resolveWaitingAxis(waitingFor, event.waiting_for_axis, 'event.waiting_for_axis');
    applyOutbound(next, at);
    c.conversation_status = 'VALIDATING';
    c.waiting_for = waitingFor;
+   c.waiting_for_axis = axis;
    c.waiting_for_reply = true;
    c.follow_up_allowed = true;
    break;
   }
   case 'FOLLOW_UP_SENT': {
-   applyOutbound(next, at);
    const waitingFor = assertEnum(event.waiting_for ?? (c.waiting_for === 'NOTHING' ? 'FIRST_REPLY' : c.waiting_for), WAITING_FOR, 'event.waiting_for');
+   // A follow-up that repeats the same question is still waiting on the same axis.
+   const carried = waitingFor === c.waiting_for ? c.waiting_for_axis : null;
+   const axis = resolveWaitingAxis(waitingFor, event.waiting_for_axis ?? carried, 'event.waiting_for_axis');
+   applyOutbound(next, at);
    c.conversation_status = waitingFor === 'FIRST_REPLY' ? 'AWAITING_REPLY' : 'VALIDATING';
    c.waiting_for = waitingFor;
+   c.waiting_for_axis = axis;
    c.waiting_for_reply = true;
    c.reopen_condition = 'NOT_APPLICABLE';
    break;
@@ -140,23 +170,29 @@ export function applyEvent(contact, event) {
    // idea that an answer is still coming.
    applyOutbound(next, at);
    c.reply_waived = true;
-   c.waiting_for_reply = false;
-   c.waiting_for = 'NOTHING';
+   clearWaiting(c);
    c.follow_up_allowed = false;
    break;
   }
   case 'INBOUND_REPLY': {
    const human = event.human ?? true;
+   if (!human) {
+    // An autoresponder is not a person. It is recorded so the timeline is complete,
+    // and it changes nothing else: a ticket receipt may not answer a question, may
+    // not clear a waiver, and may not reopen a conversation a person ended. Only a
+    // human inbound can do any of those.
+    c.last_auto_inbound_at = at;
+    break;
+   }
    c.last_inbound_at = at;
-   if (human) c.human_reply = true;
+   c.human_reply = true;
    if (c.reopen_condition === 'NEVER') {
     // An opted-out contact writing to us is a human decision, not a reopen.
     c.inbound_since_close = true;
     break;
    }
    c.conversation_status = 'REPLIED';
-   c.waiting_for = 'NOTHING';
-   c.waiting_for_reply = false;
+   clearWaiting(c);
    c.reply_waived = false;
    c.follow_up_allowed = true;
    c.reopen_condition = 'NOT_APPLICABLE';
@@ -168,8 +204,7 @@ export function applyEvent(contact, event) {
    if (c.conversation_status === 'DISCOVERED') fail('NO_REPLY_TIMEOUT before any outreach');
    if (c.conversation_status === 'CLOSED') fail('NO_REPLY_TIMEOUT on a CLOSED contact');
    c.conversation_status = 'STALLED';
-   c.waiting_for = 'NOTHING';
-   c.waiting_for_reply = false;
+   clearWaiting(c);
    // If we told them not to answer, silence is the outcome we asked for, not an
    // opening for a follow-up.
    c.follow_up_allowed = !c.reply_waived;
@@ -178,12 +213,17 @@ export function applyEvent(contact, event) {
   }
   case 'CONVERSATION_ENDED': {
    const direction = assertEnum(event.direction ?? 'inbound', ['inbound', 'outbound'], 'event.direction');
-   if (direction === 'inbound') c.last_inbound_at = at;
-   else c.last_outbound_at = at;
-   if (direction === 'inbound' && (event.human ?? true)) c.human_reply = true;
+   if (direction === 'inbound') {
+    // Only a person can end a conversation from their side; an autoresponder saying
+    // "we got your message" is not them closing the thread.
+    if (event.human === false) fail('CONVERSATION_ENDED direction=inbound needs a human message; record an autoresponder as INBOUND_REPLY with human: false');
+    c.last_inbound_at = at;
+    c.human_reply = true;
+   } else {
+    c.last_outbound_at = at;
+   }
    c.conversation_status = 'CLOSED';
-   c.waiting_for = 'NOTHING';
-   c.waiting_for_reply = false;
+   clearWaiting(c);
    c.follow_up_allowed = false;
    c.reopen_condition = 'INBOUND_ONLY';
    c.closed_reason = event.reason ?? null;
@@ -193,8 +233,7 @@ export function applyEvent(contact, event) {
    c.last_inbound_at = at;
    c.human_reply = true;
    c.conversation_status = 'CLOSED';
-   c.waiting_for = 'NOTHING';
-   c.waiting_for_reply = false;
+   clearWaiting(c);
    c.follow_up_allowed = false;
    c.reopen_condition = 'NEVER';
    c.closed_reason = event.reason ?? 'opted out';
