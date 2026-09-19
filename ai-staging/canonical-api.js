@@ -5,7 +5,7 @@ const COMMERCE='https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/ai-staging
 const store=window.BOYAKI_STORAGE;
 export const fromHex=h=>new Uint8Array((h.match(/.{1,2}/g)||[]).map(b=>parseInt(b,16)));
 export const toHex=bytes=>[...bytes].map(b=>b.toString(16).padStart(2,'0')).join('');
-window.BOYAKI_AI_STAGING_CLIENT_VERSION='20260919-commerce-v6';
+window.BOYAKI_AI_STAGING_CLIENT_VERSION='20260919-thread-room-product-v7';
 function identity(){
   const h=store.local.getItem('boyaki-account-sk')||store.session.getItem('boyaki-account-sk');
   if(h){const sk=fromHex(h);return{sk,pk:getPublicKey(sk),kind:'account'}}
@@ -49,6 +49,9 @@ export const client={
   listSolutionRooms:()=>thread('/solution-rooms'),
   getSolutionRoom:room=>thread(`/solution-rooms/${encodeURIComponent(room)}`),
   ensureSolutionRoom:postId=>thread(`/posts/${encodeURIComponent(postId)}/solution-room`,{method:'POST',signed:true}),
+  inviteVoiceToSolutionRoom:(postId,thread_event_id)=>thread(`/posts/${encodeURIComponent(postId)}/solution-room/invitations`,{method:'POST',signed:true,body:{thread_event_id}}),
+  acceptSolutionRoomInvitation:id=>thread(`/solution-room-invitations/${encodeURIComponent(id)}/accept`,{method:'POST',signed:true}),
+  getSolutionRoomAccess:room=>thread(`/solution-rooms/${encodeURIComponent(room)}/access`,{signed:true}),
   listSolutionRoomMessages:room=>thread(`/solution-rooms/${encodeURIComponent(room)}/messages`),
   createSolutionRoomMessage:(room,content)=>thread(`/solution-rooms/${encodeURIComponent(room)}/messages`,{method:'POST',signed:true,body:{content}}),
   deleteSolutionRoomMessage:id=>thread(`/solution-room-messages/${encodeURIComponent(id)}`,{method:'DELETE',signed:true}),
@@ -63,8 +66,10 @@ export const client={
   createProduct:(solution_case_id,title,description,price_yen,delivery_text)=>commerce('/products',{method:'POST',signed:true,body:{solution_case_id,title,description,price_yen,delivery_text}}),
   purchaseProduct:id=>commerce(`/products/${encodeURIComponent(id)}/purchase`,{method:'POST',signed:true}),
   accessProduct:id=>commerce(`/products/${encodeURIComponent(id)}/access`,{signed:true}),
+  publishProductBack:id=>commerce(`/products/${encodeURIComponent(id)}/publish-back`,{method:'POST',signed:true}),
+  listPostProducts:postId=>commerce(`/posts/${encodeURIComponent(postId)}/products`),
   listMyPurchases:()=>commerce('/me/purchases',{signed:true}),
   listMySales:()=>commerce('/me/sales',{signed:true})
 };
 window.BOYAKI_CANONICAL=client;
-if(document.querySelector('#feed'))initialize().then(async ok=>{if(ok)await import('./canonical-cutover.js?v=20260919-commerce-v6')}).catch(e=>console.error('AI-STAGING initialization failed',e));
+if(document.querySelector('#feed'))initialize().then(async ok=>{if(ok)await import('./canonical-cutover.js?v=20260919-thread-room-product-v7')}).catch(e=>console.error('AI-STAGING initialization failed',e));
