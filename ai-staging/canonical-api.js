@@ -4,7 +4,7 @@ const THREAD='https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/ai-staging-b
 const store=window.BOYAKI_STORAGE;
 export const fromHex=h=>new Uint8Array((h.match(/.{1,2}/g)||[]).map(b=>parseInt(b,16)));
 export const toHex=bytes=>[...bytes].map(b=>b.toString(16).padStart(2,'0')).join('');
-window.BOYAKI_AI_STAGING_CLIENT_VERSION='20260919-solution-flow-v3';
+window.BOYAKI_AI_STAGING_CLIENT_VERSION='20260919-demand-evidence-v4';
 function identity(){
   const h=store.local.getItem('boyaki-account-sk')||store.session.getItem('boyaki-account-sk');
   if(h){const sk=fromHex(h);return{sk,pk:getPublicKey(sk),kind:'account'}}
@@ -35,6 +35,10 @@ export const client={
   listMine:()=>main('/me/posts',{signed:true}),
   createPost:content=>main('/posts',{method:'POST',signed:true,body:{content,identity_kind:identity().kind}}),
   deletePost:id=>main(`/posts/${encodeURIComponent(id)}`,{method:'DELETE',signed:true}),
+  getDemand:id=>main(`/posts/${encodeURIComponent(id)}/demand`),
+  getMyDemand:id=>main(`/posts/${encodeURIComponent(id)}/demand/mine`,{signed:true}),
+  saveDemand:(id,signal,extra={})=>main(`/posts/${encodeURIComponent(id)}/demand`,{method:'POST',signed:true,body:{signal,identity_kind:identity().kind,...extra}}),
+  deleteDemand:(id,signal)=>main(`/posts/${encodeURIComponent(id)}/demand/${encodeURIComponent(signal)}`,{method:'DELETE',signed:true}),
   verifyIdentityLink:(legacy_claim,account_acceptance)=>main('/identity-links/verify',{method:'POST',body:{legacy_claim,account_acceptance}}),
   report:(target_type,target_id,reason_code='other',detail='')=>main('/reports',{method:'POST',signed:true,body:{target_type,target_id,reason_code,detail}}),
   listThread:id=>thread(`/posts/${encodeURIComponent(id)}/thread`),
@@ -52,4 +56,4 @@ export const client={
   deleteSolutionCase:id=>thread(`/solution-cases/${encodeURIComponent(id)}`,{method:'DELETE',signed:true})
 };
 window.BOYAKI_CANONICAL=client;
-if(document.querySelector('#feed'))initialize().then(async ok=>{if(ok)await import('./canonical-cutover.js?v=20260919-solution-flow-v3')}).catch(e=>console.error('AI-STAGING initialization failed',e));
+if(document.querySelector('#feed'))initialize().then(async ok=>{if(ok)await import('./canonical-cutover.js?v=20260919-demand-evidence-v4')}).catch(e=>console.error('AI-STAGING initialization failed',e));
