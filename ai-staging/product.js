@@ -1,4 +1,4 @@
-import { client } from './canonical-api.js?v=20260919-problem-transition-v8';
+import { client } from './canonical-api.js?v=20260920-action-inbox-v10';
 const $=s=>document.querySelector(s),id=String(new URLSearchParams(location.search).get('id')||'').trim();
 const uuid=/^[0-9a-f]{8}-[0-9a-f-]{27}$/i;
 const yen=v=>new Intl.NumberFormat('ja-JP',{style:'currency',currency:'JPY',maximumFractionDigits:0}).format(Number(v)||0);
@@ -38,9 +38,9 @@ async function load(){
       const card=$('#publish-back-card'),button=$('#publish-back'),link=$('#published-thread-link'),state=$('#publish-back-status');
       card.hidden=false;
       if(product.thread_publication?.status==='active'){
-        button.hidden=true;link.hidden=false;link.href=`./?problem=${encodeURIComponent(product.thread_publication.post_id)}`;state.textContent='元のBOYAKIスレッドに掲載済みです。';
+        button.hidden=true;link.hidden=false;link.href=`./?problem=${encodeURIComponent(product.thread_publication.post_id)}`;state.textContent='元のProblemに掲載済みです。';
       }else{
-        button.hidden=false;link.hidden=true;state.textContent='まだ元スレッドには掲載していません。';
+        button.hidden=false;link.hidden=true;state.textContent='ProductはMaker Spaceに保存済みです。まだ元のProblemには掲載していません。';
       }
     }
     if(identity?.kind==='account'){
@@ -58,16 +58,16 @@ async function load(){
 $('#publish-back')?.addEventListener('click',async()=>{
   if(!product)return;
   const button=$('#publish-back'),state=$('#publish-back-status'),link=$('#published-thread-link');
-  button.disabled=true;button.textContent='掲載中…';state.textContent='元のBOYAKIスレッドへProductを掲載しています…';
+  button.disabled=true;button.textContent='掲載中…';state.textContent='元のProblemへProductを掲載しています…';
   try{
     const result=await client.publishProductBack(id),publication=result.publication;
     product.thread_publication=publication;
     button.hidden=true;link.hidden=false;link.href=`./?problem=${encodeURIComponent(publication.post_id)}`;
-    state.textContent=result.idempotent?'すでに掲載済みでした。':'元のBOYAKIスレッドにProductを掲載しました。';
+    state.textContent=result.idempotent?'すでに元のProblemへ掲載済みでした。':'元のProblemにProductを掲載しました。困っていたVoiceがこのThreadから見つけられます。';
   }catch(err){
     console.error('publish back failed',err);const code=String(err?.message||err);
     state.textContent=code==='source_thread_not_available'?'元のスレッドが共同Problemとして残っていないため掲載できません。':'元スレッドへ掲載できませんでした。';
-    button.disabled=false;button.textContent='元スレッドに掲載する';
+    button.disabled=false;button.textContent='このProblemに掲載する';
   }
 });
 $('#buy-product')?.addEventListener('click',async()=>{
