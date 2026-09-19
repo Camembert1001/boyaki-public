@@ -7,7 +7,7 @@ const unix=()=>Math.floor(Date.now()/1000);
 
 window.BOYAKI_STAGING=true;
 window.BOYAKI_ENVIRONMENT='staging';
-window.BOYAKI_STAGING_CLIENT_VERSION='20260909-v7';
+window.BOYAKI_STAGING_CLIENT_VERSION='20260919-password-reset-v1';
 const robots=document.querySelector('meta[name="robots"]');
 if(robots)robots.setAttribute('content','noindex,nofollow');
 if(!document.querySelector('[data-boyaki-staging-banner]')){
@@ -56,6 +56,8 @@ async function registerLegacyControl(nostrEvent){return request('/legacy-control
 async function deleteLegacy(eventId){return request(`/legacy/${encodeURIComponent(eventId)}`,{method:'DELETE',signed:true})}
 async function legacyControls(ids=[]){const q=ids.filter(Boolean).slice(0,200).join(',');return q?request(`/legacy-controls?ids=${encodeURIComponent(q)}`):{controls:[]}}
 async function report(targetType,targetId,reasonCode='other',detail=''){return request('/reports',{method:'POST',signed:true,body:{target_type:targetType,target_id:targetId,reason_code:reasonCode,detail}})}
+async function resolveAccountCredential(loginKeyHash){return request(`/account-credentials/resolve?login_key_hash=${encodeURIComponent(loginKeyHash)}`)}
+async function saveAccountCredential(loginKeyHash,encryptedSecret){return request('/account-credentials',{method:'POST',signed:true,body:{login_key_hash:loginKeyHash,encrypted_secret:encryptedSecret}})}
 async function threadHealth(){return threadRequest('/health')}
 async function listThread(postId){return threadRequest(`/posts/${encodeURIComponent(postId)}/thread`)}
 async function threadAccess(postId){return threadRequest(`/posts/${encodeURIComponent(postId)}/thread/access`,{signed:true})}
@@ -73,5 +75,5 @@ async function initializeThreads(){
   threadInitPromise=(async()=>{window.BOYAKI_STAGING_LAST_THREAD_INIT_ERROR='';try{const state=await threadHealth();const ready=state?.ok===true&&state?.canonical_threads===true;window.BOYAKI_CANONICAL_THREAD_BACKEND_READY=ready;if(!ready)window.BOYAKI_STAGING_LAST_THREAD_INIT_ERROR='thread_health_not_ready';return ready}catch(err){const code=String(err?.message||err||'unknown_thread_init_error');window.BOYAKI_STAGING_LAST_THREAD_INIT_ERROR=code;console.warn('staging canonical thread backend unavailable',err);window.BOYAKI_CANONICAL_THREAD_BACKEND_READY=false;return false}finally{threadInitPromise=null}})();
   return threadInitPromise;
 }
-window.BOYAKI_CANONICAL={apiBase,threadApiBase,identity,health,listPosts,listMine,createPost,deletePost,verifyIdentityLink,registerLegacyControl,deleteLegacy,legacyControls,report,threadHealth,listThread,threadAccess,createThread,deleteThread,initialize,initializeThreads};
+window.BOYAKI_CANONICAL={apiBase,threadApiBase,identity,health,listPosts,listMine,createPost,deletePost,verifyIdentityLink,registerLegacyControl,deleteLegacy,legacyControls,report,resolveAccountCredential,saveAccountCredential,threadHealth,listThread,threadAccess,createThread,deleteThread,initialize,initializeThreads};
 initialize().then(async ready=>{if(ready){try{await import('./canonical-cutover.js?v=20260909-staging-cutover-v7')}catch(err){window.BOYAKI_STAGING_LAST_INIT_ERROR=`cutover_import:${String(err?.message||err||'unknown')}`;console.error('staging canonical cutover load failed',err)}}});
