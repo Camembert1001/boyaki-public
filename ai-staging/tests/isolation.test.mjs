@@ -47,8 +47,15 @@ assert(!caseCreateSource.includes('boyaki-maker-solution-cases-v1'),'Solution Ca
 const historySource=await read('maker-contribution-history.js');
 assert(historySource.includes('client.listMySolutionCases()'),'Account-scoped Contribution History read missing');
 assert(!historySource.includes('boyaki-maker-solution-cases-v1'),'Contribution History must not use browser-only store');
+const demandApiSource=await read('supabase/functions/ai-staging-boyaki-api/index.ts');
+assert(demandApiSource.includes("T('boyaki_demand_signals')"),'demand signal AI table missing');
+assert(!demandApiSource.includes("db.from('boyaki_demand_signals')"),'demand signals must stay under AI-STAGING table prefix');
+const cutoverDemandSource=await read('canonical-cutover.js');
+assert(cutoverDemandSource.includes('client.saveDemand(post.id'),'demand evidence write UI missing');
+assert(cutoverDemandSource.includes('購入予約や決済ではなく'),'demand evidence must distinguish signal from purchase');
+assert(cutoverDemandSource.includes('source_author'),'source-author exclusion UI path missing');
 const apiSource=await read('supabase/functions/ai-staging-boyaki-api/index.ts');
 assert(apiSource.includes("db.from('boyaki_accounts').select('account_pubkey')"),'shared identity read missing');
 assert(!/db\.from\('boyaki_accounts'\)\.(?:insert|upsert|update|delete)/.test(apiSource),'AI-STAGING must never mutate shared identity');
 assert(apiSource.includes("activity_scope:'AI-STAGING'"),'activity scope marker missing');
-console.log(JSON.stringify({ok:true,checks:['local/session sentinel preserved including clear','normal APIs blocked except exact read-only shared identity resolver','Production API and path traversal denied before transport','public WebSockets blocked','worker cleanup limited to AI prefix','worker ignores API and other environments','all live HTML has early boundary and CSP','all application storage scoped','AI backend may read shared identity but cannot mutate it','AI activity remains explicitly scoped to AI-STAGING','Solution Room uses isolated API rather than public relays','Solution Room storage stays under ai_staging_*','Thread -> Room transition is canonical','Solution Cases are account-scoped and not browser-only','relative assets exist'],files:files.length},null,2));
+console.log(JSON.stringify({ok:true,checks:['local/session sentinel preserved including clear','normal APIs blocked except exact read-only shared identity resolver','Production API and path traversal denied before transport','public WebSockets blocked','worker cleanup limited to AI prefix','worker ignores API and other environments','all live HTML has early boundary and CSP','all application storage scoped','AI backend may read shared identity but cannot mutate it','AI activity remains explicitly scoped to AI-STAGING','Solution Room uses isolated API rather than public relays','Solution Room storage stays under ai_staging_*','Thread -> Room transition is canonical','Solution Cases are account-scoped and not browser-only','Demand Evidence stays under ai_staging_* and is not framed as purchase','relative assets exist'],files:files.length},null,2));
