@@ -1,4 +1,4 @@
-import { client } from './canonical-api.js?v=20260919-thread-room-product-v7';
+import { client } from './canonical-api.js?v=20260919-problem-transition-v8';
 const $=s=>document.querySelector(s);
 const caseId=String(new URLSearchParams(location.search).get('case')||'').trim();
 const uuid=/^[0-9a-f]{8}-[0-9a-f-]{27}$/i;
