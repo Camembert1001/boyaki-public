@@ -11,6 +11,13 @@ alter table public.ai_staging_boyaki_solution_room_invitations
   add constraint ai_staging_boyaki_solution_room_invitations_invitee_context_check
   check (invitee_context in ('source_owner','voice_participant'));
 
+alter table public.ai_staging_boyaki_solution_room_invitations
+  drop constraint if exists ai_staging_boyaki_solution_room_invitations_check;
+
+alter table public.ai_staging_boyaki_solution_room_invitations
+  add constraint ai_staging_solution_room_invite_no_self_voice_check
+  check (invitee_context = 'source_owner' or inviter_maker_pubkey <> invitee_account_pubkey);
+
 create table if not exists public.ai_staging_boyaki_problem_statements (
   id uuid primary key default gen_random_uuid(),
   post_id uuid not null unique references public.ai_staging_boyaki_posts(id) on delete cascade,
