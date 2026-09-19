@@ -1,4 +1,4 @@
-import { client } from './canonical-api.js?v=20260919-thread-room-product-v7';
+import { client } from './canonical-api.js?v=20260919-problem-transition-v8';
 
 const purchasesBox=document.querySelector('[data-commerce-purchases]');
 const purchasesStatus=document.querySelector('#commerce-purchases-status');
