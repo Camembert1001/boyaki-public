@@ -164,7 +164,7 @@ async function hydrateCanonicalThread(article,post){
     proposalDetails.hidden=role!=='maker';
   };
   voice.addEventListener('click',()=>applyRole('voice'));maker.addEventListener('click',()=>applyRole('maker'));
-  applyRole(window.BOYAKI_STORAGE.local.getItem(roleKey)||'');
+  applyRole(window.BOYAKI_STORAGE.local.getItem(roleKey)||access.current_role||'');
 
   if(mount.dataset.canonicalThreadSubmitBound!=='1'){
     mount.dataset.canonicalThreadSubmitBound='1';
@@ -176,7 +176,9 @@ async function hydrateCanonicalThread(article,post){
       const type=form.dataset.canonicalEventType,parent=form.dataset.parentEventId||null,button=form.querySelector('button');
       button.disabled=true;
       try{
-        await client.createThread(post.id,type,text,parent);
+        const selectedRole=window.BOYAKI_STORAGE.local.getItem(roleKey)||access.current_role||'';
+        const extra=type==='poster_response'?{}:(['voice','maker'].includes(selectedRole)?{participant_role:selectedRole}:{});
+        await client.createThread(post.id,type,text,parent,extra);
         input.value='';status(`${eventLabel(type)}を管理DBへ保存しました。`);await hydrateCanonicalThread(article,post);
       }catch(err){status(`スレッドへ保存できませんでした: ${String(err?.message||err)}（Nostr Relayへは送信していません）`);button.disabled=false}
     });
