@@ -17,9 +17,21 @@ function uuid(v:any){return typeof v==='string'&&/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.
 
 const DEMAND_SIGNALS=new Set(['same_problem','would_try','would_pay']);
 function median(values:number[]){if(!values.length)return null;const xs=[...values].sort((a,b)=>a-b),m=Math.floor(xs.length/2);return xs.length%2?xs[m]:Math.round((xs[m-1]+xs[m])/2)}
+async function problemForPost(postId:string){
+ const{data,error}=await db.from(T('boyaki_problem_statements')).select('id,post_id,statement,status,created_at,updated_at').eq('post_id',postId).eq('status','active').maybeSingle();
+ if(error)throw Error(error.message);return data||null;
+}
+async function problemMap(postIds:string[]){
+ const map=new Map<string,any>();if(!postIds.length)return map;
+ const{data,error}=await db.from(T('boyaki_problem_statements')).select('id,post_id,statement,status,created_at,updated_at').in('post_id',postIds).eq('status','active');
+ if(error)throw Error(error.message);for(const row of data||[])map.set(row.post_id,row);return map;
+}
 async function activePost(postId:string){
  const{data,error}=await db.from(T('boyaki_posts')).select('id,author_pubkey,owner_account_pubkey,status').eq('id',postId).maybeSingle();
- if(error)throw Error(error.message);return data?.status==='active'?data:null;
+ if(error)throw Error(error.message);if(!data)return null;
+ if(data.status==='active')return data;
+ if(data.status==='withdrawn'&&await problemForPost(postId))return data;
+ return null;
 }
 async function demandActor(e:any,requestedKind?:string){
  const account=await linked(e.pubkey);
@@ -80,23 +92,43 @@ async function deleteDemand(req:Request,postId:string,signal:string){
 }
 
 Deno.serve(async(req)=>{if(req.method==='OPTIONS')return new Response(null,{status:204,headers:cors(req)});const u=new URL(req.url),m='/ai-staging-boyaki-api',i=u.pathname.indexOf(m),p=i>=0?(u.pathname.slice(i+m.length)||'/'):u.pathname;try{
-if(req.method==='GET'&&p==='/health')return json(req,200,{ok:true,service:'ai-staging-boyaki-api',canonical_storage:true,demand_evidence:true,environment:'AI-STAGING',parent:'STAGING',version:'ai-staging-demand-evidence-v5'});
+if(req.method==='GET'&&p==='/health')return json(req,200,{ok:true,service:'ai-staging-boyaki-api',canonical_storage:true,demand_evidence:true,shared_problem_transition:true,environment:'AI-STAGING',parent:'STAGING',version:'ai-staging-problem-transition-v6'});
 const demandMineMatch=/^\/posts\/([0-9a-f-]+)\/demand\/mine$/i.exec(p),demandMatch=/^\/posts\/([0-9a-f-]+)\/demand$/i.exec(p),demandDeleteMatch=/^\/posts\/([0-9a-f-]+)\/demand\/(same_problem|would_try|would_pay)$/i.exec(p);
 if(req.method==='GET'&&demandMineMatch&&uuid(demandMineMatch[1]))return demandMine(req,demandMineMatch[1]);
 if(req.method==='GET'&&demandMatch&&uuid(demandMatch[1]))return demandAggregate(req,demandMatch[1]);
 if(req.method==='GET'&&p==='/posts'){
  const n=Math.max(1,Math.min(Number(u.searchParams.get('limit')||50)||50,100));
- const{data,error}=await db.from(T('boyaki_posts')).select('id,author_pubkey,content,created_at,status').eq('status','active').order('created_at',{ascending:false}).limit(n);if(error)throw Error(error.message);
- const posts=data||[],ids=posts.map((x:any)=>x.id);let demand:any[]=[];
+ const{data,error}=await db.from(T('boyaki_posts')).select('id,author_pubkey,content,created_at,status,withdrawn_at').in('status',['active','withdrawn']).order('created_at',{ascending:false}).limit(Math.min(n*2,200));if(error)throw Error(error.message);
+ const rawPosts=data||[],ids=rawPosts.map((x:any)=>x.id),problems=await problemMap(ids);
+ const posts=rawPosts.filter((post:any)=>post.status==='active'||problems.has(post.id)).slice(0,n);
+ let demand:any[]=[];
  if(ids.length){const out=await db.from(T('boyaki_demand_signals')).select('post_id,signal,amount_yen').in('post_id',ids);if(out.error)throw Error(out.error.message);demand=out.data||[]}
  const byPost=new Map<string,any>();
  for(const row of demand){
   let s=byPost.get(row.post_id);if(!s){s={same_problem:0,would_try:0,would_pay:0,pay_amounts:[]};byPost.set(row.post_id,s)}
   if(row.signal==='same_problem')s.same_problem++;else if(row.signal==='would_try')s.would_try++;else if(row.signal==='would_pay'){s.would_pay++;if(Number(row.amount_yen)>0)s.pay_amounts.push(Number(row.amount_yen))}
  }
- return json(req,200,{posts:posts.map((post:any)=>{const s=byPost.get(post.id)||{same_problem:0,would_try:0,would_pay:0,pay_amounts:[]};return{...post,demand_summary:{same_problem:s.same_problem,would_try:s.would_try,would_pay:s.would_pay,median_yen:median(s.pay_amounts)}}})});
+ return json(req,200,{posts:posts.map((post:any)=>{
+   const s=byPost.get(post.id)||{same_problem:0,would_try:0,would_pay:0,pay_amounts:[]},problem=problems.get(post.id)||null,sourceWithdrawn=post.status==='withdrawn';
+   return {
+     ...post,
+     author_pubkey:sourceWithdrawn?null:post.author_pubkey,
+     content:sourceWithdrawn?(problem?.statement||''):post.content,
+     problem_statement:problem?.statement||null,
+     problem_statement_id:problem?.id||null,
+     shared_problem:Boolean(problem),
+     source_withdrawn:sourceWithdrawn,
+     content_kind:sourceWithdrawn?'problem_statement':'original_boyaki',
+     demand_summary:{same_problem:s.same_problem,would_try:s.would_try,would_pay:s.would_pay,median_yen:median(s.pay_amounts)}
+   };
+ })});
 }
-if(req.method==='GET'&&p==='/me/posts'){const e=await auth(req),a=(await linked(e.pubkey))||e.pubkey;const{data,error}=await db.from(T('boyaki_posts')).select('id,author_pubkey,owner_account_pubkey,content,status,created_at,withdrawn_at,moderated_at,deleted_at').or(`owner_account_pubkey.eq.${a},author_pubkey.eq.${e.pubkey}`).order('created_at',{ascending:false}).limit(500);if(error)throw Error(error.message);return json(req,200,{account_pubkey:a,posts:data||[]})}
+if(req.method==='GET'&&p==='/me/posts'){
+ const e=await auth(req),a=(await linked(e.pubkey))||e.pubkey;
+ const{data,error}=await db.from(T('boyaki_posts')).select('id,author_pubkey,owner_account_pubkey,content,status,created_at,withdrawn_at,moderated_at,deleted_at').or(`owner_account_pubkey.eq.${a},author_pubkey.eq.${e.pubkey}`).order('created_at',{ascending:false}).limit(500);if(error)throw Error(error.message);
+ const posts=data||[],problems=await problemMap(posts.map((x:any)=>x.id));
+ return json(req,200,{account_pubkey:a,posts:posts.map((post:any)=>({...post,problem_statement:problems.get(post.id)?.statement||null,shared_problem:problems.has(post.id),source_withdrawn:post.status==='withdrawn'}))});
+}
 if(req.method==='GET'&&p==='/me/account'){
  const e=await auth(req);
  let{data:account,error}=await db.from(T('boyaki_accounts')).select('account_pubkey,profile,created_at,updated_at').eq('account_pubkey',e.pubkey).maybeSingle();if(error)throw Error(error.message);
@@ -124,5 +156,24 @@ if(req.method==='POST'&&p==='/me/account'){
 if(req.method==='POST'&&p==='/posts'){const e=await auth(req,raw,true);await consume(e,req);const b=JSON.parse(raw||'{}'),c=typeof b.content==='string'?b.content.trim():'';if(!c||c.length>2000)return json(req,400,{error:'invalid_content'});const o=await owner(e.pubkey,b.identity_kind);const{data,error}=await db.from(T('boyaki_posts')).insert({author_pubkey:e.pubkey,author_identity_kind:b.identity_kind,owner_account_pubkey:o,content:c,content_commitment:await sha(c),status:'active'}).select('id,author_pubkey,owner_account_pubkey,content,status,created_at').single();if(error)throw Error(error.message);return json(req,201,{post:data})}
 if(req.method==='POST'&&p==='/identity-links/verify'){const b=JSON.parse(raw||'{}'),c=b.legacy_claim,a=b.account_acceptance;if(!c||!a||!verifyEvent(c)||!verifyEvent(a))return json(req,400,{error:'invalid_link_signature'});if(tag(c,'environment')!=='ai-staging'||tag(a,'environment')!=='ai-staging')return json(req,400,{error:'wrong_link_environment'});const account=tag(c,'account'),legacy=tag(c,'legacy');if(c.pubkey!==legacy||a.pubkey!==account||tag(a,'account')!==account||tag(a,'legacy')!==legacy)return json(req,400,{error:'link_pair_mismatch'});await db.from(T('boyaki_accounts')).upsert({account_pubkey:account},{onConflict:'account_pubkey',ignoreDuplicates:true});const{error}=await db.from(T('boyaki_identity_links')).upsert({account_pubkey:account,legacy_pubkey:legacy,status:'verified',legacy_claim_event_id:c.id,account_accept_event_id:a.id,verified_at:new Date().toISOString(),revoked_at:null},{onConflict:'account_pubkey,legacy_pubkey'});if(error)throw Error(error.message);await db.from(T('boyaki_posts')).update({owner_account_pubkey:account}).eq('author_pubkey',legacy).is('owner_account_pubkey',null);return json(req,200,{ok:true,account_pubkey:account,legacy_pubkey:legacy})}
 if(req.method==='POST'&&p==='/reports'){const e=await auth(req,raw,true);await consume(e,req);const b=JSON.parse(raw||'{}');if(!uuid(b.target_id)||b.target_type!=='post')return json(req,400,{error:'invalid_report_target'});const{data,error}=await db.from(T('boyaki_reports')).insert({post_id:b.target_id,legacy_nostr_event_id:null,reporter_pubkey:e.pubkey,reason_code:String(b.reason_code||'other').slice(0,80),detail:String(b.detail||'').slice(0,1000)||null,status:'open'}).select('id').single();if(error)throw Error(error.message);return json(req,201,{ok:true,report_id:data.id})}
-const d=/^\/posts\/([0-9a-f-]+)$/i.exec(p);if(req.method==='DELETE'&&d&&uuid(d[1])){const e=await auth(req);await consume(e,req);const{data:x}=await db.from(T('boyaki_posts')).select('author_pubkey,owner_account_pubkey').eq('id',d[1]).maybeSingle();if(!x)return json(req,404,{error:'post_not_found'});if(x.author_pubkey!==e.pubkey&&x.owner_account_pubkey!==e.pubkey)return json(req,403,{error:'not_post_owner'});const now=new Date().toISOString();const{error:demandError}=await db.from(T('boyaki_demand_signals')).delete().eq('post_id',d[1]);if(demandError)throw Error(demandError.message);const{error:threadError}=await db.from(T('boyaki_thread_events')).update({content:null,status:'deleted',deleted_at:now}).eq('post_id',d[1]);if(threadError)throw Error(threadError.message);const{error}=await db.from(T('boyaki_posts')).update({content:null,status:'deleted',withdrawn_at:now,deleted_at:now}).eq('id',d[1]);if(error)throw Error(error.message);return json(req,200,{ok:true,id:d[1],status:'deleted',demand_signals_purged:true})}
+const d=/^\/posts\/([0-9a-f-]+)$/i.exec(p);if(req.method==='DELETE'&&d&&uuid(d[1])){
+ const e=await auth(req);await consume(e,req);
+ const{data:x,error:postError}=await db.from(T('boyaki_posts')).select('id,author_pubkey,owner_account_pubkey,status').eq('id',d[1]).maybeSingle();
+ if(postError)throw Error(postError.message);if(!x)return json(req,404,{error:'post_not_found'});
+ if(x.author_pubkey!==e.pubkey&&x.owner_account_pubkey!==e.pubkey)return json(req,403,{error:'not_post_owner'});
+ const now=new Date().toISOString(),problem=await problemForPost(d[1]);
+ if(problem){
+   if(x.status==='withdrawn')return json(req,200,{ok:true,id:d[1],status:'source_withdrawn',thread_preserved:true,problem_statement:problem.statement,idempotent:true});
+   const tombstone=await sha(`withdrawn:${d[1]}:${now}`);
+   const{error}=await db.from(T('boyaki_posts')).update({content:null,content_commitment:tombstone,status:'withdrawn',withdrawn_at:now,deleted_at:null}).eq('id',d[1]);
+   if(error)throw Error(error.message);
+   return json(req,200,{ok:true,id:d[1],status:'source_withdrawn',thread_preserved:true,problem_statement:problem.statement,demand_signals_purged:false});
+ }
+ const room=await db.from(T('boyaki_solution_rooms')).select('id').eq('post_id',d[1]).maybeSingle();if(room.error)throw Error(room.error.message);
+ if(room.data?.id){const{error:roomDeleteError}=await db.from(T('boyaki_solution_rooms')).delete().eq('id',room.data.id);if(roomDeleteError)throw Error(roomDeleteError.message)}
+ const{error:demandError}=await db.from(T('boyaki_demand_signals')).delete().eq('post_id',d[1]);if(demandError)throw Error(demandError.message);
+ const{error:threadError}=await db.from(T('boyaki_thread_events')).update({content:null,status:'deleted',deleted_at:now}).eq('post_id',d[1]);if(threadError)throw Error(threadError.message);
+ const{error}=await db.from(T('boyaki_posts')).update({content:null,status:'deleted',withdrawn_at:now,deleted_at:now}).eq('id',d[1]);if(error)throw Error(error.message);
+ return json(req,200,{ok:true,id:d[1],status:'deleted',thread_preserved:false,demand_signals_purged:true});
+}
 return json(req,404,{error:'not_found'});}catch(e){const x=String((e as any)?.message||e);console.error(x);return json(req,/authorization|signature|stale|replayed/.test(x)?401:500,{error:x})}});
