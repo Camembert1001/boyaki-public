@@ -152,34 +152,85 @@ async function hydrateCanonicalThread(article,post){
       if(ev.participant_role!=='voice'||!ev.owner_account_pubkey||ev.owner_account_pubkey===access.actor_pubkey)continue;
       if(!voiceMap.has(ev.owner_account_pubkey))voiceMap.set(ev.owner_account_pubkey,ev);
     }
-    if(voiceMap.size){
-      const invitePanel=document.createElement('div');invitePanel.className='participation-panel';invitePanel.dataset.roomInvitePanel='1';
-      const h=document.createElement('h3');h.textContent='VoiceをSolution Roomへ招待';
-      const hint=document.createElement('p');hint.className='hint';hint.textContent='スレッドで話したVoiceの中から、解決を一緒に具体化したい人だけを招待します。';
-      invitePanel.append(h,hint);
-      const inviteByVoice=new Map((access.room_invitations||[]).map(x=>[x.invitee_account_pubkey,x]));
-      for(const [pubkey,ev] of voiceMap){
-        const row=document.createElement('div');row.className='thread-item';
-        const name=document.createElement('strong');name.textContent=ev.display_name||`Voice ${short(pubkey)}`;
-        const current=inviteByVoice.get(pubkey);
-        const invite=document.createElement('button');invite.type='button';
-        if(current){
-          invite.disabled=true;invite.textContent=current.status==='accepted'?'参加済み':'招待済み';
-        }else{
-          invite.textContent='Solution Roomへ招待';
-          invite.addEventListener('click',async()=>{
-            invite.disabled=true;invite.textContent='招待中…';
-            try{
-              await client.inviteVoiceToSolutionRoom(post.id,ev.id);
-              status('VoiceをSolution Roomへ招待しました。');
-              await hydrateCanonicalThread(article,post);
-            }catch(err){console.error('room invite failed',err);status(`招待できませんでした: ${String(err?.message||err)}`);invite.disabled=false;invite.textContent='Solution Roomへ招待'}
-          });
-        }
-        row.append(name,document.createTextNode(' '),invite);invitePanel.append(row);
+    const invitePanel=document.createElement('div');invitePanel.className='participation-panel';invitePanel.dataset.roomInvitePanel='1';
+    const h=document.createElement('h3');h.textContent='VoiceをSolution Roomへ招待';
+    const hint=document.createElement('p');hint.className='hint';
+    hint.textContent=access.problem_statement
+      ?'共有Problemができています。スレッドで話したVoiceの中から、一緒に解決を具体化したい人を招待できます。'
+      :'まず元のBOYAKI投稿者に招待を送り、共同解決フェーズへ進む同意を取ります。ここでは投稿者自身の原文と、残る共有Problemを分けます。';
+    invitePanel.append(h,hint);
+    const inviteByVoice=new Map((access.room_invitations||[]).map(x=>[x.invitee_account_pubkey,x]));
+    const sourceInvite=(access.room_invitations||[]).find(x=>x.invitee_context==='source_owner');
+
+    if(!access.problem_statement){
+      const sourceRow=document.createElement('div');sourceRow.className='thread-item';
+      const label=document.createElement('strong');label.textContent='元のBOYAKI投稿者';
+      const invite=document.createElement('button');invite.type='button';
+      if(sourceInvite){
+        invite.disabled=true;invite.textContent=sourceInvite.status==='accepted'?'同意済み':'招待済み';
+      }else if(!access.source_owner_has_account){
+        invite.disabled=true;invite.textContent='Account連携待ち';
+      }else if(!access.source_owner_invitable){
+        invite.disabled=true;invite.textContent='招待できません';
+      }else{
+        invite.textContent=access.is_source_owner?'共同解決フェーズへ進む':'共同解決へ招待';
+        invite.addEventListener('click',async()=>{
+          invite.disabled=true;invite.textContent=access.is_source_owner?'準備中…':'招待中…';
+          try{
+            await client.inviteSourceOwnerToSolutionRoom(post.id);
+            status('元のBOYAKI投稿者へSolution Room招待を送りました。');
+            await hydrateCanonicalThread(article,post);
+          }catch(err){
+            console.error('source owner room invite failed',err);
+            status(`招待できませんでした: ${String(err?.message||err)}`);
+            invite.disabled=false;invite.textContent=access.is_source_owner?'共同解決フェーズへ進む':'共同解決へ招待';
+          }
+        });
       }
-      mount.append(invitePanel);
+      sourceRow.append(label,document.createTextNode(' '),invite);invitePanel.append(sourceRow);
+      if(!access.source_owner_has_account){
+        const note=document.createElement('p');note.className='hint';
+        note.textContent='元投稿者が匿名/端末だけの状態では共同資産化しません。Accountに紐づいてから初めて同意を取れます。';
+        invitePanel.append(note);
+      }
     }
+
+    for(const [pubkey,ev] of voiceMap){
+      const row=document.createElement('div');row.className='thread-item';
+      const name=document.createElement('strong');name.textContent=ev.display_name||`Voice ${short(pubkey)}`;
+      const current=inviteByVoice.get(pubkey);
+      const invite=document.createElement('button');invite.type='button';
+      if(current){
+        invite.disabled=true;invite.textContent=current.status==='accepted'?'参加済み':'招待済み';
+      }else if(!access.problem_statement){
+        invite.disabled=true;invite.textContent='元投稿者の同意後に招待';
+      }else{
+        invite.textContent='Solution Roomへ招待';
+        invite.addEventListener('click',async()=>{
+          invite.disabled=true;invite.textContent='招待中…';
+          try{
+            await client.inviteVoiceToSolutionRoom(post.id,ev.id);
+            status('VoiceをSolution Roomへ招待しました。');
+            await hydrateCanonicalThread(article,post);
+          }catch(err){
+            console.error('room invite failed',err);
+            status(`招待できませんでした: ${String(err?.message||err)}`);
+            invite.disabled=false;invite.textContent='Solution Roomへ招待';
+          }
+        });
+      }
+      row.append(name,document.createTextNode(' '),invite);invitePanel.append(row);
+    }
+    mount.append(invitePanel);
+  }
+
+  if(access.problem_statement){
+    const shared=document.createElement('div');shared.className='participation-panel';shared.dataset.sharedProblem='1';
+    const eyebrow=document.createElement('p');eyebrow.className='eyebrow';eyebrow.textContent='Shared Problem';
+    const title=document.createElement('h3');title.textContent='共同解決の対象';
+    const statement=document.createElement('p');statement.className='raw';statement.textContent=access.problem_statement.statement;
+    const note=document.createElement('p');note.className='hint';note.textContent='元のBOYAKI本文が取り下げられても、この一般化Problemを入口に同じ痛みを持つVoiceが後から参加できます。';
+    shared.append(eyebrow,title,statement,note);mount.append(shared);
   }
 
   const solutionStep=document.createElement('div');
@@ -190,17 +241,51 @@ async function hydrateCanonicalThread(article,post){
   const solutionActions=document.createElement('div');solutionActions.className='actions';
 
   if(access.my_invitation?.status==='pending'){
-    solutionHint.textContent='Makerから、このBOYAKIの解決を一緒に詰めるSolution Roomへ招待されています。';
-    const accept=document.createElement('button');accept.type='button';accept.textContent='招待を受けてSolution Roomへ入る';
-    accept.addEventListener('click',async()=>{
-      accept.disabled=true;accept.textContent='参加中…';
-      try{
-        const result=await client.acceptSolutionRoomInvitation(access.my_invitation.id);
-        const roomId=result?.invitation?.room_id||access.solution_room_id;if(!roomId)throw Error('solution_room_id_missing');
-        location.href=`./solution-room.html?room=${encodeURIComponent(roomId)}`;
-      }catch(err){console.error('accept room invite failed',err);status(`招待を受けられませんでした: ${String(err?.message||err)}`);accept.disabled=false;accept.textContent='招待を受けてSolution Roomへ入る'}
-    });
-    solutionActions.append(accept);
+    const isSourceOwnerInvite=access.my_invitation.invitee_context==='source_owner';
+    if(isSourceOwnerInvite&&!access.problem_statement){
+      solutionHint.textContent='ここから共同解決フェーズです。あなたの元のBOYAKI文は後から取り下げられますが、個人情報を除いて一般化した「Problem」、他の参加者の発言、Solution、Productは残る場合があります。';
+      const consent=document.createElement('div');consent.className='candidate-block';consent.dataset.problemConsent='1';
+      const label=document.createElement('label');label.textContent='残してよい「困りごと」だけを、個人名・会社名・固有事情を外して1文にしてください';
+      const textarea=document.createElement('textarea');textarea.rows=3;textarea.minLength=10;textarea.maxLength=300;textarea.placeholder='例: 複数システム間の定型的な手動転記に毎日時間を取られる';
+      label.append(textarea);
+      const checkLabel=document.createElement('label');checkLabel.className='hint';
+      const check=document.createElement('input');check.type='checkbox';
+      checkLabel.append(check,document.createTextNode(' 元のBOYAKI本文は取り下げ可能だが、この一般化Problemと共同成果は残ることを理解した'));
+      const accept=document.createElement('button');accept.type='button';accept.disabled=true;accept.textContent='同意してSolution Roomへ入る';
+      const sync=()=>{accept.disabled=textarea.value.trim().length<10||!check.checked};
+      textarea.addEventListener('input',sync);check.addEventListener('change',sync);
+      accept.addEventListener('click',async()=>{
+        accept.disabled=true;accept.textContent='共同解決フェーズへ移行中…';
+        try{
+          const result=await client.acceptSolutionRoomInvitation(access.my_invitation.id,textarea.value.trim(),true);
+          const roomId=result?.invitation?.room_id||access.solution_room_id;if(!roomId)throw Error('solution_room_id_missing');
+          location.href=`./solution-room.html?room=${encodeURIComponent(roomId)}`;
+        }catch(err){
+          console.error('accept source owner invite failed',err);
+          status(`移行できませんでした: ${String(err?.message||err)}`);
+          accept.textContent='同意してSolution Roomへ入る';sync();
+        }
+      });
+      consent.append(label,checkLabel,accept);solutionActions.append(consent);
+    }else if(!access.problem_statement){
+      solutionHint.textContent='Makerから招待されています。元のBOYAKI投稿者が共有Problemへの移行に同意すると参加できます。';
+    }else{
+      solutionHint.textContent=`Makerから、この共有Problemの解決を一緒に詰めるSolution Roomへ招待されています。\nProblem: ${access.problem_statement.statement}`;
+      const accept=document.createElement('button');accept.type='button';accept.textContent='招待を受けてSolution Roomへ入る';
+      accept.addEventListener('click',async()=>{
+        accept.disabled=true;accept.textContent='参加中…';
+        try{
+          const result=await client.acceptSolutionRoomInvitation(access.my_invitation.id);
+          const roomId=result?.invitation?.room_id||access.solution_room_id;if(!roomId)throw Error('solution_room_id_missing');
+          location.href=`./solution-room.html?room=${encodeURIComponent(roomId)}`;
+        }catch(err){
+          console.error('accept room invite failed',err);
+          status(`招待を受けられませんでした: ${String(err?.message||err)}`);
+          accept.disabled=false;accept.textContent='招待を受けてSolution Roomへ入る';
+        }
+      });
+      solutionActions.append(accept);
+    }
   }else if(access.my_invitation?.status==='accepted'&&access.solution_room_id){
     solutionHint.textContent='このスレッドから招待されたSolution Roomに参加中です。';
     const open=document.createElement('a');open.className='button-link';open.href=`./solution-room.html?room=${encodeURIComponent(access.solution_room_id)}`;open.textContent='Solution Roomへ戻る';solutionActions.append(open);
@@ -383,26 +468,60 @@ function canonicalCard(post,{detail=false}={}){
   article.className='card problem-card';
   article.dataset.canonicalPostCard='1';
   article.dataset.canonicalPostId=post.id;
-  const meta=document.createElement('div');meta.className='meta';meta.textContent=`${fmt(post.created_at)} · ${short(post.author_pubkey)} · BOYAKI canonical`;article.append(meta);
+  const meta=document.createElement('div');meta.className='meta';
+  meta.textContent=post.source_withdrawn
+    ?`${fmt(post.created_at)} · 共有Problem · 元BOYAKIは取り下げ済み`
+    :`${fmt(post.created_at)} · ${short(post.author_pubkey)} · BOYAKI canonical`;
+  article.append(meta);
+
   const raw=document.createElement('p');raw.className='raw';raw.textContent=post.content||'';article.append(raw);
+
+  if(post.shared_problem&&!post.source_withdrawn&&post.problem_statement){
+    const problem=document.createElement('div');problem.className='candidate-block';problem.dataset.sharedProblemSummary='1';
+    const heading=document.createElement('strong');heading.textContent='共同解決で残るProblem';
+    const statement=document.createElement('p');statement.textContent=post.problem_statement;
+    const note=document.createElement('p');note.className='hint';note.textContent='元のBOYAKI本文は投稿者が取り下げられます。この一般化Problemは共同解決の入口として残ります。';
+    problem.append(heading,statement,note);article.append(problem);
+  }
+
   const chips=document.createElement('div');chips.className='chips';
-  const canonical=document.createElement('span');canonical.className='chip';canonical.textContent='AI-STAGING';chips.append(canonical);demandFeedChips(chips,post.demand_summary);article.append(chips);
+  const canonical=document.createElement('span');canonical.className='chip';canonical.textContent='AI-STAGING';chips.append(canonical);
+  if(post.shared_problem){const shared=document.createElement('span');shared.className='chip';shared.textContent='共同解決フェーズ';chips.append(shared)}
+  if(post.source_withdrawn){const withdrawn=document.createElement('span');withdrawn.className='chip';withdrawn.textContent='元文取り下げ済み';chips.append(withdrawn)}
+  demandFeedChips(chips,post.demand_summary);article.append(chips);
+
   if(detail){
-    const note=document.createElement('p');note.className='hint';note.textContent='このBOYAKIのスレッドで会話できます。';article.append(note);
+    const note=document.createElement('p');note.className='hint';
+    note.textContent=post.source_withdrawn
+      ?'元の個人的なBOYAKI本文は取り下げ済みです。一般化されたProblemと共同の会話・Solution・Productは継続しています。'
+      :'このBOYAKIのスレッドで会話できます。';
+    article.append(note);
     const mount=document.createElement('div');mount.dataset.canonicalThreadMount='1';article.append(mount);
     queueMicrotask(()=>hydrateDemandEvidence(article,post).catch(err=>console.warn('demand evidence hydrate failed',err)));
     queueMicrotask(()=>hydrateCanonicalThread(article,post).catch(err=>console.warn('canonical thread hydrate failed',err)));
   }else{
     const actions=document.createElement('div');actions.className='actions';
-    const open=document.createElement('a');open.className='button-link';open.href=`?problem=${encodeURIComponent(post.id)}`;open.textContent='このBOYAKIを開く';actions.append(open);article.append(actions);
+    const open=document.createElement('a');open.className='button-link';open.href=`?problem=${encodeURIComponent(post.id)}`;open.textContent=post.source_withdrawn?'このProblemを開く':'このBOYAKIを開く';actions.append(open);article.append(actions);
   }
+
   if(ownedIds.has(post.id)){
     const actions=document.createElement('div');actions.className='actions';
-    const del=document.createElement('button');del.type='button';del.textContent='自分の投稿を削除';del.dataset.canonicalPostDelete=post.id;
-    del.addEventListener('click',async()=>{del.disabled=true;try{await(await api()).deletePost(post.id);status('投稿とスレッドを削除しました。');await renderHybrid()}catch(err){status(`削除できませんでした: ${String(err.message)}`);del.disabled=false}});
+    const del=document.createElement('button');del.type='button';
+    del.textContent=post.shared_problem?'元のBOYAKI文を取り下げる':'自分の投稿を削除';
+    del.dataset.canonicalPostDelete=post.id;
+    del.addEventListener('click',async()=>{
+      del.disabled=true;
+      try{
+        const result=await(await api()).deletePost(post.id);
+        status(result.thread_preserved
+          ?'元のBOYAKI本文を取り下げました。共有Problem・他の参加者の会話・Solution・Productは残ります。'
+          :'投稿とスレッドを削除しました。');
+        await renderHybrid();
+      }catch(err){status(`削除できませんでした: ${String(err.message)}`);del.disabled=false}
+    });
     actions.append(del);article.append(actions);
   }
-  const permalink=document.createElement('a');permalink.className='permalink';permalink.rel='nofollow';permalink.href=`?problem=${encodeURIComponent(post.id)}`;permalink.textContent='この問題のURL';article.append(permalink);
+  const permalink=document.createElement('a');permalink.className='permalink';permalink.rel='nofollow';permalink.href=`?problem=${encodeURIComponent(post.id)}`;permalink.textContent=post.shared_problem?'このProblemのURL':'この問題のURL';article.append(permalink);
   return article;
 }
 

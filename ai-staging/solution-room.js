@@ -1,5 +1,5 @@
 import { getPublicKey } from 'https://esm.sh/nostr-tools@2.17.0';
-import { client, fromHex } from './canonical-api.js?v=20260919-thread-room-product-v7';
+import { client, fromHex } from './canonical-api.js?v=20260919-problem-transition-v8';
 
 const $=s=>document.querySelector(s);
 const params=new URLSearchParams(location.search);
@@ -65,9 +65,9 @@ function applyAccess(){
   }
   $('#room-message').disabled=false;
   submit.disabled=false;
-  caseButton.hidden=accessState.role!=='maker';
+  caseButton.hidden=accessState.role!=='maker'||!accessState.problem_statement;
   setStatus(accessState.role==='maker'
-    ?'MakerとしてSolution Roomに参加しています。'
+    ?(accessState.problem_statement?'MakerとしてSolution Roomに参加しています。共有ProblemからSolution Caseを作れます。':'MakerとしてRoomを準備中です。元のBOYAKI投稿者が共同解決への移行に同意するとCaseを作れます。')
     :'招待されたVoiceとしてSolution Roomに参加しています。');
 }
 
@@ -101,14 +101,17 @@ async function loadRoomMeta(){
     const result=await client.getSolutionRoom(room);
     const data=result.room,post=data?.post;
     renderDemandEvidence(data?.demand_evidence||{});
-    const sourceActive=post?.status==='active'&&Boolean(post?.content);
-    const raw=sourceActive?String(post.content).trim():'元のBOYAKIは取り下げ済みです。Solution Roomの履歴は保持されています。';
-    $('#room-title').textContent=sourceActive?(raw.length>54?`${raw.slice(0,54)}…`:raw):'取り下げ済みBOYAKIのSolution Room';
-    $('#room-problem').textContent=raw;
+    const sourceWithdrawn=post?.source_withdrawn===true;
+    const sharedProblem=String(data?.problem_statement?.statement||post?.problem_statement||'').trim();
+    const raw=String(post?.content||sharedProblem||'元のBOYAKIを取得できませんでした').trim();
+    $('#room-title').textContent=raw.length>54?`${raw.slice(0,54)}…`:raw;
+    $('#room-problem').textContent=sourceWithdrawn
+      ?`共有Problem: ${sharedProblem||raw}\n\n元の個人的なBOYAKI本文は投稿者によって取り下げ済みです。`
+      :raw;
     const sourceLink=$('#room-source-link');
-    if(sourceActive&&post?.id)sourceLink.href=`./?problem=${encodeURIComponent(post.id)}`;
+    if(post?.id){sourceLink.hidden=false;sourceLink.href=`./?problem=${encodeURIComponent(post.id)}`;sourceLink.textContent=sourceWithdrawn?'共有Problemを見る':'元のBOYAKIを見る'}
     else sourceLink.hidden=true;
-    document.title=`${sourceActive?raw.slice(0,32):'Solution Room'} — BOYAKI AI-STAGING`;
+    document.title=`${raw.slice(0,32)||'Solution Room'} — BOYAKI AI-STAGING`;
     return true;
   }catch(err){
     console.error('solution room metadata failed',err);
@@ -189,6 +192,7 @@ if(!viewOnly){
   $('#room-report')?.addEventListener('click',()=>setStatus('通報対象の選択フローはまだ未接続です。'));
   caseButton?.addEventListener('click',()=>{
     if(accessState.role!=='maker'){setStatus('Solution CaseはMakerだけが作成できます。','error');return}
+    if(!accessState.problem_statement){setStatus('元のBOYAKI投稿者が共同解決への移行に同意するまでCaseは作成できません。','error');return}
     location.href=`./solution-case-create.html?room=${encodeURIComponent(room)}`;
   });
 }

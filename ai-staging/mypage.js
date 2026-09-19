@@ -1,7 +1,7 @@
 import { getPublicKey, finalizeEvent } from 'https://esm.sh/nostr-tools@2.17.0';
 import * as nip49 from 'https://esm.sh/nostr-tools@2.17.0/nip49';
-import { client,fromHex,toHex } from './canonical-api.js?v=20260919-thread-room-product-v7';
-import { loadOwnedPosts } from './canonical-mypage.js?v=20260919-thread-room-product-v7';
+import { client,fromHex,toHex } from './canonical-api.js?v=20260919-problem-transition-v8';
+import { loadOwnedPosts } from './canonical-mypage.js?v=20260919-problem-transition-v8';
 const $=s=>document.querySelector(s),short=pk=>`${pk.slice(0,8)}…${pk.slice(-6)}`;
 const store=window.BOYAKI_STORAGE;
 function currentIdentity(){const i=client.identity();return i.kind==='account'?i:null}

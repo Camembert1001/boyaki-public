@@ -62,6 +62,12 @@ function profileName(profile:any,pubkey:string){
   const value=profile&&typeof profile==='object'&&typeof profile.displayName==='string'?profile.displayName.trim():'';
   return value||`${pubkey.slice(0,8)}…${pubkey.slice(-6)}`;
 }
+async function problemForPost(postId:string){
+  const{data,error}=await db.from(T('boyaki_problem_statements'))
+    .select('id,post_id,statement,status,created_at,updated_at')
+    .eq('post_id',postId).eq('status','active').maybeSingle();
+  if(error)throw Error(error.message);return data||null;
+}
 async function productContext(product:any){
   const {data:caseRow,error:caseError}=await db.from(T('boyaki_solution_cases'))
     .select('id,room_id,maker_account_pubkey,title,contribution,evidence_snapshot,status,created_at')
@@ -73,7 +79,7 @@ async function productContext(product:any){
     if(roomResult.error)throw Error(roomResult.error.message);
     room=roomResult.data;
     if(room?.post_id){
-      const postResult=await db.from(T('boyaki_posts')).select('id,content,status,created_at').eq('id',room.post_id).maybeSingle();
+      const postResult=await db.from(T('boyaki_posts')).select('id,content,status,created_at,withdrawn_at').eq('id',room.post_id).maybeSingle();
       if(postResult.error)throw Error(postResult.error.message);
       post=postResult.data;
     }
@@ -86,13 +92,22 @@ async function productContext(product:any){
     .select('id,product_id,post_id,room_id,published_by_pubkey,status,published_at,updated_at')
     .eq('product_id',product.id).maybeSingle();
   if(publication.error)throw Error(publication.error.message);
+  const problem=room?.post_id?await problemForPost(room.post_id):null;
   return {
     solution_case:caseRow?{
       id:caseRow.id,title:caseRow.title,contribution:caseRow.contribution,
       evidence_snapshot:caseRow.evidence_snapshot,created_at:caseRow.created_at
     }:null,
     room:room?{id:room.id,status:room.status}:null,
-    source_post:post?{id:post.id,content:post.content,status:post.status,created_at:post.created_at}:null,
+    source_post:post?{
+      id:post.id,
+      content:post.status==='withdrawn'?(problem?.statement||null):post.content,
+      status:post.status,
+      created_at:post.created_at,
+      source_withdrawn:post.status==='withdrawn',
+      problem_statement:problem?.statement||null,
+      shared_problem:Boolean(problem)
+    }:null,
     maker:{account_pubkey:product.maker_account_pubkey,display_name:profileName(maker.profile,product.maker_account_pubkey)},
     sold_count:count||0,
     thread_publication:publication.data||null
@@ -178,7 +193,9 @@ async function publishBack(req:Request,id:string){
   if(!room?.post_id)return json(req,409,{error:'product_source_post_missing'});
   const {data:post,error:postError}=await db.from(T('boyaki_posts')).select('id,status').eq('id',room.post_id).maybeSingle();
   if(postError)throw Error(postError.message);
-  if(!post||post.status!=='active')return json(req,409,{error:'source_post_not_active'});
+  const problem=await problemForPost(room.post_id);
+  const threadAlive=post?.status==='active'||(post?.status==='withdrawn'&&Boolean(problem));
+  if(!post||!threadAlive)return json(req,409,{error:'source_thread_not_available'});
   const existing=await db.from(T('boyaki_product_thread_publications'))
     .select('id,product_id,post_id,room_id,published_by_pubkey,status,published_at,updated_at').eq('product_id',id).maybeSingle();
   if(existing.error)throw Error(existing.error.message);
@@ -294,7 +311,7 @@ Deno.serve(async req=>{
   try{
     if(req.method==='GET'&&path==='/health')return json(req,200,{
       ok:true,service:'ai-staging-commerce-api',products:true,orders:true,entitlements:true,
-      checkout_mode:'ai_staging_test',real_payment_processed:false,publish_back:true,environment:'AI-STAGING',version:'ai-staging-commerce-v2'
+      checkout_mode:'ai_staging_test',real_payment_processed:false,publish_back:true,shared_problem_transition:true,environment:'AI-STAGING',version:'ai-staging-commerce-v3'
     });
     const productMatch=/^\/products\/([0-9a-f-]+)$/i.exec(path);
     const purchaseMatch=/^\/products\/([0-9a-f-]+)\/purchase$/i.exec(path);

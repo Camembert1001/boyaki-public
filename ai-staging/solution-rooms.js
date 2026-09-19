@@ -1,4 +1,4 @@
-import { client } from './canonical-api.js?v=20260919-thread-room-product-v7';
+import { client } from './canonical-api.js?v=20260919-problem-transition-v8';
 
 const $=s=>document.querySelector(s);
 const list=$('#solution-room-list');
@@ -17,20 +17,21 @@ function roomCard(room){
   card.dataset.solutionRoomId=room.id;
 
   const post=room.post;
-  const sourceActive=post?.status==='active'&&Boolean(post?.content);
+  const sourceWithdrawn=post?.source_withdrawn===true;
+  const hasSource=Boolean(post?.content);
   const meta=document.createElement('p');
   meta.className='eyebrow';
   meta.textContent=`Solution Room · ${fmt(room.updated_at||room.created_at)}`;
 
   const title=document.createElement('h3');
-  const raw=sourceActive?String(post.content).trim():'元のBOYAKIは取り下げ済み';
+  const raw=hasSource?String(post.content).trim():'Problemを取得できませんでした';
   title.textContent=raw.length>72?`${raw.slice(0,72)}…`:raw;
 
   const hint=document.createElement('p');
   hint.className='hint';
-  hint.textContent=sourceActive
-    ?'このRoomのSolution LogとSolution CaseはAI-STAGINGだけに保存され、通常STAGINGの活動履歴とは分離されています。'
-    :'元のBOYAKIは取り下げ済みですが、Maker側のSolution Log / Caseは履歴として保持されています。';
+  hint.textContent=sourceWithdrawn
+    ?'元の個人的なBOYAKI本文は取り下げ済みです。一般化されたProblem・Solution Log・Caseは共同資産として続いています。'
+    :'このRoomのSolution LogとSolution CaseはAI-STAGINGだけに保存され、通常STAGINGの活動履歴とは分離されています。';
 
   const actions=document.createElement('div');
   actions.className='actions';
@@ -41,11 +42,11 @@ function roomCard(room){
   open.textContent='Solution Roomを開く';
   actions.append(open);
 
-  if(sourceActive&&post?.id){
+  if(post?.id){
     const source=document.createElement('a');
     source.className='button-link';
     source.href=`./?problem=${encodeURIComponent(post.id)}`;
-    source.textContent='元のBOYAKIを見る';
+    source.textContent=sourceWithdrawn?'共有Problemを見る':'元のBOYAKIを見る';
     actions.append(source);
   }
 
