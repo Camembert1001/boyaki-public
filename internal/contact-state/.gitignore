@@ -1,0 +1,5 @@
+# Real contact records never belong in this public repo. Keep them local.
+# *.local.json is the canonical store; *.local.md is the human-readable position on
+# individual contacts (CHECKPOINT.local.md). Neither is ever committed.
+*.local.json
+*.local.md
