@@ -1,0 +1,27 @@
+{
+ "schema": "yn0-validation-hypothesis-v1",
+ "axes": {
+  "problem": {
+   "state": "SETTLED",
+   "evidence": [
+    "invented shape: one contact answered, cited in the contact store"
+   ]
+  },
+  "usefulness": {
+   "state": "SETTLED",
+   "evidence": [
+    "invented shape: same contact, same thread"
+   ]
+  },
+  "workflow": {
+   "state": "PARTIAL",
+   "evidence": [
+    "invented shape: one ambiguous answer"
+   ]
+  },
+  "payer": {
+   "state": "OPEN",
+   "evidence": []
+  }
+ }
+}

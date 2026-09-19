@@ -92,6 +92,12 @@ See [`README.md`](README.md) for the full event and field reference.
 - a mechanical distribution scanner exists
 - an adapter boundary exists / is being proposed separately
 - JSON is the only intended adapter until a real respondent validates another format
+- a prospect discovery layer sits on top of the scanner, and reads this directory rather
+  than duplicating it: contact posture comes from `derive()`, and the validation
+  hypothesis it filters candidates against is derived from the axes recorded here. There
+  is no second validation model, and discovery writes nothing back.
+- discovery ends at human review. It has no outreach surface, and it never records that a
+  contact was checked — only a human reading the local store may claim that.
 
 ## Decision gates
 
