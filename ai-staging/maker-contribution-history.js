@@ -1,4 +1,4 @@
-import { client } from './canonical-api.js?v=20260919-problem-transition-v8';
+import { client } from './canonical-api.js?v=20260920-action-inbox-v10';
 
 const box=document.querySelector('[data-contribution-role="maker"]');
 const status=document.querySelector('#maker-contribution-status');
