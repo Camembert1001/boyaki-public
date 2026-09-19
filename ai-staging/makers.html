@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
 <meta http-equiv="Content-Security-Policy" content="connect-src https://camembert1001.github.io/boyaki-public/ai-staging/ https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/ai-staging-boyaki-api https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/ai-staging-boyaki-api/ https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/ai-staging-boyaki-thread-api https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/ai-staging-boyaki-thread-api/ https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/ai-staging-e2e-runner https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/ai-staging-e2e-runner/; base-uri 'none'; form-action 'none'; object-src 'none'">
-<script src="./ai-environment.js?v=20260918-ai-v1"></script>
+<script src="./ai-environment.js?v=20260919-shared-identity-v1"></script>
 
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <meta name="theme-color" content="#111827" />
@@ -12,9 +12,8 @@
   <link rel="stylesheet" href="./styles.css" />
   <title>Maker Space — BOYAKI</title>
   <style>
-    .solution-room-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:16px}
-    .solution-room-button{min-height:72px;font-size:1.05rem;font-weight:700}
-    @media(max-width:640px){.solution-room-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.solution-room-button{min-height:64px}}
+    .solution-room-list{display:grid;gap:12px;margin-top:16px}
+    .solution-room-card h3{margin:6px 0 8px;line-height:1.45}
   </style>
 </head>
 <body>
@@ -44,18 +43,8 @@
     <section class="card">
       <p class="eyebrow">Solution Rooms</p>
       <h2>Solution Room</h2>
-      <p class="hint">入室するRoomを選びます。Roomを開くと、そのRoomのチャットとSolution Logを復元して続きから話せます。</p>
-      <div class="solution-room-grid" aria-label="Solution Rooms">
-        <button class="solution-room-button" type="button" data-room="1">Room 1</button>
-        <button class="solution-room-button" type="button" data-room="2">Room 2</button>
-        <button class="solution-room-button" type="button" data-room="3">Room 3</button>
-        <button class="solution-room-button" type="button" data-room="4">Room 4</button>
-        <button class="solution-room-button" type="button" data-room="5">Room 5</button>
-        <button class="solution-room-button" type="button" data-room="6">Room 6</button>
-        <button class="solution-room-button" type="button" data-room="7">Room 7</button>
-        <button class="solution-room-button" type="button" data-room="8">Room 8</button>
-        <button class="solution-room-button" type="button" data-room="9">Room 9</button>
-      </div>
+      <p class="hint">RoomはBOYAKIスレッドから作成され、元の困りごとと1対1で紐づきます。ここでは進行中のRoomを一覧できます。</p>
+      <div id="solution-room-list" class="solution-room-list" aria-label="Solution Rooms"></div>
       <div id="room-status" class="hint" role="status" aria-live="polite"></div>
     </section>
 
@@ -67,20 +56,7 @@
     </section>
   </main>
 
-  <script type="module">
-    import { getPublicKey } from 'https://esm.sh/nostr-tools@2.17.0';
-    const fromHex=hex=>new Uint8Array((hex.match(/.{1,2}/g)||[]).map(b=>parseInt(b,16)));
-    const accountHex=window.BOYAKI_STORAGE.local.getItem('boyaki-account-sk')||window.BOYAKI_STORAGE.session.getItem('boyaki-account-sk');
-    const device=document.querySelector('#device-id');
-    if(accountHex){
-      try{const pk=getPublicKey(fromHex(accountHex));device.textContent=`${pk.slice(0,8)}…${pk.slice(-6)}`}catch{device.textContent='invalid account'}
-    }else{device.textContent='not logged in'}
-    document.querySelectorAll('[data-room]').forEach(button=>button.addEventListener('click',()=>{
-      const room=button.dataset.room;
-      document.querySelector('#room-status').textContent=`Room ${room} に入室します…`;
-      location.href=`./solution-room.html?room=${encodeURIComponent(room)}`;
-    }));
-  </script>
+  <script type="module" src="./solution-rooms.js?v=20260919-solution-flow-v3"></script>
 <script>
 (()=>{window.BOYAKI_AUTH_NAV_V1='1';const loggedIn=!!(window.BOYAKI_STORAGE.local.getItem('boyaki-account-sk')||window.BOYAKI_STORAGE.session.getItem('boyaki-account-sk'));if(loggedIn)document.querySelectorAll('[data-auth-register-link]').forEach(x=>x.style.display='none')})();
 </script>

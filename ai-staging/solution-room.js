@@ -1,12 +1,11 @@
 import { getPublicKey } from 'https://esm.sh/nostr-tools@2.17.0';
-import { client, fromHex } from './canonical-api.js?v=20260919-solution-room-v2';
+import { client, fromHex } from './canonical-api.js?v=20260919-solution-flow-v3';
 
 const $=s=>document.querySelector(s);
 const params=new URLSearchParams(location.search);
 const room=String(params.get('room')||'').trim();
 const viewOnly=params.get('mode')==='view';
-const validRoom=/^[1-9]$/.test(room);
-const escapeHtml=(s='')=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const validRoom=/^[0-9a-f-]{36}$/i.test(room);
 const fmt=value=>new Date(value).toLocaleString('ja-JP',{month:'numeric',day:'2-digit',hour:'2-digit',minute:'2-digit'});
 
 function accountIdentity(){
@@ -25,11 +24,10 @@ let loading=false;
 if(!validRoom){
   $('#room-title').textContent='Room not found';
   $('#room-id').textContent='invalid';
+  $('#room-problem').textContent='Room IDが不正です。';
   $('#room-form').hidden=true;
 }else{
-  $('#room-title').textContent=`Room ${room}`;
-  $('#room-id').textContent=viewOnly?'閲覧モード':`room:${room}`;
-  document.title=`Room ${room} — BOYAKI AI-STAGING`;
+  $('#room-id').textContent=viewOnly?'閲覧モード':`room:${room.slice(0,8)}…`;
 }
 
 $('#room-identity').textContent=identity?`${identity.pk.slice(0,8)}…${identity.pk.slice(-6)}`:'not logged in';
@@ -51,6 +49,30 @@ function setStatus(text,state=''){
   if(!node)return;
   node.textContent=text;
   if(state)node.dataset.state=state;else delete node.dataset.state;
+}
+
+async function loadRoomMeta(){
+  if(!validRoom)return false;
+  try{
+    const result=await client.getSolutionRoom(room);
+    const data=result.room,post=data?.post;
+    const sourceActive=post?.status==='active'&&Boolean(post?.content);
+    const raw=sourceActive?String(post.content).trim():'元のBOYAKIは取り下げ済みです。Solution Roomの履歴は保持されています。';
+    $('#room-title').textContent=sourceActive?(raw.length>54?`${raw.slice(0,54)}…`:raw):'取り下げ済みBOYAKIのSolution Room';
+    $('#room-problem').textContent=raw;
+    const sourceLink=$('#room-source-link');
+    if(sourceActive&&post?.id)sourceLink.href=`./?problem=${encodeURIComponent(post.id)}`;
+    else sourceLink.hidden=true;
+    document.title=`${sourceActive?raw.slice(0,32):'Solution Room'} — BOYAKI AI-STAGING`;
+    return true;
+  }catch(err){
+    console.error('solution room metadata failed',err);
+    $('#room-title').textContent='Solution Roomを読み込めませんでした';
+    $('#room-problem').textContent='このRoomが削除されたか、読み込みに失敗しました。';
+    $('#room-form').hidden=true;
+    setStatus('Room情報を取得できませんでした。','error');
+    return false;
+  }
 }
 
 function renderMessage(message){
@@ -83,7 +105,7 @@ function renderMessage(message){
       try{
         await client.deleteSolutionRoomMessage(message.id);
         setStatus('メッセージを取り下げました。','success');
-        await load();
+        await loadMessages();
       }catch(err){
         console.error('solution room delete failed',err);
         setStatus('取り下げできませんでした。通信状態を確認して再試行してください。','error');
@@ -96,8 +118,8 @@ function renderMessage(message){
   return item;
 }
 
-async function load({silent=false}={}){
-  if(!validRoom||loading)return;
+async function loadMessages({silent=false}={}){
+  if(!validRoom||loading)return false;
   loading=true;
   const log=$('#room-log');
   if(!silent)log.innerHTML='<p class="hint">Solution Logを復元しています…</p>';
@@ -147,7 +169,7 @@ if(!viewOnly){
       await publishMessage(text);
       input.value='';
       setStatus('Solution Logへ保存しました。STAGING側の履歴には反映されません。','success');
-      await load();
+      await loadMessages();
       input.focus();
     }catch(err){
       console.error('solution room publish failed',err);
@@ -160,21 +182,23 @@ if(!viewOnly){
 
   $('#room-refresh')?.addEventListener('click',async()=>{
     setStatus('更新しています…','working');
-    const ok=await load();
+    const ok=await loadMessages();
     if(ok)setStatus('最新のSolution Logを表示しています。','success');
   });
 
   $('#room-report')?.addEventListener('click',()=>{
-    setStatus('通報対象の選択フローは未接続です。今回の実装対象はSolution Roomの保存・復元・取り下げです。');
+    setStatus('通報対象の選択フローはまだ未接続です。');
   });
 
   $('#solution-case-create')?.addEventListener('click',()=>{
+    if(!identity){setStatus('Solution Caseを作るにはログインしてください。','error');return}
     location.href=`./solution-case-create.html?room=${encodeURIComponent(room)}`;
   });
 }
 
-await load();
-if(validRoom){
-  refreshTimer=setInterval(()=>load({silent:true}),8000);
+const roomReady=await loadRoomMeta();
+if(roomReady)await loadMessages();
+if(roomReady&&validRoom){
+  refreshTimer=setInterval(()=>loadMessages({silent:true}),8000);
 }
 window.addEventListener('pagehide',()=>{if(refreshTimer)clearInterval(refreshTimer)},{once:true});

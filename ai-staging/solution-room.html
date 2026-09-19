@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
 <meta http-equiv="Content-Security-Policy" content="connect-src https://camembert1001.github.io/boyaki-public/ai-staging/ https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/ai-staging-boyaki-api https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/ai-staging-boyaki-api/ https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/ai-staging-boyaki-thread-api https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/ai-staging-boyaki-thread-api/ https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/ai-staging-e2e-runner https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/ai-staging-e2e-runner/; base-uri 'none'; form-action 'none'; object-src 'none'">
-<script src="./ai-environment.js?v=20260918-ai-v1"></script>
+<script src="./ai-environment.js?v=20260919-shared-identity-v1"></script>
 
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <meta name="theme-color" content="#111827" />
@@ -35,8 +35,10 @@
         </div>
         <span class="chip" id="room-id"></span>
       </div>
-      <p class="lead">VoiceとMakerが、このRoomの文脈を引き継いで解決を詰める場所。</p>
-      <p class="hint">このRoomの会話はAI-STAGING専用DBへSolution Logとして保存されます。STAGINGの投稿・活動履歴には反映されません。</p>
+      <p class="lead">元のBOYAKIから文脈を引き継いで、VoiceとMakerが解決を具体化する場所。</p>
+      <p id="room-problem" class="raw">元のBOYAKIを読み込んでいます…</p>
+      <div class="actions"><a id="room-source-link" class="button-link" href="./">元のBOYAKIを見る</a></div>
+      <p class="hint">このRoomの会話とSolution CaseはAI-STAGING専用DBへ保存されます。STAGINGの投稿・活動履歴には反映されません。</p>
     </section>
 
     <section class="card">
@@ -65,6 +67,6 @@
   </main>
 
   <script src="./legacy-write-freeze.js?v=20260918-ai-v1"></script>
-  <script type="module" src="./solution-room.js?v=20260919-solution-room-v2"></script>
+  <script type="module" src="./solution-room.js?v=20260919-solution-flow-v3"></script>
 </body>
 </html>
