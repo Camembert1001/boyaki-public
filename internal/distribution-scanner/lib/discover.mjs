@@ -2,6 +2,7 @@
 // Pure filesystem inspection: no network, no credentials, no mutation.
 import {readdir} from 'node:fs/promises';
 import path from 'node:path';
+import {LOCALE_EXTENSIONS} from './adapters/index.mjs';
 
 // Directories that never hold a project's own locale data worth scanning.
 export const SKIP_DIRS = new Set([
@@ -36,13 +37,15 @@ function parseBase(base) {
  return null;
 }
 
-// Classify one repo-relative JSON path as an EN or JA locale file.
+// Classify one repo-relative path as an EN or JA locale file. Only extensions a
+// registered file adapter claims are considered, so a new format becomes discoverable
+// by registering its adapter - this function does not change.
 // Filename evidence wins; otherwise the deepest `en`/`ja` directory segment is used.
 export function classifyPath(relPath) {
  const segments = relPath.split('/');
  const filename = segments.pop();
  const ext = path.extname(filename);
- if (ext.toLowerCase() !== '.json') return null;
+ if (!LOCALE_EXTENSIONS.has(ext.toLowerCase())) return null;
  const base = filename.slice(0, -ext.length);
 
  const fromName = parseBase(base);

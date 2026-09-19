@@ -1,12 +1,20 @@
 // Orchestration for the YN0 Distribution Scanner: discover EN/JA pairs under a
-// local path, run the mechanical checks, and bucket each pair by prospect fit.
+// local path, read each side through its file adapter, run the mechanical checks on
+// the normalized entries, and bucket each pair by prospect fit.
+//
+//   raw file -> file adapter -> normalized entries -> checks -> findings
+//
+// This module is the only one that touches the filesystem; it picks an adapter by
+// extension and never parses a locale file itself.
 //
 // Deterministic by construction: sorted traversal, sorted findings, no timestamps,
 // no randomness, no network.
 import {readFile, stat} from 'node:fs/promises';
 import path from 'node:path';
 import {walk, pairLocaleFiles} from './discover.mjs';
-import {checkPair, flatten, RULES, BLANK_RULES, ADVISORY_RULES} from './checks.mjs';
+import {adapterForPath} from './adapters/index.mjs';
+import {keyCount, pairEntries} from './entries.mjs';
+import {checkEntries, RULES, BLANK_RULES, ADVISORY_RULES} from './checks.mjs';
 
 export const SCHEMA = 'yn0-distribution-scanner-report-v1';
 
@@ -23,17 +31,18 @@ export const CLASSIFICATIONS = ['HIGH_FIT', 'CLEAN', 'REVIEW', 'TOO_NOISY'];
 const round = value => Math.round(value * 10000) / 10000;
 const percent = value => (value * 100).toFixed(1) + '%';
 
+// Read one locale file through the adapter that claims its extension. Returns the
+// adapter's own result: {ok: true, entries} or {ok: false, reason}.
 async function readLocale(root, relPath) {
- let parsed;
+ const adapter = adapterForPath(relPath);
+ if (!adapter) return {ok: false, reason: 'no file adapter for this extension'};
+ let text;
  try {
-  parsed = JSON.parse(await readFile(path.join(root, relPath), 'utf8'));
+  text = await readFile(path.join(root, relPath), 'utf8');
  } catch (error) {
-  return {ok: false, reason: 'unreadable JSON: ' + error.message};
+  return {ok: false, reason: 'unreadable ' + adapter.label + ': ' + error.message};
  }
- if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-  return {ok: false, reason: 'top-level JSON value is not an object'};
- }
- return {ok: true, entries: flatten(parsed)};
+ return adapter.parse(text);
 }
 
 // Bucket one pair. Order matters: an incomplete locale is judged before finding counts,
@@ -98,11 +107,11 @@ export async function scan(rootPath, options = {}) {
    continue;
   }
 
-  const findings = checkPair(en.entries, ja.entries);
+  const findings = checkEntries(pairEntries(en.entries, ja.entries));
   const findingsByRule = {};
   for (const item of findings) findingsByRule[item.rule] = (findingsByRule[item.rule] || 0) + 1;
 
-  const enKeyCount = Object.keys(en.entries).length;
+  const enKeyCount = keyCount(en.entries);
   const blankFindings = BLANK_RULES.reduce((sum, rule) => sum + (findingsByRule[rule] || 0), 0);
   const advisoryFindings = ADVISORY_RULES.reduce((sum, rule) => sum + (findingsByRule[rule] || 0), 0);
   const stats = {
@@ -118,7 +127,7 @@ export async function scan(rootPath, options = {}) {
    en: candidate.en,
    ja: candidate.ja,
    enKeyCount,
-   jaKeyCount: Object.keys(ja.entries).length,
+   jaKeyCount: keyCount(ja.entries),
    totalFindings: findings.length,
    classifyingFindings: stats.classifyingFindings,
    advisoryFindings,

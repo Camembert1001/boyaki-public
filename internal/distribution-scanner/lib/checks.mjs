@@ -1,5 +1,9 @@
 // Mechanical EN/JA checks for the YN0 Distribution Scanner.
 //
+// Format-agnostic by construction: everything here reads normalized entries
+// (see entries.mjs), never a file, an extension or a parse tree. Whatever a file
+// adapter produces is checked the same way.
+//
 // These deliberately mirror the public JP UI Preflight (yn0-jp-ui-preflight/index.html)
 // so that a scanner finding is the same claim the public tool would make. The one
 // intentional difference: the Preflight's single `placeholder-mismatch` rule is split
@@ -7,6 +11,7 @@
 // string may legitimately repeat a placeholder the English string uses once.
 //
 // The scanner reports. It never rewrites a value.
+import {fromMap, pairEntries} from './entries.mjs';
 
 // Identical to the `ph` pattern in yn0-jp-ui-preflight/index.html.
 // Covers {{name}}, {name}, {0}, format-like {0:0.#}, %s / %d / %f and indexed %1$s.
@@ -45,20 +50,7 @@ const tally = tokens => {
  return counts;
 };
 
-// Flatten nested objects/arrays into dotted keys. Only leaf scalars become entries,
-// so structural nesting on either side never counts as a translatable string.
-export function flatten(value, prefix = '', out = {}) {
- if (Array.isArray(value)) {
-  value.forEach((item, index) => flatten(item, prefix ? prefix + '.' + index : String(index), out));
- } else if (value && typeof value === 'object') {
-  for (const key of Object.keys(value)) flatten(value[key], prefix ? prefix + '.' + key : key, out);
- } else if (prefix) {
-  out[prefix] = value === null ? '' : String(value);
- }
- return out;
-}
-
-const finding = (rule, key, detail) => ({severity: RULES[rule], rule, key, detail});
+const finding =(rule, key, detail) => ({severity: RULES[rule], rule, key, detail});
 
 // Run every rule for one key. `en` / `ja` are undefined when the key is absent on that side.
 export function checkEntry(key, en, ja) {
@@ -94,14 +86,18 @@ export function checkEntry(key, en, ja) {
  return found;
 }
 
-// Compare two flattened locale maps. Keys present only in JA are checked on the JA
-// side alone, matching the Preflight; they are never reported as extra keys.
-export function checkPair(enEntries, jaEntries) {
- const keys = [...new Set([...Object.keys(enEntries), ...Object.keys(jaEntries)])].sort();
+// Run every rule over paired entries (see entries.mjs `pairEntries`), whatever file
+// adapter produced them. Keys present only in JA are checked on the JA side alone,
+// matching the Preflight; they are never reported as extra keys.
+export function checkEntries(pairs) {
  const found = [];
- for (const key of keys) found.push(...checkEntry(key, enEntries[key], jaEntries[key]));
+ for (const pair of pairs) found.push(...checkEntry(pair.key, pair.source, pair.target));
  return found.sort((a, b) =>
   SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity] ||
   (a.key < b.key ? -1 : a.key > b.key ? 1 : 0) ||
   (a.rule < b.rule ? -1 : a.rule > b.rule ? 1 : 0));
 }
+
+// Convenience for callers holding plain key -> value maps rather than entry lists.
+export const checkPair = (enEntries, jaEntries) =>
+ checkEntries(pairEntries(fromMap(enEntries), fromMap(jaEntries)));

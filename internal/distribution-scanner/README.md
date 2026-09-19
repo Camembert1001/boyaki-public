@@ -116,7 +116,8 @@ byte-identical.
 
 ## Locale discovery
 
-JSON only (CSV is deliberately out of scope for the MVP). A file is treated as a locale
+JSON only today — it is the only registered [file adapter](#adding-a-file-adapter), and
+discovery ignores every extension no adapter claims. A file is treated as a locale
 when an `en` / `ja` tag — optionally with a region, e.g. `en-US`, `ja_JP` — appears either
 in its filename or in a directory segment:
 
@@ -131,6 +132,46 @@ Flat and nested JSON both work; nested objects and arrays flatten to dotted keys
 compared as content. `.git`, `node_modules`, `dist`, `build` and similar directories are
 skipped. When a group holds several candidates (`en.json` *and* `en-US.json`), the
 region-less file is scanned and the alternates are listed under the pair's `notes`.
+
+## Adding a file adapter
+
+The checks never see a file. Reading is one replaceable layer:
+
+```
+raw file -> file adapter -> normalized entries -> mechanical checks -> findings
+```
+
+A **normalized entry** (`lib/entries.mjs`) is `{key, value, location?}`: the identifier the
+string has inside its own file (dotted JSON path today, a msgid or row id for some other
+format), the string itself, and an optional adapter-defined position in the raw file. Source
+and target entries are matched by `key`; `location` is carried through pairing untouched for a
+line-oriented format to use, and no check reads it.
+
+An **adapter** (`lib/adapters/`) is a plain object:
+
+| Field | Meaning |
+| --- | --- |
+| `id` | short lowercase identifier, unique |
+| `label` | human-readable format name, used in `skipped` reasons |
+| `extensions` | lowercase extensions with the dot, each claimed by exactly one adapter |
+| `parse(text)` | `{ok: true, entries}` or `{ok: false, reason}` — pure, no filesystem, never throws on malformed input |
+
+To add one, e.g. CSV:
+
+1. Write `lib/adapters/csv.mjs` exporting the object above as its default export.
+2. Add it to `ADAPTERS` in `lib/adapters/index.mjs`. Discovery picks up the new extension
+   from there, and the scanner picks the adapter by extension.
+3. Add a `csv` entry to `tests/adapter-fixtures.mjs` — one sample file, the entries `parse`
+   must return, and a few malformed texts it must reject. The contract test
+   (`every registered file adapter satisfies the adapter contract`) fails until it exists,
+   and then exercises the new adapter automatically.
+4. Optionally add a `fixtures/<scenario>/` directory in the new format for an end-to-end
+   scan; note that the fixture-bucket test pins the current tree, so extend its expectations
+   in the same change.
+
+Nothing in `lib/checks.mjs`, `lib/discover.mjs` or `lib/scanner.mjs` changes. Files of
+different formats never pair with each other: a pair's group key includes the extension, so
+`en.json` pairs with `ja.json`, never with `ja.csv`.
 
 ## Mechanical checks
 
@@ -276,7 +317,11 @@ No dependencies, no install step, no network. Node 22 built-ins only.
 
 ## Known limitations
 
-- JSON only. CSV, `.po`, `.strings`, `.resx`, YAML and XLIFF are not read.
+- JSON is the only registered file adapter. CSV, `.po`, `.strings`, `.resx`, YAML and XLIFF
+  are not read — adding one is an adapter, not a change to the checks (see
+  [Adding a file adapter](#adding-a-file-adapter)).
+- A normalized entry can carry a `location`, but nothing populates or reports one yet: the
+  JSON adapter has only dotted keys, and no check or report field reads it.
 - Only the seven rules above run. The public Preflight's kinsoku, display-width,
   control-character, line-break-count and punctuation-mixing checks are not ported —
   they were outside this MVP's scope.
