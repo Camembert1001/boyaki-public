@@ -170,24 +170,37 @@ function setupLoginKeyRecoveryUI(){
   hide.addEventListener('click',()=>{area.value='';area.hidden=true;copy.hidden=true;hide.hidden=true;show.hidden=false;status.textContent='ログインキーを隠しました。';});
 }
 function setupPasswordReset(identity){
-  const card=$('#account-password-reset'),status=$('#account-password-reset-status'),form=$('#account-password-reset-form');
+  const card=$('#account-password-reset'),status=$('#account-password-reset-status'),complete=$('#account-password-reset-complete'),form=$('#account-password-reset-form');
   const password=$('#account-password-new'),confirm=$('#account-password-new-confirm');
   const manualWrap=$('#account-password-reset-login-key-wrap'),manualKey=$('#account-password-reset-login-key');
-  if(!card||!status||!form||!password||!confirm||!manualWrap||!manualKey||!identity)return;
+  if(!card||!status||!complete||!form||!password||!confirm||!manualWrap||!manualKey||!identity)return;
+  const setStatus=(state,message,{focus=false}={})=>{
+    status.hidden=false;
+    status.dataset.state=state;
+    status.textContent=message;
+    if(focus){
+      status.focus({preventScroll:true});
+      status.scrollIntoView({behavior:'smooth',block:'center'});
+    }
+  };
   card.hidden=false;
+  complete.hidden=true;
   const existing=savedLoginKey();
   manualWrap.hidden=Boolean(existing);
-  status.textContent=existing
+  setStatus('info',existing
     ?'現在のログインキーは変更せず、パスワードだけを再設定できます。'
-    :'この端末にログインキーが保存されていません。現在のログインキーを入力すると、パスワードだけを再設定できます。';
+    :'この端末にログインキーが保存されていません。現在のログインキーを入力すると、パスワードだけを再設定できます。');
   form.addEventListener('submit',async e=>{
     e.preventDefault();
+    complete.hidden=true;
     const button=e.submitter,p=password.value,check=confirm.value;
     const stableLoginKey=savedLoginKey()||manualKey.value.trim();
-    if(!stableLoginKey){status.textContent='現在のログインキーを入力してください。';return}
-    if(p.length<10){status.textContent='新しいパスワードは10文字以上にしてください。';return}
-    if(p!==check){status.textContent='新しいパスワードが一致しません。';return}
-    button.disabled=true;status.textContent='パスワードを再設定しています…';
+    if(!stableLoginKey){setStatus('error','再設定できませんでした。現在のログインキーを入力してください。',{focus:true});return}
+    if(p.length<10){setStatus('error','再設定できませんでした。新しいパスワードは10文字以上にしてください。',{focus:true});return}
+    if(p!==check){setStatus('error','再設定できませんでした。新しいパスワードが一致しません。',{focus:true});return}
+    button.disabled=true;
+    button.textContent='再設定中…';
+    setStatus('working','パスワードを再設定しています。この画面を閉じずにお待ちください。',{focus:true});
     try{
       const encryptedSecret=nip49.encrypt(identity.sk,p);
       const verified=nip49.decrypt(encryptedSecret,p);
@@ -198,11 +211,16 @@ function setupPasswordReset(identity){
       localStorage.removeItem('boyaki-account-login-key');sessionStorage.removeItem('boyaki-account-login-key');
       target.setItem('boyaki-account-login-key',stableLoginKey);
       form.reset();manualWrap.hidden=true;
-      status.textContent='パスワードを再設定しました。次回も同じログインキーを使い、新しいパスワードでログインできます。';
+      setStatus('success','再設定が完了しました。',{focus:true});
+      complete.hidden=false;
+      complete.scrollIntoView({behavior:'smooth',block:'center'});
     }catch(err){
       console.error('password reset failed',err);
-      status.textContent='パスワードを再設定できませんでした。通信状態を確認して再試行してください。';
-    }finally{button.disabled=false}
+      setStatus('error','再設定に失敗しました。通信状態を確認して、もう一度お試しください。',{focus:true});
+    }finally{
+      button.disabled=false;
+      button.textContent='パスワードを再設定';
+    }
   });
 }
 
