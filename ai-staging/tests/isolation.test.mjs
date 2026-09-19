@@ -118,6 +118,7 @@ assert(inboxApiSource.includes("kind:'productize_case'"),'Maker Case -> Product 
 assert(inboxApiSource.includes("kind:'publish_product'"),'Maker Product publish-back Action Inbox item missing');
 assert(inboxApiSource.includes("kind:'room_activity'"),'Solution Room activity Inbox item missing');
 assert(inboxApiSource.includes("kind:'sale'"),'Maker sale Inbox update missing');
+assert(inboxApiSource.includes("kind:'market_opportunity'"),'Maker unresolved-demand Inbox opportunity missing');
 assert(!/notifications|notification_payload/.test(inboxApiSource),'Inbox must derive actions rather than persist notification copies');
 const inboxUiSource=await read('action-inbox.js');
 assert(inboxUiSource.includes('client.listMyInbox()'),'Action Inbox client read missing');
