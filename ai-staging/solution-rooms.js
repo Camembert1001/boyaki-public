@@ -1,4 +1,4 @@
-import { client } from './canonical-api.js?v=20260919-solution-flow-v3';
+import { client } from './canonical-api.js?v=20260919-commerce-v6';
 
 const $=s=>document.querySelector(s);
 const list=$('#solution-room-list');

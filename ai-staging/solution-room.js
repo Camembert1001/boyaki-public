@@ -1,5 +1,5 @@
 import { getPublicKey } from 'https://esm.sh/nostr-tools@2.17.0';
-import { client, fromHex } from './canonical-api.js?v=20260919-contribution-history-v5';
+import { client, fromHex } from './canonical-api.js?v=20260919-commerce-v6';
 
 const $=s=>document.querySelector(s);
 const params=new URLSearchParams(location.search);
