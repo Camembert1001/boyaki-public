@@ -1,7 +1,10 @@
 import { finalizeEvent, generateSecretKey, getPublicKey } from 'npm:nostr-tools@2.17.0';
+import { createClient } from 'npm:@supabase/supabase-js@2';
 const BASE='https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1';
 const API=BASE+'/ai-staging-boyaki-api';
 const THREAD=BASE+'/ai-staging-boyaki-thread-api';
+const db=createClient(Deno.env.get('SUPABASE_URL')||'',Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')||'',{auth:{persistSession:false}});
+const T=(name:string)=>`ai_staging_${name}`;
 type Id={sk:Uint8Array;pk:string;kind:'account'|'legacy_browser'};
 Deno.serve(async(request)=>{
 const cors={'Access-Control-Allow-Origin':'https://camembert1001.github.io','Access-Control-Allow-Methods':'POST,OPTIONS','Access-Control-Allow-Headers':'content-type'};
@@ -38,6 +41,9 @@ async function run(){
  const roomCreated=(await req(THREAD,`/solution-rooms/${roomId}/messages`,{method:'POST',id:a,expected:[201],body:{content:'AI-STAGING E2E Solution Room message'}})).p.message;cleanupRoomMessage=roomCreated?.id||'';yes(roomCreated?.id,'solution room message id');pass('solution-room-message-create',roomCreated.id);
  const roomMessages=(await req(THREAD,`/solution-rooms/${roomId}/messages`)).p.messages||[];yes(roomMessages.some((x:any)=>x.id===roomCreated.id&&x.content==='AI-STAGING E2E Solution Room message'),'solution room read missing');pass('solution-room-message-read');
  const roomDenied=await req(THREAD,`/solution-room-messages/${roomCreated.id}`,{method:'DELETE',id:attacker,expected:[403]});eq(roomDenied.p.error,'not_room_message_owner','solution room non-owner delete');pass('solution-room-non-owner-delete-denied');
+ const sourceInvite=(await req(THREAD,`/posts/${created.id}/solution-room/invitations`,{method:'POST',id:a,expected:[201],body:{source_owner:true}})).p.invitation;yes(sourceInvite?.id,'source owner invite');eq(sourceInvite.invitee_context,'source_owner','source owner invitation context');pass('source-owner-transition-invite');
+ const problemText='AI E2E generalized recurring manual workflow problem';
+ const consent=(await req(THREAD,`/solution-room-invitations/${sourceInvite.id}/accept`,{method:'POST',id:b,body:{problem_statement:problemText,confirm_shared_problem:true}})).p;eq(consent.problem_statement.statement,problemText,'shared problem');pass('source-owner-transition-consent');
  const createdCase=(await req(THREAD,`/solution-rooms/${roomId}/cases`,{method:'POST',id:a,expected:[201],body:{title:'E2E Solution Case',contribution:'Connected a real BOYAKI to a persistent Solution Room and Case.'}})).p.case;cleanupCase=createdCase?.id||'';yes(createdCase?.id,'solution case id');eq(createdCase.room_id,roomId,'solution case room binding');pass('solution-case-create',createdCase.id);
  const myCases=(await req(THREAD,'/me/solution-cases',{id:b})).p.cases||[];const restoredCase=myCases.find((x:any)=>x.id===createdCase.id);yes(restoredCase,'solution case cross-device missing');eq(restoredCase.room?.post?.id,created.id,'solution case source post');pass('solution-case-cross-device-history');
  const caseDenied=await req(THREAD,`/solution-cases/${createdCase.id}`,{method:'DELETE',id:attacker,expected:[403]});eq(caseDenied.p.error,'not_solution_case_owner','solution case non-owner delete');pass('solution-case-non-owner-delete-denied');
@@ -46,10 +52,14 @@ async function run(){
  await req(THREAD,`/solution-room-messages/${roomCreated.id}`,{method:'DELETE',id:b});cleanupRoomMessage='';pass('solution-room-message-delete');
  const roomAfter=(await req(THREAD,`/solution-rooms/${roomId}/messages`)).p.messages||[];yes(!roomAfter.some((x:any)=>x.id===roomCreated.id),'deleted solution room message still visible');pass('solution-room-deleted-hidden');
  await req(THREAD,`/thread/${msg.id}`,{method:'DELETE',id:b});pass('thread-delete');
- await req(API,`/posts/${created.id}`,{method:'DELETE',id:b});pass('post-delete');
- const after=(await req(API,'/me/posts',{id:a})).p.posts||[],row=after.find((x:any)=>x.id===created.id);eq(row?.status,'deleted','post status');eq(row?.content,null,'post purge');pass('post-delete-purge');
- const feed2=(await req(API,'/posts?limit=100')).p.posts||[];yes(!feed2.some((x:any)=>x.id===created.id),'deleted still feed');pass('deleted-hidden-from-feed');
- const roomAfterPostDelete=(await req(THREAD,`/solution-rooms/${roomId}`)).p.room;eq(roomAfterPostDelete.post.status,'deleted','source post status after delete');eq(roomAfterPostDelete.post.content,null,'source post content purge in room');pass('post-delete-preserves-solution-room-history');
+ const withdrawal=(await req(API,`/posts/${created.id}`,{method:'DELETE',id:b})).p;eq(withdrawal.status,'source_withdrawn','post withdrawal status');eq(withdrawal.thread_preserved,true,'shared thread preserved');pass('post-source-withdrawal');
+ const after=(await req(API,'/me/posts',{id:a})).p.posts||[],row=after.find((x:any)=>x.id===created.id);eq(row?.status,'withdrawn','post status');eq(row?.content,null,'original post purge');eq(row?.problem_statement,problemText,'shared problem retained');pass('post-withdrawal-purge');
+ const feed2=(await req(API,'/posts?limit=100')).p.posts||[],problemRow=feed2.find((x:any)=>x.id===created.id);yes(problemRow,'shared problem missing from feed');eq(problemRow.content,problemText,'feed shared problem');eq(problemRow.author_pubkey,null,'withdrawn source author hidden');pass('shared-problem-remains-discoverable');
+ const roomAfterPostDelete=(await req(THREAD,`/solution-rooms/${roomId}`)).p.room;eq(roomAfterPostDelete.post.status,'withdrawn','source post status after withdrawal');eq(roomAfterPostDelete.post.content,problemText,'room shared problem fallback');pass('post-withdrawal-preserves-solution-room-history');
+ const {error:fixtureDeleteError}=await db.from(T('boyaki_posts')).delete().eq('id',created.id);if(fixtureDeleteError)fail('fixture post cleanup: '+fixtureDeleteError.message);
+ await db.from(T('boyaki_accounts')).delete().eq('account_pubkey',a.pk);
+ cleanupPost='';cleanupMessage='';cleanupRoomMessage='';cleanupCase='';cleanupAccount=null;
+ const feed3=(await req(API,'/posts?limit=100')).p.posts||[];yes(!feed3.some((x:any)=>x.id===created.id),'E2E fixture remained after cleanup');pass('fixture-cleanup');
  return{ok:true,environment:'ai-staging',results,responses};
 }
-try{return new Response(JSON.stringify(await run()),{headers:{'content-type':'application/json',...cors}})}catch(e){results.push({name:'execution',status:'FAIL',detail:String((e as any)?.message||e)});for(const [base,path] of [[THREAD,cleanupCase?`/solution-cases/${cleanupCase}`:''],[THREAD,cleanupRoomMessage?`/solution-room-messages/${cleanupRoomMessage}`:''],[THREAD,cleanupMessage?`/thread/${cleanupMessage}`:''],[API,cleanupPost?`/posts/${cleanupPost}`:'']]){if(path&&cleanupAccount)try{await req(base,path,{method:'DELETE',id:cleanupAccount})}catch{}}return new Response(JSON.stringify({ok:false,error:String((e as any)?.message||e),results,responses}),{status:500,headers:{'content-type':'application/json',...cors}})}});
+try{return new Response(JSON.stringify(await run()),{headers:{'content-type':'application/json',...cors}})}catch(e){results.push({name:'execution',status:'FAIL',detail:String((e as any)?.message||e)});if(cleanupPost)try{await db.from(T('boyaki_posts')).delete().eq('id',cleanupPost)}catch{}if(cleanupAccount)try{await db.from(T('boyaki_accounts')).delete().eq('account_pubkey',cleanupAccount.pk)}catch{}return new Response(JSON.stringify({ok:false,error:String((e as any)?.message||e),results,responses}),{status:500,headers:{'content-type':'application/json',...cors}})}});
