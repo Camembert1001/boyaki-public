@@ -1,0 +1,352 @@
+{
+  "schema": "yn0-contact-state-v1",
+  "program": "YN0",
+  "note": "Single source of truth for YN0 validation contacts. YN0 only - BOYAKI state does not belong in this file. Timestamps are null where no message id or date was captured at the time; that is a recorded gap, not an unknown state. Conversation state and validation state are independent: an UNKNOWN validation answer never means an answer is owed to us.",
+  "contacts": [
+    {
+      "id": "banzai-escape-2",
+      "program": "YN0",
+      "name": "XenoAisam",
+      "organization": "XenoAisam Studio (Banzai Escape 2)",
+      "channel": "EMAIL",
+      "counts_toward_payer_validation": true,
+      "conversation": {
+        "outreach_status": "ANSWERED",
+        "human_reply": true,
+        "conversation_status": "CLOSED",
+        "waiting_for_reply": false,
+        "follow_up_allowed": false,
+        "reopen_condition": "INBOUND_ONLY",
+        "last_inbound_at": null,
+        "last_outbound_at": null,
+        "last_auto_ack_at": null
+      },
+      "validation": {
+        "problem": {
+          "status": "UNKNOWN",
+          "evidence": []
+        },
+        "usefulness": {
+          "status": "POSITIVE",
+          "evidence": [
+            {
+              "source": "gmail",
+              "ref": null,
+              "summary": "Confirmed a mechanical preflight would be useful, and expressed interest in a version that handles the custom TXT format this project ships.",
+              "observed_at": null
+            }
+          ]
+        },
+        "workflow": {
+          "status": "UNKNOWN",
+          "evidence": []
+        },
+        "payer": {
+          "status": "AMBIGUOUS",
+          "evidence": [
+            {
+              "source": "gmail",
+              "ref": null,
+              "summary": "Asked directly whether they would pay $5 one-time; the answer declined to resolve either way.",
+              "quote": "That. I don't know. I cannot answer YEs or No.",
+              "observed_at": null
+            }
+          ]
+        }
+      },
+      "notes": [
+        "Uses a custom TXT localization format, which no current adapter reads.",
+        "Payer question was asked and answered; the answer is an explicit non-answer, which is AMBIGUOUS, not UNKNOWN and not a pending reply.",
+        "Thank-you sent after their reply; the conversation was closed from our side."
+      ]
+    },
+    {
+      "id": "muraoka-collet",
+      "program": "YN0",
+      "name": "Muraoka",
+      "organization": "Collet Game Translation",
+      "channel": "EMAIL",
+      "counts_toward_payer_validation": true,
+      "conversation": {
+        "outreach_status": "ANSWERED",
+        "human_reply": true,
+        "conversation_status": "STALLED",
+        "waiting_for_reply": false,
+        "follow_up_allowed": false,
+        "reopen_condition": "INBOUND_ONLY",
+        "last_inbound_at": null,
+        "last_outbound_at": null,
+        "last_auto_ack_at": null
+      },
+      "validation": {
+        "problem": {
+          "status": "UNKNOWN",
+          "evidence": []
+        },
+        "usefulness": {
+          "status": "UNKNOWN",
+          "evidence": []
+        },
+        "workflow": {
+          "status": "UNKNOWN",
+          "evidence": []
+        },
+        "payer": {
+          "status": "UNKNOWN",
+          "evidence": []
+        }
+      },
+      "notes": [
+        "Replied \"Do I know you?\"; we answered with identity and purpose.",
+        "We then wrote \"No need to answer the original questions if you'd rather not.\" - the questions were explicitly released, so no answer is owed to us.",
+        "Every validation dimension is UNKNOWN because no validation answer was given. UNKNOWN here means no evidence, not a pending reply: this contact must never appear in a payer-answer queue."
+      ]
+    },
+    {
+      "id": "atlos-open-endfield-map",
+      "program": "YN0",
+      "name": "Atlos maintainers",
+      "organization": "Atlos (Open Endfield Map)",
+      "channel": "EMAIL",
+      "counts_toward_payer_validation": true,
+      "conversation": {
+        "outreach_status": "FOLLOW_UP_SENT",
+        "human_reply": true,
+        "conversation_status": "AWAITING_REPLY",
+        "waiting_for_reply": true,
+        "follow_up_allowed": false,
+        "reopen_condition": "OPEN",
+        "last_inbound_at": null,
+        "last_outbound_at": null,
+        "last_auto_ack_at": null
+      },
+      "validation": {
+        "problem": {
+          "status": "POSITIVE",
+          "evidence": [
+            {
+              "source": "gmail",
+              "ref": null,
+              "summary": "Confirmed the reported Japanese keys were genuinely missing translations rather than an intentional English fallback.",
+              "observed_at": null
+            }
+          ]
+        },
+        "usefulness": {
+          "status": "POSITIVE",
+          "evidence": [
+            {
+              "source": "gmail",
+              "ref": null,
+              "summary": "Accepted the mechanical findings as real defects worth catching; the missing keys were acted on rather than dismissed.",
+              "observed_at": null
+            }
+          ]
+        },
+        "workflow": {
+          "status": "AMBIGUOUS",
+          "evidence": [
+            {
+              "source": "gmail",
+              "ref": null,
+              "summary": "A locale schema and checker already exist in the project but are not wired into release checks. The gap is confirmed to exist; whether it is felt as pain is the open question our follow-up asks.",
+              "observed_at": null
+            }
+          ]
+        },
+        "payer": {
+          "status": "UNKNOWN",
+          "evidence": []
+        }
+      },
+      "notes": [
+        "This contact carries hypothesis B: value may sit in the release/CI connection rather than in the checker itself.",
+        "Follow-up sent asking why the existing checker is not connected to release or CI. That answer is genuinely owed to us, which is why this is the only AWAITING_REPLY contact with a human reply already on record."
+      ]
+    },
+    {
+      "id": "tashiro-across",
+      "program": "YN0",
+      "name": "Tashiro",
+      "organization": "Across",
+      "channel": "EMAIL",
+      "counts_toward_payer_validation": true,
+      "conversation": {
+        "outreach_status": "SENT",
+        "human_reply": false,
+        "conversation_status": "AWAITING_REPLY",
+        "waiting_for_reply": true,
+        "follow_up_allowed": false,
+        "reopen_condition": "OPEN",
+        "last_inbound_at": null,
+        "last_outbound_at": null,
+        "last_auto_ack_at": null
+      },
+      "validation": {
+        "problem": {
+          "status": "UNKNOWN",
+          "evidence": []
+        },
+        "usefulness": {
+          "status": "UNKNOWN",
+          "evidence": []
+        },
+        "workflow": {
+          "status": "UNKNOWN",
+          "evidence": []
+        },
+        "payer": {
+          "status": "UNKNOWN",
+          "evidence": []
+        }
+      },
+      "notes": [
+        "Payer validation email sent; no human reply yet."
+      ]
+    },
+    {
+      "id": "sticky-paws-jonnil",
+      "program": "YN0",
+      "name": "Jonnil Games",
+      "organization": "Jonnil Games (Sticky Paws)",
+      "channel": "EMAIL",
+      "counts_toward_payer_validation": true,
+      "conversation": {
+        "outreach_status": "SENT",
+        "human_reply": false,
+        "conversation_status": "AWAITING_REPLY",
+        "waiting_for_reply": true,
+        "follow_up_allowed": false,
+        "reopen_condition": "OPEN",
+        "last_inbound_at": null,
+        "last_outbound_at": null,
+        "last_auto_ack_at": null
+      },
+      "validation": {
+        "problem": {
+          "status": "UNKNOWN",
+          "evidence": []
+        },
+        "usefulness": {
+          "status": "UNKNOWN",
+          "evidence": []
+        },
+        "workflow": {
+          "status": "UNKNOWN",
+          "evidence": []
+        },
+        "payer": {
+          "status": "UNKNOWN",
+          "evidence": []
+        }
+      },
+      "notes": [
+        "Outreach sent; no human reply yet.",
+        "Open questions: whether the {br} differences are intentional, and whether the check is useful."
+      ]
+    },
+    {
+      "id": "aseprite-igara",
+      "program": "YN0",
+      "name": "Igara Studio support",
+      "organization": "Igara Studio (Aseprite)",
+      "channel": "EMAIL",
+      "counts_toward_payer_validation": true,
+      "conversation": {
+        "outreach_status": "AUTO_ACK_ONLY",
+        "human_reply": false,
+        "conversation_status": "AWAITING_REPLY",
+        "waiting_for_reply": true,
+        "follow_up_allowed": false,
+        "reopen_condition": "OPEN",
+        "last_inbound_at": null,
+        "last_outbound_at": null,
+        "last_auto_ack_at": null
+      },
+      "validation": {
+        "problem": {
+          "status": "UNKNOWN",
+          "evidence": []
+        },
+        "usefulness": {
+          "status": "UNKNOWN",
+          "evidence": []
+        },
+        "workflow": {
+          "status": "UNKNOWN",
+          "evidence": []
+        },
+        "payer": {
+          "status": "UNKNOWN",
+          "evidence": []
+        }
+      },
+      "notes": [
+        "Only an automated support receipt came back. An auto-acknowledgement is not a human reply: human_reply stays false and last_inbound_at stays null, so this contact cannot read as \"they answered\".",
+        "Open questions: whether the placeholder mismatch is real, and whether the check is useful."
+      ]
+    },
+    {
+      "id": "oyasumivr",
+      "program": "YN0",
+      "name": "OyasumiVR maintainer",
+      "organization": "OyasumiVR",
+      "channel": "GITHUB_ISSUE",
+      "counts_toward_payer_validation": false,
+      "conversation": {
+        "outreach_status": "ANSWERED",
+        "human_reply": true,
+        "conversation_status": "OBSERVE",
+        "waiting_for_reply": false,
+        "follow_up_allowed": false,
+        "reopen_condition": "INBOUND_ONLY",
+        "last_inbound_at": null,
+        "last_outbound_at": null,
+        "last_auto_ack_at": null
+      },
+      "validation": {
+        "problem": {
+          "status": "POSITIVE",
+          "evidence": [
+            {
+              "source": "github",
+              "ref": "https://github.com/Raphiiko/OyasumiVR/issues/339",
+              "summary": "Reported a missing {deviceName} placeholder in a localized string; the maintainer confirmed it as a real defect.",
+              "observed_at": null
+            }
+          ]
+        },
+        "usefulness": {
+          "status": "POSITIVE",
+          "evidence": [
+            {
+              "source": "github",
+              "ref": "https://github.com/Raphiiko/OyasumiVR/pull/340",
+              "summary": "The maintainer accepted and shipped the fix in #340, so the mechanical finding was worth acting on.",
+              "observed_at": null
+            },
+            {
+              "source": "github",
+              "ref": "https://github.com/Raphiiko/OyasumiVR/issues/339",
+              "summary": "Maintainer stated an intention to add more automated checks after the report.",
+              "quote": "I will likely be adding more automated checks soon.",
+              "observed_at": null
+            }
+          ]
+        },
+        "workflow": {
+          "status": "UNKNOWN",
+          "evidence": []
+        },
+        "payer": {
+          "status": "UNKNOWN",
+          "evidence": []
+        }
+      },
+      "notes": [
+        "Free product: the maintainer cannot answer a purchase question, so this contact is excluded from the payer-validation count by counts_toward_payer_validation = false. It is problem and usefulness evidence only.",
+        "No outreach relationship to manage - the remaining value is watching whether the promised automated checks appear."
+      ]
+    }
+  ]
+}
