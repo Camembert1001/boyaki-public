@@ -1,6 +1,6 @@
 # YN0 Contact State (internal)
 
-> Recovery entrypoint: read [`CHECKPOINT.md`](CHECKPOINT.md) first. It records the current YN0 operating position; this README defines the state model.
+> Recovery entrypoint: read [`CHECKPOINT.md`](CHECKPOINT.md) first. It records the YN0 objective, hypothesis and rules — never contact data, which is local-only; this README defines the state model.
 
 A minimal state machine for the YN0 validation pipeline. It answers three questions
 about one contact, mechanically:
@@ -61,12 +61,14 @@ There is exactly one canonical store of real contacts, and it is not in this rep
 | File | Holds | Tracked |
 | --- | --- | --- |
 | `contacts.local.json` | the real contacts, and the only current answer to "what state is X in?" | **no** — gitignored |
+| `CHECKPOINT.local.md` | the human-readable position on individual contacts | **no** — gitignored |
 | `fixtures/contacts.json` | invented scenarios that exercise the model | yes |
-| [`CHECKPOINT.md`](CHECKPOINT.md) | the operating position a new session restores from | yes |
+| [`CHECKPOINT.md`](CHECKPOINT.md) | objective, rules and restore procedure — no contact data | yes |
 
-**Real contact records do not belong in this public repository.** Keep the live store in
-an untracked file — `*.local.json` in this directory is gitignored — and point the CLI at
-it:
+**Real contact records do not belong in this public repository.** `*.local.json` and
+`*.local.md` in this directory are gitignored, and a test asserts both rules are in
+`.gitignore` and that no tracked file here carries an email address or an individual
+contact's status. Keep the live store untracked and point the CLI at it:
 
 ```
 node internal/contact-state/state.mjs internal/contact-state/contacts.local.json
@@ -257,10 +259,11 @@ that left `UNKNOWN` without evidence or without a human reply.
 
 ## Fixtures
 
-> **These are invented scenarios, not contacts.** Every id names a conversation shape and
-> every name is `Prospect <letter>`. Nothing here reflects the state of any real contact;
-> that lives only in the untracked `contacts.local.json`. A test enforces this, so a
-> fixture row cannot silently start reading as someone's current state.
+> **These are invented scenarios, not contacts.** Every id names a conversation shape,
+> every name is `Prospect <letter>` and every organization starts with `Example`. Nothing
+> here reflects the state of any real contact; that lives only in the untracked
+> `contacts.local.json`. A test enforces the shape, so a fixture row cannot silently start
+> reading as someone's current state.
 
 | Contact | Shape | Result |
 | --- | --- | --- |
@@ -289,7 +292,7 @@ node --test internal/contact-state/tests/contact-state.test.mjs
 ```
 
 No dependencies, no install step, no network. Node 22 built-ins only. The suite covers
-the twelve fixtures and the rule that none of them names a real contact, the transition
+the twelve fixtures and the rule that no tracked file here holds contact data, the transition
 path, the separation of the two blocks, the evidence requirement, the waiting axis,
 automated acknowledgements, refusal of outbound events, reopening under `INBOUND_ONLY`,
 the consistency checker, store validation, determinism and the CLI.

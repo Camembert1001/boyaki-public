@@ -2,7 +2,7 @@
 //   node --test internal/contact-state/tests/
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFile} from 'node:fs/promises';
+import {readdir, readFile} from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {ContactStateError, createContact} from '../lib/model.mjs';
@@ -105,18 +105,48 @@ test('every fixture lands in its intended conversation and validation state', as
 });
 
 // Fixtures are scenarios. A row that reads as a real contact's current state is the
-// failure this file is guarding against.
-test('fixtures never name a real contact', async () => {
- const text = await readFile(fixtureFile, 'utf8');
- for (const name of ['muraoka', 'banzai', 'atlos', 'aisam', 'xenoaisam', 'collet', 'aseprite', 'tashiro', 'jonnil', 'oyasumi']) {
-  assert.equal(text.toLowerCase().includes(name), false, 'fixtures must not mention ' + name);
- }
+// failure this file is guarding against. The guard is a positive shape rule rather than
+// a list of real names, because such a list would itself be real contact data in a
+// tracked file.
+test('fixtures describe invented scenarios, never a real contact', async () => {
  const contacts = byId(await loadFixtures());
+ assert.ok(Object.keys(contacts).length >= 10);
  for (const contact of Object.values(contacts)) {
+  assert.match(contact.id, /^[a-z][a-z0-9]*(-[a-z0-9]+)+$/, contact.id + ' must be a kebab-case shape name');
   assert.match(contact.name, /^Prospect [A-Z]$/, contact.id + ' must carry a placeholder name');
+  assert.match(contact.organization, /^Example /, contact.id + ' must carry a placeholder organization');
+  assert.equal(contact.channel_ref, null, contact.id + ' must not cite a real thread');
   for (const axis of Object.values(contact.validation)) {
    for (const item of axis.evidence) assert.match(item.message_id, /^fixture-/, contact.id + ' evidence must cite a fixture id');
   }
+ }
+});
+
+// Real contact data lives only in the gitignored *.local.json store and *.local.md
+// checkpoint. Everything tracked in this directory - fixtures, README, CHECKPOINT.md,
+// this suite - must be free of it, and the ignore rule must actually cover both.
+test('real contact data is never tracked', async () => {
+ const root = path.join(here, '..');
+ const ignore = await readFile(path.join(root, '.gitignore'), 'utf8');
+ const ignored = ignore.split('\n').map(line => line.trim());
+ assert.ok(ignored.includes('*.local.json'), '.gitignore must exclude the canonical store');
+ assert.ok(ignored.includes('*.local.md'), '.gitignore must exclude the local checkpoint');
+
+ const entries = await readdir(root, {recursive: true, withFileTypes: true});
+ const tracked = entries
+  .filter(entry => entry.isFile() && !entry.name.includes('.local.'))
+  .map(entry => path.join(entry.parentPath, entry.name));
+ assert.ok(tracked.length >= 10, 'the directory listing should have found every tracked file');
+ for (const file of tracked) {
+  const text = await readFile(file, 'utf8');
+  const where = path.relative(root, file);
+  assert.doesNotMatch(text, /[\w.+-]+@[\w-]+\.[\w.-]*[\w]/, where + ' must not carry an email address');
+  // The tracked checkpoint points at the local one; it must not hold the position
+  // itself. A per-contact status list is what that looks like when it creeps back in.
+  assert.doesNotMatch(
+   text,
+   /^[ \t]*[-*][ \t]+(conversation|next action|reopen|problem|usefulness|workflow|payer)[ \t]*:/im,
+   where + ' must not state an individual contact\'s current position');
  }
 });
 
