@@ -1,0 +1,9 @@
+{
+ "menu": {
+  "save": "Save",
+  "options": "Options"
+ },
+ "status": {
+  "loading": "Loading..."
+ }
+}

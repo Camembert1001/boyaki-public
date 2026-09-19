@@ -1,0 +1,108 @@
+{
+ "schema": "yn0-prospect-metadata-v1",
+ "prospects": {
+  "already-contacted": {
+   "activity": "ACTIVE",
+   "public_contact_route": "GITHUB_ISSUE",
+   "contact_ids": [
+    "awaiting-first-reply-shape"
+   ]
+  },
+  "ambiguous-identity": {
+   "aliases": [
+    "Localization vendor toolkit"
+   ],
+   "activity": "ACTIVE",
+   "public_contact_route": "GITHUB_ISSUE",
+   "contact_ids": []
+  },
+  "clean-repo": {
+   "activity": "ACTIVE",
+   "public_contact_route": "GITHUB_ISSUE",
+   "contact_ids": []
+  },
+  "closed-conversation": {
+   "activity": "ACTIVE",
+   "public_contact_route": "GITHUB_ISSUE",
+   "contact_ids": [
+    "closed-thread-shape"
+   ]
+  },
+  "dormant-repo": {
+   "activity": "DORMANT",
+   "activity_evidence": "invented shape: archived, no commit in three years",
+   "public_contact_route": "GITHUB_ISSUE",
+   "contact_ids": []
+  },
+  "english-side-repo": {
+   "activity": "ACTIVE",
+   "public_contact_route": "GITHUB_ISSUE",
+   "contact_ids": []
+  },
+  "incomplete-locale": {
+   "activity": "ACTIVE",
+   "public_contact_route": "GITHUB_ISSUE",
+   "contact_ids": []
+  },
+  "intentional-risk-repo": {
+   "activity": "ACTIVE",
+   "public_contact_route": "GITHUB_ISSUE",
+   "contact_ids": []
+  },
+  "mixed-format-candidate": {
+   "activity": "MAINTAINED",
+   "activity_evidence": "invented shape: releases, issues answered",
+   "public_contact_route": "GITHUB_DISCUSSION",
+   "contact_ids": []
+  },
+  "no-locale-assets": {
+   "activity": "ACTIVE",
+   "public_contact_route": "GITHUB_ISSUE",
+   "contact_ids": []
+  },
+  "no-public-route": {
+   "activity": "ACTIVE",
+   "public_contact_route": "NONE",
+   "contact_route_evidence": "invented shape: issues disabled, no public address",
+   "contact_ids": []
+  },
+  "noise-dominated": {
+   "activity": "ACTIVE",
+   "public_contact_route": "GITHUB_ISSUE",
+   "contact_ids": []
+  },
+  "opted-out": {
+   "activity": "ACTIVE",
+   "public_contact_route": "GITHUB_ISSUE",
+   "contact_ids": [
+    "opted-out-shape"
+   ]
+  },
+  "ready-candidate": {
+   "activity": "ACTIVE",
+   "activity_evidence": "invented shape: commits this month",
+   "public_contact_route": "GITHUB_ISSUE",
+   "contact_ids": []
+  },
+  "undeclared-contact-link": {
+   "activity": "ACTIVE",
+   "public_contact_route": "GITHUB_ISSUE"
+  },
+  "unknown-activity": {
+   "public_contact_route": "GITHUB_ISSUE",
+   "contact_ids": []
+  },
+  "unknown-contact-id": {
+   "activity": "ACTIVE",
+   "public_contact_route": "GITHUB_ISSUE",
+   "contact_ids": [
+    "no-such-contact-shape"
+   ]
+  },
+  "unsupported-format-repo": {
+   "activity": "ACTIVE",
+   "public_contact_route": "GITHUB_ISSUE",
+   "contact_ids": []
+  }
+ }
+}

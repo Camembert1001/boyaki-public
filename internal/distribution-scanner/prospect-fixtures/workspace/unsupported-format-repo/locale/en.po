@@ -1,0 +1,2 @@
+msgid "Save"
+msgstr "Save"
