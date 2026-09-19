@@ -97,15 +97,38 @@ async function loadOwnedPosts(identity){
 
 $('#login-form').addEventListener('submit',async e=>{e.preventDefault();const key=$('#login-key').value.trim(),password=$('#login-password').value,remember=$('#remember-login').checked;const button=e.submitter;button.disabled=true;$('#profile-state').textContent='ログイン中…';try{const sk=nip49.decrypt(key,password);const hex=[...sk].map(b=>b.toString(16).padStart(2,'0')).join('');if(remember)localStorage.setItem('boyaki-account-sk',hex);else sessionStorage.setItem('boyaki-account-sk',hex);localStorage.setItem('boyaki-account-login-key',key);location.reload()}catch(err){console.error(err);$('#profile-state').textContent='ログインできませんでした。ログインキーとパスワードを確認してください。'}finally{button.disabled=false}});
 
+function savedLoginKey(){
+  return localStorage.getItem('boyaki-account-login-key')||sessionStorage.getItem('boyaki-account-login-key')||'';
+}
+function activeAccountStore(){
+  if(localStorage.getItem('boyaki-account-sk'))return localStorage;
+  if(sessionStorage.getItem('boyaki-account-sk'))return sessionStorage;
+  return null;
+}
+function storeLoginKeyForActiveSession(value){
+  const target=activeAccountStore()||localStorage;
+  localStorage.removeItem('boyaki-account-login-key');
+  sessionStorage.removeItem('boyaki-account-login-key');
+  target.setItem('boyaki-account-login-key',value);
+}
 function setupLoginKeyRecoveryUI(){
   const card=$('#login-key-card'),show=$('#show-login-key'),copy=$('#copy-login-key'),hide=$('#hide-login-key'),area=$('#saved-login-key'),status=$('#login-key-status');
   if(!card||!show||!copy||!hide||!area||!status)return;
-  const key=localStorage.getItem('boyaki-account-login-key')||sessionStorage.getItem('boyaki-account-login-key')||'';
-  if(!key)return;
+  if(!savedLoginKey())return;
   card.hidden=false;
   status.textContent='この端末に保存されているログインキーがあります。';
-  show.addEventListener('click',()=>{area.value=key;area.hidden=false;copy.hidden=false;hide.hidden=false;show.hidden=true;status.textContent='ログインキーを表示しています。安全な場所へ保存したら「隠す」を押してください。';});
-  copy.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(key);status.textContent='ログインキーをコピーしました。';}catch{area.hidden=false;area.focus();area.select();status.textContent='自動コピーできませんでした。表示欄を選択してコピーしてください。';}});
+  show.addEventListener('click',()=>{
+    const key=savedLoginKey();
+    if(!key){status.textContent='保存済みログインキーが見つかりません。';return}
+    area.value=key;area.hidden=false;copy.hidden=false;hide.hidden=false;show.hidden=true;
+    status.textContent='ログインキーを表示しています。安全な場所へ保存したら「隠す」を押してください。';
+  });
+  copy.addEventListener('click',async()=>{
+    const key=savedLoginKey();
+    if(!key){status.textContent='保存済みログインキーが見つかりません。';return}
+    try{await navigator.clipboard.writeText(key);status.textContent='ログインキーをコピーしました。';}
+    catch{area.value=key;area.hidden=false;area.focus();area.select();status.textContent='自動コピーできませんでした。表示欄を選択してコピーしてください。';}
+  });
   hide.addEventListener('click',()=>{area.value='';area.hidden=true;copy.hidden=true;hide.hidden=true;show.hidden=false;status.textContent='ログインキーを隠しました。';});
 }
 
@@ -119,37 +142,56 @@ function setupAccountKeyBackup(identity){
   const reissueForm=$('#account-key-reissue-form');
   const password=$('#account-key-new-password');
   const confirm=$('#account-key-new-password-confirm');
-  if(!card||!show||!copy||!hide||!area||!status||!reissueForm||!identity)return;
-  let value=localStorage.getItem('boyaki-account-login-key')||'';
+  if(!card||!show||!copy||!hide||!area||!status||!reissueForm||!password||!confirm||!identity)return;
+
   card.hidden=false;
-  if(!value){
-    show.hidden=true;
-    reissueForm.hidden=false;
-    status.textContent='この端末にはログインキーの保存がありませんが、現在のAccount IDを維持したまま再発行できます。';
-    reissueForm.addEventListener('submit',e=>{
-      e.preventDefault();
-      const p=password.value;
-      const c=confirm.value;
-      if(p.length<10){status.textContent='パスワードは10文字以上にしてください。';return}
-      if(p!==c){status.textContent='パスワードが一致しません。';return}
-      try{
-        value=nip49.encrypt(identity.sk,p);
-        localStorage.setItem('boyaki-account-login-key',value);
-        area.value=value;
-        area.hidden=false;
-        copy.hidden=false;
-        hide.hidden=false;
-        reissueForm.hidden=true;
-        status.textContent='同じAccount IDのログインキーを再発行しました。安全な場所へ保存してください。';
-        password.value='';confirm.value='';
-      }catch(err){console.error('login key reissue failed',err);status.textContent='ログインキーを再発行できませんでした。再試行してください。';}
-    },{once:true});
-    return;
-  }
-  status.textContent='この端末に保存されているログインキーがあります。';
-  show.addEventListener('click',()=>{area.value=value;area.hidden=false;copy.hidden=false;hide.hidden=false;show.hidden=true;status.textContent='ログインキーを表示しています。保存後は隠してください。';});
-  copy.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(value);status.textContent='ログインキーをコピーしました。';}catch{area.hidden=false;area.focus();area.select();status.textContent='自動コピーできませんでした。表示欄を選択してコピーしてください。';}});
-  hide.addEventListener('click',()=>{area.value='';area.hidden=true;copy.hidden=true;hide.hidden=true;show.hidden=false;status.textContent='ログインキーを隠しました。';});
+  const refreshState=()=>{
+    const value=savedLoginKey();
+    show.hidden=!value;
+    if(area.hidden){
+      status.textContent=value
+        ?'現在のログインキーを保存済みです。パスワードを忘れた場合は、下で新しいログインキーを発行できます。'
+        :'現在のAccount IDはこの端末でログイン中です。下で新しいログインキーを発行してください。';
+    }
+  };
+  refreshState();
+
+  show.addEventListener('click',()=>{
+    const value=savedLoginKey();
+    if(!value){refreshState();return}
+    area.value=value;area.hidden=false;copy.hidden=false;hide.hidden=false;show.hidden=true;
+    status.textContent='現在保存されているログインキーを表示しています。';
+  });
+  copy.addEventListener('click',async()=>{
+    const value=area.value||savedLoginKey();
+    if(!value)return;
+    try{await navigator.clipboard.writeText(value);status.textContent='ログインキーをコピーしました。安全な場所へ保存してください。';}
+    catch{area.value=value;area.hidden=false;area.focus();area.select();status.textContent='自動コピーできませんでした。表示欄を選択してコピーしてください。';}
+  });
+  hide.addEventListener('click',()=>{
+    area.value='';area.hidden=true;copy.hidden=true;hide.hidden=true;show.hidden=!savedLoginKey();refreshState();
+  });
+
+  reissueForm.addEventListener('submit',e=>{
+    e.preventDefault();
+    const button=e.submitter;
+    const p=password.value,c=confirm.value;
+    if(p.length<10){status.textContent='新しいパスワードは10文字以上にしてください。';return}
+    if(p!==c){status.textContent='新しいパスワードが一致しません。';return}
+    button.disabled=true;status.textContent='新しいログインキーを作成しています…';
+    try{
+      const value=nip49.encrypt(identity.sk,p);
+      const verified=nip49.decrypt(value,p);
+      if(getPublicKey(verified)!==identity.pk)throw new Error('reissue_verification_failed');
+      storeLoginKeyForActiveSession(value);
+      area.value=value;area.hidden=false;copy.hidden=false;hide.hidden=false;show.hidden=true;
+      reissueForm.reset();
+      status.textContent='同じAccount IDの新しいログインキーを発行しました。必ずコピーして保存してください。投稿・活動履歴はそのままです。古いログインキーは無効化されません。';
+    }catch(err){
+      console.error('login key reissue failed',err);
+      status.textContent='ログインキーを再発行できませんでした。再試行してください。';
+    }finally{button.disabled=false}
+  });
 }
 
 async function main(){
