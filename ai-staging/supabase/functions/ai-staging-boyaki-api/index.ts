@@ -15,14 +15,21 @@ async function linked(pk:string){const{data}=await db.from(T('boyaki_identity_li
 async function owner(pk:string,k:string){if(k==='account'){const{error}=await db.from(T('boyaki_accounts')).upsert({account_pubkey:pk},{onConflict:'account_pubkey',ignoreDuplicates:true});if(error)throw Error(error.message);return pk}if(k==='legacy_browser')return linked(pk);throw Error('invalid_identity_kind')}
 function uuid(v:any){return typeof v==='string'&&/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(v)}
 Deno.serve(async(req)=>{if(req.method==='OPTIONS')return new Response(null,{status:204,headers:cors(req)});const u=new URL(req.url),m='/ai-staging-boyaki-api',i=u.pathname.indexOf(m),p=i>=0?(u.pathname.slice(i+m.length)||'/'):u.pathname;try{
-if(req.method==='GET'&&p==='/health')return json(req,200,{ok:true,service:'ai-staging-boyaki-api',canonical_storage:true,environment:'AI-STAGING',parent:'STAGING',version:'ai-staging-isolation-v3'});
+if(req.method==='GET'&&p==='/health')return json(req,200,{ok:true,service:'ai-staging-boyaki-api',canonical_storage:true,environment:'AI-STAGING',parent:'STAGING',version:'ai-staging-shared-identity-v4'});
 if(req.method==='GET'&&p==='/posts'){const n=Math.max(1,Math.min(Number(u.searchParams.get('limit')||50)||50,100));const{data,error}=await db.from(T('boyaki_posts')).select('id,author_pubkey,content,created_at,status').eq('status','active').order('created_at',{ascending:false}).limit(n);if(error)throw Error(error.message);return json(req,200,{posts:data||[]})}
 if(req.method==='GET'&&p==='/me/posts'){const e=await auth(req),a=(await linked(e.pubkey))||e.pubkey;const{data,error}=await db.from(T('boyaki_posts')).select('id,author_pubkey,owner_account_pubkey,content,status,created_at,withdrawn_at,moderated_at,deleted_at').or(`owner_account_pubkey.eq.${a},author_pubkey.eq.${e.pubkey}`).order('created_at',{ascending:false}).limit(500);if(error)throw Error(error.message);return json(req,200,{account_pubkey:a,posts:data||[]})}
 if(req.method==='GET'&&p==='/me/account'){
  const e=await auth(req);
- const{data:account,error}=await db.from(T('boyaki_accounts')).select('account_pubkey,profile,created_at,updated_at').eq('account_pubkey',e.pubkey).maybeSingle();if(error)throw Error(error.message);if(!account)return json(req,404,{error:'ai_account_not_found'});
+ let{data:account,error}=await db.from(T('boyaki_accounts')).select('account_pubkey,profile,created_at,updated_at').eq('account_pubkey',e.pubkey).maybeSingle();if(error)throw Error(error.message);
+ let identitySource='ai-staging';
+ if(!account){
+  const{data:shared,error:sharedError}=await db.from('boyaki_accounts').select('account_pubkey').eq('account_pubkey',e.pubkey).maybeSingle();if(sharedError)throw Error('shared_identity_lookup_failed:'+sharedError.message);
+  if(!shared)return json(req,404,{error:'shared_account_not_found'});
+  const{data:created,error:createError}=await db.from(T('boyaki_accounts')).upsert({account_pubkey:e.pubkey},{onConflict:'account_pubkey'}).select('account_pubkey,profile,created_at,updated_at').single();if(createError)throw Error(createError.message);
+  account=created;identitySource='staging-shared';
+ }
  const{data:links,error:linkError}=await db.from(T('boyaki_identity_links')).select('legacy_pubkey,status').eq('account_pubkey',e.pubkey);if(linkError)throw Error(linkError.message);
- return json(req,200,{account,links:links||[],environment:'AI-STAGING'});
+ return json(req,200,{account,links:links||[],environment:'AI-STAGING',identity_source:identitySource,activity_scope:'AI-STAGING'});
 }
 const raw=await req.text();
 if(req.method==='POST'&&p==='/me/account'){
