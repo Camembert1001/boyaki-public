@@ -1,4 +1,4 @@
-import { client } from './canonical-api.js?v=20260919-contribution-history-v5';
+import { client } from './canonical-api.js?v=20260919-commerce-v6';
 
 const box=document.querySelector('[data-contribution-role="maker"]');
 const status=document.querySelector('#maker-contribution-status');
@@ -43,8 +43,9 @@ async function render(){
   }
   if(status)status.textContent='Contribution Historyを読み込んでいます…';
   try{
-    const result=await client.listMySolutionCases();
-    const cases=result.cases||[];
+    const [result,productResult]=await Promise.all([client.listMySolutionCases(),client.listMyProducts()]);
+    const cases=result.cases||[],products=productResult.products||[];
+    const productByCase=new Map(products.map(x=>[x.solution_case_id,x]));
     box.replaceChildren();
     if(!cases.length){
       box.innerHTML='<p class="hint">まだSolution Caseはありません。Solution RoomからCaseを作ると、ここにAccount ID単位で残ります。</p>';
@@ -90,6 +91,12 @@ async function render(){
           post.textContent='元のBOYAKIを見る';
           actions.append(post);
         }
+        const product=productByCase.get(item.id);
+        const productLink=document.createElement('a');
+        productLink.className='button-link';
+        productLink.href=product?`./product.html?id=${encodeURIComponent(product.id)}`:`./product-create.html?case=${encodeURIComponent(item.id)}`;
+        productLink.textContent=product?'商品を見る':'プロダクトとして出す';
+        actions.append(productLink);
         const del=document.createElement('button');
         del.type='button';
         del.textContent='Caseを削除';
