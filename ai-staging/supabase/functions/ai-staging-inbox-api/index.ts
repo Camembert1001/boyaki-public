@@ -284,6 +284,45 @@ async function buildInbox(account:string){
     }
   }
 
+  // Maker: current market opportunities. This is derived from live demand, not stored as a notification.
+  const makerEligible=makerEvents.length>0||cases.length>0||myProducts.length>0;
+  if(makerEligible){
+    const problemOut=await db.from(T('boyaki_problem_statements'))
+      .select('id,post_id,statement,status,created_at,updated_at').eq('status','active').order('updated_at',{ascending:false}).limit(150);
+    if(problemOut.error)throw Error(problemOut.error.message);
+    const problems=problemOut.data||[],problemPostIds=problems.map((x:any)=>x.post_id);
+    if(problemPostIds.length){
+      const [demandMarketOut,pubMarketOut]=await Promise.all([
+        db.from(T('boyaki_demand_signals')).select('post_id,signal,amount_yen').in('post_id',problemPostIds),
+        db.from(T('boyaki_product_thread_publications')).select('post_id,status').in('post_id',problemPostIds).eq('status','active')
+      ]);
+      if(demandMarketOut.error)throw Error(demandMarketOut.error.message);
+      if(pubMarketOut.error)throw Error(pubMarketOut.error.message);
+      const solved=new Set((pubMarketOut.data||[]).map((x:any)=>x.post_id)),scores=new Map<string,any>();
+      for(const row of demandMarketOut.data||[]){
+        let s=scores.get(row.post_id);if(!s){s={same:0,try:0,pay:0};scores.set(row.post_id,s)}
+        if(row.signal==='same_problem')s.same++;
+        else if(row.signal==='would_try')s.try++;
+        else if(row.signal==='would_pay')s.pay++;
+      }
+      const opportunities=problems
+        .map((problem:any)=>({problem,signal:scores.get(problem.post_id)||{same:0,try:0,pay:0}}))
+        .map((x:any)=>({...x,score:x.signal.same+x.signal.try*2+x.signal.pay*3}))
+        .filter((x:any)=>x.score>0&&!solved.has(x.problem.post_id)&&!makerPostIds.includes(x.problem.post_id))
+        .sort((a:any,b:any)=>b.score-a.score||String(b.problem.updated_at).localeCompare(String(a.problem.updated_at)))
+        .slice(0,5);
+      for(const row of opportunities){
+        items.push({
+          key:`market-opportunity:${row.problem.id}`,role:'maker',kind:'market_opportunity',priority:'ready',
+          title:'需要シグナルのある未解決Problem',
+          detail:`${excerpt(row.problem.statement,120)} — 同じ悩み ${row.signal.same} / 試したい ${row.signal.try} / 払ってもいい ${row.signal.pay}`,
+          action_label:'Problemを見る',action_url:`./?problem=${encodeURIComponent(row.problem.post_id)}`,
+          occurred_at:row.problem.updated_at||row.problem.created_at,meta:{problem_id:row.problem.id,post_id:row.problem.post_id,demand_score:row.score}
+        });
+      }
+    }
+  }
+
   // Maker: recent paid sales are useful updates, but never outrank required work.
   if(sales.length){
     const ids=[...new Set(sales.map((x:any)=>x.product_id))];
