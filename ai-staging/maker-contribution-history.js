@@ -65,7 +65,7 @@ async function render(){
         if(source){
           const sourceBox=document.createElement('p');
           sourceBox.className='hint';
-          sourceBox.textContent=`元のBOYAKI: ${source}`;
+          sourceBox.textContent=`${item.room?.post?.source_withdrawn?'共有Problem（元BOYAKI本文は取り下げ済み）':'元のBOYAKI'}: ${source}`;
           card.append(title,contribution,sourceBox);
         }else card.append(title,contribution);
 
@@ -88,7 +88,7 @@ async function render(){
           const post=document.createElement('a');
           post.className='button-link';
           post.href=`./?problem=${encodeURIComponent(item.room.post.id)}`;
-          post.textContent='元のBOYAKIを見る';
+          post.textContent=item.room.post.source_withdrawn?'共有Problemを見る':'元のBOYAKIを見る';
           actions.append(post);
         }
         const product=productByCase.get(item.id);
