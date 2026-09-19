@@ -1,14 +1,19 @@
 // Tests for the YN0 Distribution Scanner. Run with:
-//   node --test internal/distribution-scanner/tests/
+//   node --test internal/distribution-scanner/tests/scanner.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFile} from 'node:fs/promises';
+import {mkdir, mkdtemp, readFile, rm, writeFile} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {scan, classify, DEFAULT_THRESHOLDS} from '../lib/scanner.mjs';
-import {checkEntry, checkPair, flatten, PLACEHOLDER_PATTERN, placeholders} from '../lib/checks.mjs';
+import {checkEntries, checkEntry, checkPair, PLACEHOLDER_PATTERN, placeholders} from '../lib/checks.mjs';
+import {entry, pairEntries} from '../lib/entries.mjs';
+import {ADAPTERS, LOCALE_EXTENSIONS, adapterForPath} from '../lib/adapters/index.mjs';
+import {flatten} from '../lib/adapters/json.mjs';
 import {classifyPath, pairLocaleFiles, walk} from '../lib/discover.mjs';
 import {parseArgs} from '../scan.mjs';
+import {ADAPTER_FIXTURES} from './adapter-fixtures.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const fixtures = path.join(here, '..', 'fixtures');
@@ -84,6 +89,72 @@ test('each mechanical check fires on its own trigger and stays quiet otherwise',
 test('nested and flat JSON both flatten to comparable keys', () => {
  assert.deepEqual(flatten({menu: {save: 'Save'}, tips: ['a', 'b'], count: 3, missing: null}),
   {'menu.save': 'Save', 'tips.0': 'a', 'tips.1': 'b', count: '3', missing: ''});
+});
+
+test('every registered file adapter satisfies the adapter contract', () => {
+ assert.deepEqual(Object.keys(ADAPTER_FIXTURES).sort(), ADAPTERS.map(adapter => adapter.id).sort(),
+  'every registered adapter needs a conformance fixture in tests/adapter-fixtures.mjs, and vice versa');
+ const claimed = new Set();
+ for (const adapter of ADAPTERS) {
+  const fixture = ADAPTER_FIXTURES[adapter.id];
+  assert.equal(typeof adapter.label, 'string', adapter.id + ' needs a human-readable label');
+  assert.ok(adapter.extensions.length, adapter.id + ' claims no extension');
+  for (const ext of adapter.extensions) {
+   assert.equal(ext, ext.toLowerCase(), ext + ' must be lowercase');
+   assert.ok(ext.startsWith('.'), ext + ' must include the dot');
+   assert.equal(claimed.has(ext), false, 'two adapters claim ' + ext);
+   claimed.add(ext);
+   assert.equal(adapterForPath('locales/ja' + ext), adapter, ext + ' must resolve back to its adapter');
+  }
+
+  const parsed = adapter.parse(fixture.text);
+  assert.equal(parsed.ok, true, adapter.id + ' failed to parse its own fixture');
+  assert.deepEqual(parsed.entries.map(item => ({key: item.key, value: item.value})), fixture.entries, adapter.id);
+  for (const item of parsed.entries) {
+   assert.equal(typeof item.key, 'string', adapter.id + ' emitted a non-string key');
+   assert.equal(typeof item.value, 'string', adapter.id + ' emitted a non-string value');
+  }
+  for (const malformed of fixture.malformed) {
+   const result = adapter.parse(malformed);
+   assert.equal(result.ok, false, adapter.id + ' accepted malformed input: ' + malformed);
+   assert.equal(typeof result.reason, 'string', adapter.id + ' rejected without a reason');
+  }
+ }
+});
+
+// The checker never sees a file: it reads normalized entries, wherever they came from.
+test('checks run on normalized entries from any adapter, locations carried through', () => {
+ const source = [entry('greeting', 'Hello {name}', {line: 1})];
+ const target = [entry('greeting', 'こんにちは{user}', {line: 1}), entry('extra', '保存 ', {line: 2})];
+ const pairs = pairEntries(source, target);
+ assert.deepEqual(pairs.map(pair => pair.key), ['extra', 'greeting']);
+ assert.deepEqual(pairs[1].sourceLocation, {line: 1}, 'an adapter-supplied location survives pairing');
+ assert.equal(pairs[0].source, undefined, 'a target-only key has no source text');
+ assert.deepEqual(checkEntries(pairs).map(f => f.rule), ['placeholder-set-mismatch', 'edge-whitespace']);
+ // The map-shaped convenience wrapper is the same run.
+ assert.deepEqual(checkPair({greeting: 'Hello {name}'}, {greeting: 'こんにちは{user}', extra: '保存 '}),
+  checkEntries(pairs));
+});
+
+test('locale discovery follows the adapter registry rather than a hardcoded extension', () => {
+ assert.deepEqual([...LOCALE_EXTENSIONS].sort(), ADAPTERS.flatMap(adapter => adapter.extensions).sort());
+ for (const ext of LOCALE_EXTENSIONS) assert.equal(classifyPath('locales/en' + ext).lang, 'en', ext);
+ assert.equal(classifyPath('locales/en.no-adapter-claims-this'), null);
+});
+
+test('a file the adapter rejects skips the pair instead of failing the scan', async () => {
+ const dir = await mkdtemp(path.join(tmpdir(), 'yn0-scanner-'));
+ try {
+  await mkdir(path.join(dir, 'locales'));
+  await writeFile(path.join(dir, 'locales', 'en.json'), '{"menu.save": "Save"}');
+  await writeFile(path.join(dir, 'locales', 'ja.json'), '{not json');
+  const report = await scan(dir);
+  assert.deepEqual(report.pairs, []);
+  assert.equal(report.skipped.length, 1);
+  assert.match(report.skipped[0].reason, /^locales\/ja\.json: unreadable JSON: /);
+ } finally {
+  await rm(dir, {recursive: true, force: true});
+ }
 });
 
 test('locale discovery recognises the documented naming conventions', () => {
