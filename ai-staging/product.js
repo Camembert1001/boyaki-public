@@ -1,4 +1,4 @@
-import { client } from './canonical-api.js?v=20260919-commerce-v6';
+import { client } from './canonical-api.js?v=20260919-thread-room-product-v7';
 const $=s=>document.querySelector(s),id=String(new URLSearchParams(location.search).get('id')||'').trim();
 const uuid=/^[0-9a-f]{8}-[0-9a-f-]{27}$/i;
 const yen=v=>new Intl.NumberFormat('ja-JP',{style:'currency',currency:'JPY',maximumFractionDigits:0}).format(Number(v)||0);
@@ -32,6 +32,15 @@ async function load(){
   try{
     const result=await client.getProduct(id);product=result.product;render(product);document.title=`${product.title} — BOYAKI AI-STAGING`;
     const identity=client.identity();
+    if(identity?.kind==='account'&&identity.pk===product.maker_account_pubkey){
+      const card=$('#publish-back-card'),button=$('#publish-back'),link=$('#published-thread-link'),state=$('#publish-back-status');
+      card.hidden=false;
+      if(product.thread_publication?.status==='active'){
+        button.hidden=true;link.hidden=false;link.href=`./?problem=${encodeURIComponent(product.thread_publication.post_id)}`;state.textContent='元のBOYAKIスレッドに掲載済みです。';
+      }else{
+        button.hidden=false;link.hidden=true;state.textContent='まだ元スレッドには掲載していません。';
+      }
+    }
     if(identity?.kind==='account'){
       const has=await showAccess();
       if(!has){
@@ -44,6 +53,21 @@ async function load(){
     }
   }catch(err){console.error(err);$('#product-detail').innerHTML='<p class="hint">商品を読み込めませんでした。</p>'}
 }
+$('#publish-back')?.addEventListener('click',async()=>{
+  if(!product)return;
+  const button=$('#publish-back'),state=$('#publish-back-status'),link=$('#published-thread-link');
+  button.disabled=true;button.textContent='掲載中…';state.textContent='元のBOYAKIスレッドへProductを掲載しています…';
+  try{
+    const result=await client.publishProductBack(id),publication=result.publication;
+    product.thread_publication=publication;
+    button.hidden=true;link.hidden=false;link.href=`./?problem=${encodeURIComponent(publication.post_id)}`;
+    state.textContent=result.idempotent?'すでに掲載済みでした。':'元のBOYAKIスレッドにProductを掲載しました。';
+  }catch(err){
+    console.error('publish back failed',err);const code=String(err?.message||err);
+    state.textContent=code==='source_post_not_active'?'元のBOYAKIが取り下げ済みなので掲載できません。':'元スレッドへ掲載できませんでした。';
+    button.disabled=false;button.textContent='元スレッドに掲載する';
+  }
+});
 $('#buy-product')?.addEventListener('click',async()=>{
   const button=$('#buy-product');button.disabled=true;button.textContent='購入処理中…';$('#checkout-status').textContent='AI-STAGINGの注文と購入権を作成しています…';
   try{

@@ -1,4 +1,4 @@
-import { client } from './canonical-api.js?v=20260919-commerce-v6';
+import { client } from './canonical-api.js?v=20260919-thread-room-product-v7';
 export async function loadOwnedPosts(){
   const box=document.querySelector('#own-posts');if(!box)return;
   const result=await client.listMine(),posts=(result.posts||[]).filter(p=>p.status==='active');box.replaceChildren();

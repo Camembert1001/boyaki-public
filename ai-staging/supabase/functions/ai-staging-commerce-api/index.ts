@@ -82,6 +82,10 @@ async function productContext(product:any){
   const {count,error:countError}=await db.from(T('boyaki_orders'))
     .select('*',{count:'exact',head:true}).eq('product_id',product.id).eq('payment_status','paid');
   if(countError)throw Error(countError.message);
+  const publication=await db.from(T('boyaki_product_thread_publications'))
+    .select('id,product_id,post_id,room_id,published_by_pubkey,status,published_at,updated_at')
+    .eq('product_id',product.id).maybeSingle();
+  if(publication.error)throw Error(publication.error.message);
   return {
     solution_case:caseRow?{
       id:caseRow.id,title:caseRow.title,contribution:caseRow.contribution,
@@ -90,7 +94,8 @@ async function productContext(product:any){
     room:room?{id:room.id,status:room.status}:null,
     source_post:post?{id:post.id,content:post.content,status:post.status,created_at:post.created_at}:null,
     maker:{account_pubkey:product.maker_account_pubkey,display_name:profileName(maker.profile,product.maker_account_pubkey)},
-    sold_count:count||0
+    sold_count:count||0,
+    thread_publication:publication.data||null
   };
 }
 function publicProduct(row:any,context:any=null){
@@ -124,7 +129,9 @@ async function listMyProducts(req:Request){
     .select('id,solution_case_id,maker_account_pubkey,title,description,price_yen,status,created_at,updated_at,published_at')
     .eq('maker_account_pubkey',event.pubkey).order('created_at',{ascending:false});
   if(error)throw Error(error.message);
-  return json(req,200,{products:data||[],environment:'AI-STAGING'});
+  const products=[];
+  for(const row of data||[])products.push(publicProduct(row,await productContext(row)));
+  return json(req,200,{products,environment:'AI-STAGING'});
 }
 async function createProduct(req:Request,raw:string){
   const event=await auth(req,raw,true);await consume(event,req);await requireAccount(event.pubkey);
@@ -154,6 +161,55 @@ async function createProduct(req:Request,raw:string){
   if(error)throw Error(error.message);
   return json(req,201,{product:publicProduct(data,await productContext(data)),environment:'AI-STAGING'});
 }
+async function publishBack(req:Request,id:string){
+  const event=await auth(req);await consume(event,req);await requireAccount(event.pubkey);
+  const {data:product,error:productError}=await db.from(T('boyaki_products'))
+    .select('id,solution_case_id,maker_account_pubkey,status').eq('id',id).maybeSingle();
+  if(productError)throw Error(productError.message);
+  if(!product||product.status!=='published')return json(req,404,{error:'product_not_found'});
+  if(product.maker_account_pubkey!==event.pubkey)return json(req,403,{error:'not_product_owner'});
+  const {data:caseRow,error:caseError}=await db.from(T('boyaki_solution_cases'))
+    .select('id,room_id,status').eq('id',product.solution_case_id).maybeSingle();
+  if(caseError)throw Error(caseError.message);
+  if(!caseRow||!caseRow.room_id)return json(req,409,{error:'product_source_room_missing'});
+  const {data:room,error:roomError}=await db.from(T('boyaki_solution_rooms'))
+    .select('id,post_id,status').eq('id',caseRow.room_id).maybeSingle();
+  if(roomError)throw Error(roomError.message);
+  if(!room?.post_id)return json(req,409,{error:'product_source_post_missing'});
+  const {data:post,error:postError}=await db.from(T('boyaki_posts')).select('id,status').eq('id',room.post_id).maybeSingle();
+  if(postError)throw Error(postError.message);
+  if(!post||post.status!=='active')return json(req,409,{error:'source_post_not_active'});
+  const existing=await db.from(T('boyaki_product_thread_publications'))
+    .select('id,product_id,post_id,room_id,published_by_pubkey,status,published_at,updated_at').eq('product_id',id).maybeSingle();
+  if(existing.error)throw Error(existing.error.message);
+  if(existing.data?.status==='active')return json(req,200,{publication:existing.data,idempotent:true,environment:'AI-STAGING'});
+  const now=new Date().toISOString(),payload={product_id:id,post_id:room.post_id,room_id:room.id,published_by_pubkey:event.pubkey,status:'active',published_at:existing.data?.published_at||now,updated_at:now};
+  const query=existing.data
+    ?db.from(T('boyaki_product_thread_publications')).update(payload).eq('id',existing.data.id)
+    :db.from(T('boyaki_product_thread_publications')).insert(payload);
+  const {data,error}=await query.select('id,product_id,post_id,room_id,published_by_pubkey,status,published_at,updated_at').single();
+  if(error)throw Error(error.message);
+  return json(req,existing.data?200:201,{publication:data,idempotent:false,environment:'AI-STAGING'});
+}
+async function listPostProducts(req:Request,postId:string){
+  const {data:pubs,error}=await db.from(T('boyaki_product_thread_publications'))
+    .select('id,product_id,post_id,room_id,published_by_pubkey,status,published_at,updated_at')
+    .eq('post_id',postId).eq('status','active').order('published_at',{ascending:false});
+  if(error)throw Error(error.message);
+  if(!pubs?.length)return json(req,200,{post_id:postId,products:[],environment:'AI-STAGING'});
+  const ids=pubs.map((x:any)=>x.product_id);
+  const {data:products,error:productError}=await db.from(T('boyaki_products'))
+    .select('id,solution_case_id,maker_account_pubkey,title,description,price_yen,status,created_at,updated_at,published_at')
+    .in('id',ids).eq('status','published');
+  if(productError)throw Error(productError.message);
+  const map=new Map((products||[]).map((x:any)=>[x.id,x])),out=[];
+  for(const pub of pubs){
+    const product=map.get(pub.product_id);if(!product)continue;
+    out.push({...publicProduct(product,await productContext(product)),thread_publication:pub});
+  }
+  return json(req,200,{post_id:postId,products:out,environment:'AI-STAGING'});
+}
+
 async function purchase(req:Request,id:string){
   const event=await auth(req);await consume(event,req);await requireAccount(event.pubkey);
   const {data:product,error:productError}=await db.from(T('boyaki_products'))
@@ -238,11 +294,13 @@ Deno.serve(async req=>{
   try{
     if(req.method==='GET'&&path==='/health')return json(req,200,{
       ok:true,service:'ai-staging-commerce-api',products:true,orders:true,entitlements:true,
-      checkout_mode:'ai_staging_test',real_payment_processed:false,environment:'AI-STAGING',version:'ai-staging-commerce-v1'
+      checkout_mode:'ai_staging_test',real_payment_processed:false,publish_back:true,environment:'AI-STAGING',version:'ai-staging-commerce-v2'
     });
     const productMatch=/^\/products\/([0-9a-f-]+)$/i.exec(path);
     const purchaseMatch=/^\/products\/([0-9a-f-]+)\/purchase$/i.exec(path);
     const accessMatch=/^\/products\/([0-9a-f-]+)\/access$/i.exec(path);
+    const publishBackMatch=/^\/products\/([0-9a-f-]+)\/publish-back$/i.exec(path);
+    const postProductsMatch=/^\/posts\/([0-9a-f-]+)\/products$/i.exec(path);
 
     if(req.method==='GET'&&path==='/products')return listProducts(req);
     if(req.method==='GET'&&path==='/me/products')return listMyProducts(req);
@@ -250,10 +308,12 @@ Deno.serve(async req=>{
     if(req.method==='GET'&&path==='/me/sales')return listMySales(req);
     if(req.method==='GET'&&productMatch&&uuid(productMatch[1]))return getProduct(req,productMatch[1]);
     if(req.method==='GET'&&accessMatch&&uuid(accessMatch[1]))return accessProduct(req,accessMatch[1]);
+    if(req.method==='GET'&&postProductsMatch&&uuid(postProductsMatch[1]))return listPostProducts(req,postProductsMatch[1]);
 
     const raw=await req.text();
     if(req.method==='POST'&&path==='/products')return createProduct(req,raw);
     if(req.method==='POST'&&purchaseMatch&&uuid(purchaseMatch[1]))return purchase(req,purchaseMatch[1]);
+    if(req.method==='POST'&&publishBackMatch&&uuid(publishBackMatch[1]))return publishBack(req,publishBackMatch[1]);
 
     return json(req,404,{error:'not_found'});
   }catch(error){

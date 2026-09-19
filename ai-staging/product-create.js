@@ -1,4 +1,4 @@
-import { client } from './canonical-api.js?v=20260919-commerce-v6';
+import { client } from './canonical-api.js?v=20260919-thread-room-product-v7';
 const $=s=>document.querySelector(s);
 const caseId=String(new URLSearchParams(location.search).get('case')||'').trim();
 const uuid=/^[0-9a-f]{8}-[0-9a-f-]{27}$/i;
@@ -42,7 +42,7 @@ $('#product-form').addEventListener('submit',async e=>{
   button.disabled=true;button.textContent='公開中…';$('#product-status').textContent='AI-STAGINGの商品として公開しています…';
   try{
     const result=await client.createProduct(caseRow.id,title,description,price,delivery);
-    $('#product-status').textContent='プロダクトを公開しました。商品ページへ移動します…';
+    $('#product-status').textContent='プロダクトをMaker Spaceに公開しました。商品ページで元のBOYAKIスレッドへの掲載を選べます…';
     setTimeout(()=>location.href=`./product.html?id=${encodeURIComponent(result.product.id)}`,500);
   }catch(err){
     console.error(err);const code=String(err?.message||err);

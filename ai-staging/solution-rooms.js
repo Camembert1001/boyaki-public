@@ -1,4 +1,4 @@
-import { client } from './canonical-api.js?v=20260919-commerce-v6';
+import { client } from './canonical-api.js?v=20260919-thread-room-product-v7';
 
 const $=s=>document.querySelector(s);
 const list=$('#solution-room-list');
@@ -77,4 +77,34 @@ async function load(){
 
 const id=accountIdentity();
 device.textContent=id?`Account · ${short(id.pk)}`:'not logged in';
-await load();
+await Promise.all([load(),loadProducts()]);
+async function loadProducts(){
+  const box=$('#maker-products-list'),state=$('#maker-products-status');
+  if(!box)return;
+  const id=accountIdentity();
+  if(!id){box.innerHTML='<p class="hint">ログインすると、このAccount IDのMaker Productsが表示されます。</p>';if(state)state.textContent='';return}
+  if(state)state.textContent='Maker Productsを読み込んでいます…';
+  try{
+    const result=await client.listMyProducts(),products=result.products||[];
+    box.replaceChildren();
+    if(!products.length)box.innerHTML='<p class="hint">まだProductはありません。Solution Caseから「プロダクトとして出す」で作成できます。</p>';
+    for(const product of products){
+      const card=document.createElement('article');card.className='participation-panel';
+      const h=document.createElement('h3');h.textContent=product.title;
+      const meta=document.createElement('p');meta.className='hint';
+      meta.textContent=`${new Intl.NumberFormat('ja-JP',{style:'currency',currency:'JPY',maximumFractionDigits:0}).format(product.price_yen)} · ${product.thread_publication?.status==='active'?'元スレッド掲載済み':'Maker Spaceのみ'}`;
+      const actions=document.createElement('div');actions.className='actions';
+      const open=document.createElement('a');open.className='button-link';open.href=`./product.html?id=${encodeURIComponent(product.id)}`;open.textContent=product.thread_publication?.status==='active'?'商品を見る / 掲載先確認':'商品を見る / スレッドへ掲載';
+      actions.append(open);
+      if(product.thread_publication?.status==='active'){
+        const thread=document.createElement('a');thread.className='button-link';thread.href=`./?problem=${encodeURIComponent(product.thread_publication.post_id)}`;thread.textContent='掲載先スレッド';
+        actions.append(thread);
+      }
+      card.append(h,meta,actions);box.append(card);
+    }
+    if(state)state.textContent=`${products.length}件のMaker Product`;
+  }catch(err){
+    console.error('maker products failed',err);box.innerHTML='<p class="hint">Maker Productsを読み込めませんでした。</p>';if(state)state.textContent='読み込みに失敗しました。';
+  }
+}
+

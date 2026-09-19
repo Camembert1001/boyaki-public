@@ -1,5 +1,5 @@
 import { getPublicKey } from 'https://esm.sh/nostr-tools@2.17.0';
-import { client, fromHex } from './canonical-api.js?v=20260919-commerce-v6';
+import { client, fromHex } from './canonical-api.js?v=20260919-thread-room-product-v7';
 
 const $=s=>document.querySelector(s);
 const params=new URLSearchParams(location.search);
@@ -20,6 +20,7 @@ function accountIdentity(){
 const identity=accountIdentity();
 let refreshTimer=null;
 let loading=false;
+let accessState={can_write:false,role:null,invitation:null};
 
 if(!validRoom){
   $('#room-title').textContent='Room not found';
@@ -32,23 +33,42 @@ if(!validRoom){
 
 $('#room-identity').textContent=identity?`${identity.pk.slice(0,8)}…${identity.pk.slice(-6)}`:'not logged in';
 const submit=$('#room-form button[type="submit"]');
-
-if(viewOnly){
-  $('#room-form').hidden=true;
-  const identityCard=$('.identity-card');
-  if(identityCard)identityCard.hidden=true;
-  const hero=document.querySelector('.card.hero .hint');
-  if(hero)hero.textContent='このSolution LogはAI-STAGING内の履歴からの閲覧モードです。ここから会話への参加・ケース作成はできません。';
-}else if(!identity){
-  submit.disabled=true;
-  $('#room-status').textContent='送信するにはBOYAKI Accountでログインしてください。';
-}
+const caseButton=$('#solution-case-create');
 
 function setStatus(text,state=''){
   const node=$('#room-status');
   if(!node)return;
   node.textContent=text;
   if(state)node.dataset.state=state;else delete node.dataset.state;
+}
+
+function applyAccess(){
+  if(viewOnly){
+    $('#room-form').hidden=true;
+    const identityCard=$('.identity-card');if(identityCard)identityCard.hidden=true;
+    return;
+  }
+  if(!identity){
+    submit.disabled=true;
+    caseButton.hidden=true;
+    setStatus('このRoomの会話に参加するには、元スレッドでMakerから招待を受けてログインしてください。');
+    return;
+  }
+  if(!accessState.can_write){
+    submit.disabled=true;
+    caseButton.hidden=true;
+    $('#room-message').disabled=true;
+    setStatus(accessState.invitation?.status==='pending'
+      ?'招待はまだ未承認です。元のBOYAKIスレッドから招待を受けてください。'
+      :'このRoomは閲覧できますが、会話への参加には元スレッドからの招待が必要です。');
+    return;
+  }
+  $('#room-message').disabled=false;
+  submit.disabled=false;
+  caseButton.hidden=accessState.role!=='maker';
+  setStatus(accessState.role==='maker'
+    ?'MakerとしてSolution Roomに参加しています。'
+    :'招待されたVoiceとしてSolution Roomに参加しています。');
 }
 
 function yen(value){const n=Number(value);return Number.isFinite(n)&&n>0?new Intl.NumberFormat('ja-JP',{style:'currency',currency:'JPY',maximumFractionDigits:0}).format(n):''}
@@ -68,8 +88,7 @@ function renderDemandEvidence(evidence){
   box.append(title,heading,summary);
   const conditions=evidence?.pay_conditions||[];
   if(conditions.length){
-    const note=document.createElement('p');note.className='hint';note.textContent='匿名の成立条件';
-    box.append(note);
+    const note=document.createElement('p');note.className='hint';note.textContent='匿名の成立条件';box.append(note);
     for(const row of conditions){const item=document.createElement('div');item.className='thread-item';const strong=document.createElement('strong');strong.textContent=yen(row.amount_yen);item.append(strong,document.createTextNode(` — ${row.condition_text}`));box.append(item)}
   }else{
     const empty=document.createElement('p');empty.className='hint';empty.textContent='まだ支払条件付きの需要証拠はありません。';box.append(empty);
@@ -101,130 +120,80 @@ async function loadRoomMeta(){
   }
 }
 
-function renderMessage(message){
-  const text=String(message.content||'').trim();
-  if(!text)return null;
-  const mine=identity?.pk===message.author_pubkey;
-  const item=document.createElement('div');
-  item.className=`room-message${mine?' mine':''}`;
-  item.dataset.messageId=message.id;
+async function loadAccess(){
+  if(viewOnly||!identity||!validRoom){applyAccess();return}
+  try{
+    accessState=await client.getSolutionRoomAccess(room);
+  }catch(err){
+    console.error('solution room access failed',err);
+    accessState={can_write:false,role:null,invitation:null};
+  }
+  applyAccess();
+}
 
-  const meta=document.createElement('div');
-  meta.className='room-meta';
+function renderMessage(message){
+  const text=String(message.content||'').trim();if(!text)return null;
+  const mine=identity?.pk===message.author_pubkey;
+  const item=document.createElement('div');item.className=`room-message${mine?' mine':''}`;item.dataset.messageId=message.id;
+  const meta=document.createElement('div');meta.className='room-meta';
   const name=message.display_name?.trim()||`${message.author_pubkey.slice(0,8)}…${message.author_pubkey.slice(-6)}`;
   meta.textContent=`${name} · ${fmt(message.created_at)}${mine?' · you':''}`;
-
-  const body=document.createElement('p');
-  body.textContent=text;
-  item.append(meta,body);
-
-  if(mine&&!viewOnly){
-    const actions=document.createElement('div');
-    actions.className='room-actions';
-    const del=document.createElement('button');
-    del.type='button';
-    del.textContent='取り下げ';
+  const body=document.createElement('p');body.textContent=text;item.append(meta,body);
+  if(mine&&!viewOnly&&accessState.can_write){
+    const actions=document.createElement('div');actions.className='room-actions';
+    const del=document.createElement('button');del.type='button';del.textContent='取り下げ';
     del.addEventListener('click',async()=>{
-      if(del.disabled)return;
-      del.disabled=true;
-      setStatus('メッセージを取り下げています…','working');
-      try{
-        await client.deleteSolutionRoomMessage(message.id);
-        setStatus('メッセージを取り下げました。','success');
-        await loadMessages();
-      }catch(err){
-        console.error('solution room delete failed',err);
-        setStatus('取り下げできませんでした。通信状態を確認して再試行してください。','error');
-        del.disabled=false;
-      }
+      del.disabled=true;setStatus('メッセージを取り下げています…','working');
+      try{await client.deleteSolutionRoomMessage(message.id);setStatus('メッセージを取り下げました。','success');await loadMessages()}
+      catch(err){console.error('solution room delete failed',err);setStatus('取り下げできませんでした。','error');del.disabled=false}
     });
-    actions.append(del);
-    item.append(actions);
+    actions.append(del);item.append(actions);
   }
   return item;
 }
 
 async function loadMessages({silent=false}={}){
   if(!validRoom||loading)return false;
-  loading=true;
-  const log=$('#room-log');
+  loading=true;const log=$('#room-log');
   if(!silent)log.innerHTML='<p class="hint">Solution Logを復元しています…</p>';
   try{
-    const result=await client.listSolutionRoomMessages(room);
-    const messages=result.messages||[];
+    const result=await client.listSolutionRoomMessages(room),messages=result.messages||[];
     const stickToBottom=Math.abs(log.scrollHeight-log.scrollTop-log.clientHeight)<80;
     log.replaceChildren();
-    if(!messages.length){
-      const empty=document.createElement('p');
-      empty.className='hint room-empty';
-      empty.textContent='Solution Logはまだありません。ここから最初のメッセージを残せます。';
-      log.append(empty);
-    }else{
-      for(const message of messages){
-        const node=renderMessage(message);
-        if(node)log.append(node);
-      }
-    }
+    if(!messages.length){const empty=document.createElement('p');empty.className='hint room-empty';empty.textContent='Solution Logはまだありません。';log.append(empty)}
+    else for(const message of messages){const node=renderMessage(message);if(node)log.append(node)}
     if(stickToBottom||!silent)log.scrollTop=log.scrollHeight;
     return true;
   }catch(err){
     console.error('solution room load failed',err);
-    if(!silent){
-      log.innerHTML='<p class="hint">Solution Logを復元できませんでした。通信状態を確認して再試行してください。</p>';
-      setStatus('読み込みに失敗しました。','error');
-    }
+    if(!silent){log.innerHTML='<p class="hint">Solution Logを復元できませんでした。</p>';setStatus('読み込みに失敗しました。','error')}
     return false;
   }finally{loading=false}
 }
 
-async function publishMessage(message){
-  if(viewOnly||!identity||!validRoom)throw new Error('not_allowed');
-  return client.createSolutionRoomMessage(room,message);
-}
-
 if(!viewOnly){
   $('#room-form').addEventListener('submit',async e=>{
-    e.preventDefault();
-    const input=$('#room-message');
-    const text=input.value.trim();
-    if(!text)return;
-    submit.disabled=true;
-    submit.textContent='送信中…';
-    setStatus('AI-STAGINGのSolution Logへ保存しています…','working');
+    e.preventDefault();if(!accessState.can_write)return;
+    const input=$('#room-message'),text=input.value.trim();if(!text)return;
+    submit.disabled=true;submit.textContent='送信中…';setStatus('Solution Logへ保存しています…','working');
     try{
-      await publishMessage(text);
-      input.value='';
-      setStatus('Solution Logへ保存しました。STAGING側の履歴には反映されません。','success');
-      await loadMessages();
-      input.focus();
+      await client.createSolutionRoomMessage(room,text);input.value='';
+      setStatus('Solution Logへ保存しました。','success');await loadMessages();input.focus();
     }catch(err){
       console.error('solution room publish failed',err);
-      setStatus('送信できませんでした。内容は保存されていません。','error');
-    }finally{
-      submit.disabled=!identity;
-      submit.textContent='送信';
-    }
+      setStatus(String(err?.message||err)==='room_invitation_required'?'このRoomへの参加権がありません。元スレッドの招待を確認してください。':'送信できませんでした。','error');
+    }finally{submit.disabled=!accessState.can_write;submit.textContent='送信'}
   });
 
-  $('#room-refresh')?.addEventListener('click',async()=>{
-    setStatus('更新しています…','working');
-    const ok=await loadMessages();
-    if(ok)setStatus('最新のSolution Logを表示しています。','success');
-  });
-
-  $('#room-report')?.addEventListener('click',()=>{
-    setStatus('通報対象の選択フローはまだ未接続です。');
-  });
-
-  $('#solution-case-create')?.addEventListener('click',()=>{
-    if(!identity){setStatus('Solution Caseを作るにはログインしてください。','error');return}
+  $('#room-refresh')?.addEventListener('click',async()=>{setStatus('更新しています…','working');await loadAccess();const ok=await loadMessages();if(ok&&accessState.can_write)setStatus('最新のSolution Logを表示しています。','success')});
+  $('#room-report')?.addEventListener('click',()=>setStatus('通報対象の選択フローはまだ未接続です。'));
+  caseButton?.addEventListener('click',()=>{
+    if(accessState.role!=='maker'){setStatus('Solution CaseはMakerだけが作成できます。','error');return}
     location.href=`./solution-case-create.html?room=${encodeURIComponent(room)}`;
   });
 }
 
 const roomReady=await loadRoomMeta();
-if(roomReady)await loadMessages();
-if(roomReady&&validRoom){
-  refreshTimer=setInterval(()=>loadMessages({silent:true}),8000);
-}
+if(roomReady){await loadAccess();await loadMessages()}
+if(roomReady&&validRoom)refreshTimer=setInterval(()=>loadMessages({silent:true}),8000);
 window.addEventListener('pagehide',()=>{if(refreshTimer)clearInterval(refreshTimer)},{once:true});
