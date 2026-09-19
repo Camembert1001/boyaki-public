@@ -52,4 +52,4 @@ export const client={
   deleteSolutionCase:id=>thread(`/solution-cases/${encodeURIComponent(id)}`,{method:'DELETE',signed:true})
 };
 window.BOYAKI_CANONICAL=client;
-if(document.querySelector('#feed'))initialize().then(async ok=>{if(ok)await import('./canonical-cutover.js?v=20260918-ai-v1')}).catch(e=>console.error('AI-STAGING initialization failed',e));
+if(document.querySelector('#feed'))initialize().then(async ok=>{if(ok)await import('./canonical-cutover.js?v=20260919-solution-flow-v3')}).catch(e=>console.error('AI-STAGING initialization failed',e));
