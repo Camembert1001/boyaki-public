@@ -4,11 +4,11 @@
 // is what actually happened, the state is the fold) or an already-resolved state
 // record (for importing what is known without a reconstructable history). Carrying
 // both would be two sources of truth for the same contact, so it is rejected.
-import {ContactStateError, SCHEMA, normalizeContact} from './model.mjs';
+import {ContactStateError, SCHEMA, identityKeys, normalizeContact} from './model.mjs';
 import {replay} from './transitions.mjs';
 import {NEXT_ACTIONS, derive} from './derive.mjs';
 
-const IDENTITY_KEYS = ['id', 'name', 'organization', 'channel', 'channel_ref'];
+const IDENTITY_KEYS = ['id', 'name', 'organization', 'channel', 'channel_ref', 'identity'];
 
 function fail(message) {
  throw new ContactStateError(message);
@@ -53,6 +53,28 @@ export function loadStore(text, label = 'store') {
   contacts.push(resolved);
  }
  return {schema: SCHEMA, contacts};
+}
+
+// How much of this store can be recognized in public.
+//
+// A contact with no identity evidence is *opaque*: nothing that reads this store can tell
+// whether a discovered stranger is that contact or not. One opaque contact is therefore
+// enough to make "we have never written to this party" unprovable by machine for every
+// party, which is why the number is reported rather than buried - it is the one figure
+// that says whether automatic contact checking can conclude anything at all.
+export function identityCoverage(store) {
+ const opaque = [];
+ const indexed = [];
+ for (const {contact} of store.contacts) {
+  (identityKeys(contact).length === 0 ? opaque : indexed).push(contact.id);
+ }
+ return {
+  contactCount: store.contacts.length,
+  indexedCount: indexed.length,
+  opaqueCount: opaque.length,
+  opaqueIds: opaque.sort(),
+  complete: opaque.length === 0 && store.contacts.length > 0
+ };
 }
 
 export function buildReport(store) {

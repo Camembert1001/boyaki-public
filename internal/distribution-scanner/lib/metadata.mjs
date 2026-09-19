@@ -22,9 +22,15 @@ export const ACTIVITY_LEVELS = ['ACTIVE', 'MAINTAINED', 'DORMANT', 'UNKNOWN'];
 // private one.
 export const CONTACT_ROUTES = ['GITHUB_ISSUE', 'GITHUB_DISCUSSION', 'PUBLIC_EMAIL', 'OTHER', 'NONE', 'UNKNOWN'];
 
+// `owner`, `repository` and `url` are the candidate's *public* identity, and they are
+// here rather than only in a v3 manifest because they are what makes an automatic contact
+// check possible: without one of them the contact store cannot be asked about this party
+// at all, and "never contacted" stays unprovable. `emails` is the one field that may hold
+// something personal, so it only ever appears in a local, untracked metadata file - a
+// test asserts no tracked fixture carries an address.
 const FIELDS = new Set([
  'aliases', 'activity', 'activity_evidence', 'public_contact_route', 'contact_route_evidence',
- 'contact_ids', 'notes'
+ 'contact_ids', 'notes', 'owner', 'repository', 'url', 'emails'
 ]);
 
 export class ProspectMetadataError extends Error {}
@@ -44,6 +50,11 @@ const assertStrings = (value, label) => {
  return [...value];
 };
 
+const assertText = (value, label) => {
+ if (typeof value !== 'string' || value.trim() === '') fail(label + ' must be a non-empty string');
+ return value;
+};
+
 export function normalizeEntry(raw, label) {
  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) fail(label + ' must be an object');
  for (const key of Object.keys(raw)) {
@@ -56,9 +67,15 @@ export function normalizeEntry(raw, label) {
   activity_evidence: raw.activity_evidence === undefined ? null : String(raw.activity_evidence),
   public_contact_route: assertEnum(raw.public_contact_route ?? 'UNKNOWN', CONTACT_ROUTES, label + '.public_contact_route'),
   contact_route_evidence: raw.contact_route_evidence === undefined ? null : String(raw.contact_route_evidence),
-  // undefined is "nobody checked"; [] is "checked, nothing there". They are not the
-  // same claim, so the distinction survives normalization.
+  // undefined is "nobody declared a link"; [] is "a human read the store and there is
+  // nothing there". They are not the same claim, so the distinction survives
+  // normalization - and `undefined` now means the store is searched by identity rather
+  // than that nothing happens.
   contact_ids: raw.contact_ids === undefined ? undefined : assertStrings(raw.contact_ids, label + '.contact_ids'),
+  owner: raw.owner === undefined || raw.owner === null ? null : assertText(raw.owner, label + '.owner'),
+  repository: raw.repository === undefined || raw.repository === null ? null : assertText(raw.repository, label + '.repository'),
+  url: raw.url === undefined || raw.url === null ? null : assertText(raw.url, label + '.url'),
+  emails: raw.emails === undefined ? [] : assertStrings(raw.emails, label + '.emails'),
   notes: raw.notes ?? null
  };
 }
@@ -71,6 +88,10 @@ export const emptyEntry = () => ({
  public_contact_route: 'UNKNOWN',
  contact_route_evidence: null,
  contact_ids: undefined,
+ owner: null,
+ repository: null,
+ url: null,
+ emails: [],
  notes: null
 });
 

@@ -75,6 +75,7 @@ export function aggregate(scanReport) {
 //  2  conversation closed (reopens on inbound or not at all)          IGNORE
 //  3  a thread already exists / an answer is outstanding             IGNORE
 //  4  contact identity unresolved, ambiguous, or flagged by the model HUMAN_REVIEW
+//     (and, as a backstop before rule 17, any posture but NEVER_CONTACTED)
 //  5  repository is dormant                                          IGNORE
 //  6  no public contact route                                        IGNORE
 //  7  no localization assets at all                                  IGNORE
@@ -142,6 +143,16 @@ export function decide(facts, thresholds) {
  if (asking && outstandingAxes.includes(asking)) {
   return rule(16, 'HUMAN_REVIEW', 'an answer on the ' + asking + ' axis is already outstanding from another contact; ' +
    'a second one buys no information we are not already about to get');
+ }
+
+ // The backstop. Rules 1-4 and 14 name every posture that exists today, but this table is
+ // the last thing between a contact posture and a human being asked to write to somebody -
+ // so a posture nobody here has heard of must stop here rather than fall through into
+ // READY_FOR_REVIEW. Adding a posture to contact-link.mjs can make this engine more
+ // cautious by accident; it can never make it bolder by accident.
+ if (contact.posture !== 'NEVER_CONTACTED') {
+  return rule(4, 'HUMAN_REVIEW', 'contact posture ' + contact.posture +
+   ' is not "store checked, nothing there" - ' + contact.reason);
  }
 
  return rule(17, 'READY_FOR_REVIEW', evidence.highConfidenceFindings + ' high-confidence finding(s) on a ' +

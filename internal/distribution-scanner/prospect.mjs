@@ -9,7 +9,7 @@
 // list - it decides nothing about who is contacted, and it contacts nobody.
 import {readFile, writeFile} from 'node:fs/promises';
 import {VALIDATION_AXES} from '../contact-state/lib/model.mjs';
-import {readContactStore} from './lib/contact-link.mjs';
+import {loadContactStoreFile} from './lib/contact-link.mjs';
 import {loadMetadata} from './lib/metadata.mjs';
 import {DEFAULT_PROSPECT_THRESHOLDS, VERDICTS} from './lib/candidates.mjs';
 import {DEFAULT_SAMPLES, discover, renderText} from './lib/prospects.mjs';
@@ -111,7 +111,9 @@ async function main(argv) {
 
  let report;
  try {
-  const contacts = options.contacts ? readContactStore(await readFile(options.contacts, 'utf8'), options.contacts) : null;
+  // A store that was asked for and could not be read is a hard failure, never a
+  // silent fall back to "no store" or to an empty one.
+  const contacts = options.contacts ? await loadContactStoreFile(options.contacts) : null;
   const metadata = options.metadata ? loadMetadata(await readFile(options.metadata, 'utf8'), options.metadata) : null;
   report = await discover(target, {...options, contacts, metadata});
  } catch (error) {

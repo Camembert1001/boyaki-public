@@ -638,9 +638,13 @@ test('the manifest is validated, round-trips, and feeds v2 its own metadata shap
  const metadata = toMetadata(manifest);
  assert.equal(metadata.schema, 'yn0-prospect-metadata-v1');
  assert.equal(metadata.prospects.get('unchecked-contact-repo').contact_ids, undefined);
- // v2 gets exactly the fields it already reads, and none of v3's.
+ // v2 gets exactly the fields it reads, and none of v3's own (strategy ids, signals,
+ // discovery counters, path). `owner`, `repository` and `url` are in that list because v2
+ // needs them: they are the identity the contact store is checked with, without which no
+ // candidate can be shown to be a stranger.
  assert.deepEqual(Object.keys(metadata.prospects.get('paid-studio-alpha')).sort(),
-  ['activity', 'activity_evidence', 'aliases', 'contact_ids', 'contact_route_evidence', 'notes', 'public_contact_route']);
+  ['activity', 'activity_evidence', 'aliases', 'contact_ids', 'contact_route_evidence', 'emails',
+   'notes', 'owner', 'public_contact_route', 'repository', 'url']);
 
  const round = normalizeManifest(serializeManifest(manifest), 'round trip');
  assert.equal(JSON.stringify(serializeManifest(round)), JSON.stringify(serializeManifest(manifest)));

@@ -26,11 +26,17 @@ import {normalizeSignals} from './signals.mjs';
 export const SCHEMA = 'yn0-candidate-manifest-v1';
 
 // Fields v3 adds on top of a metadata entry.
-const DISCOVERY_FIELDS = new Set(['strategy_ids', 'owner', 'repository', 'url', 'path', 'signals', 'discovery']);
+//
+// `owner`, `repository` and `url` used to be here. They are metadata fields now, because
+// they stopped being exploration trivia the moment the contact check learned to use them:
+// they are the only thing that lets the store be asked "is this party somebody we have
+// already written to?", so they are normalized once, by metadata.mjs, and handed to v2
+// like every other field v2 reads.
+const DISCOVERY_FIELDS = new Set(['strategy_ids', 'path', 'signals', 'discovery']);
 
 const METADATA_FIELDS = new Set([
  'aliases', 'activity', 'activity_evidence', 'public_contact_route', 'contact_route_evidence',
- 'contact_ids', 'notes'
+ 'contact_ids', 'notes', 'owner', 'repository', 'url', 'emails'
 ]);
 
 export class ManifestError extends Error {}
@@ -85,9 +91,6 @@ export function normalizeCandidate(raw, id, label) {
   ...metadata,
   id,
   strategy_ids: raw.strategy_ids === undefined ? [] : assertStrings(raw.strategy_ids, label + '.strategy_ids').sort(),
-  owner: raw.owner === undefined || raw.owner === null ? null : assertText(raw.owner, label + '.owner'),
-  repository: raw.repository === undefined || raw.repository === null ? null : assertText(raw.repository, label + '.repository'),
-  url: raw.url === undefined || raw.url === null ? null : assertText(raw.url, label + '.url'),
   // Where the materialized files sit, relative to the workspace root. Defaults to the id,
   // which is what the explorer names the directory.
   path: raw.path === undefined || raw.path === null ? id : assertText(raw.path, label + '.path'),
@@ -177,6 +180,11 @@ export function toMetadata(manifest) {
    public_contact_route: candidate.public_contact_route,
    contact_route_evidence: candidate.contact_route_evidence,
    contact_ids: candidate.contact_ids,
+   // The candidate's public identity, which is what v2's contact check is checked *with*.
+   owner: candidate.owner,
+   repository: candidate.repository,
+   url: candidate.url,
+   emails: candidate.emails,
    notes: candidate.notes
   });
  }

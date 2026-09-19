@@ -352,6 +352,8 @@ node internal/distribution-scanner/prospect.mjs ~/prospects \
 
 Without `--contacts`, **no candidate can reach `READY_FOR_REVIEW`**. "We have not written
 to them" is a claim about a store; not having looked at the store is not the same claim.
+With `--contacts`, a store that cannot be read or does not validate stops the run with
+exit 1 — it never degrades into "no store" or into an empty one.
 
 ### Localization asset discovery
 
@@ -452,6 +454,9 @@ input file, validated on load, absent by default.
   "prospects": {
     "some-repository-directory": {
       "aliases": ["a name this project is also known by"],
+      "owner": "the-repository-owner",
+      "repository": "the-repository-owner/some-repository",
+      "url": "https://example.invalid/the-repository-owner/some-repository",
       "activity": "ACTIVE",
       "activity_evidence": "commits this month",
       "public_contact_route": "GITHUB_ISSUE",
@@ -467,7 +472,14 @@ input file, validated on load, absent by default.
 `GITHUB_ISSUE` / `GITHUB_DISCUSSION` / `PUBLIC_EMAIL` / `OTHER` / `NONE` / `UNKNOWN`. An
 absent field is never guessed — it reads `UNKNOWN`, and `UNKNOWN` routes to a human rather
 than assuming the best. An unknown *field name* is an error, so `contact_id` instead of
-`contact_ids` fails loudly rather than silently meaning "nobody checked".
+`contact_ids` fails loudly rather than silently meaning "nobody declared a link".
+
+`owner`, `repository` and `url` are the candidate's **public identity**, and they are what
+the contact store gets checked *with*: without at least one of them the store cannot be
+asked about this party, and the prospect stays `UNCHECKED` whatever else it carries. There
+is also an `emails` field for the rare candidate whose only public route is an address; it
+belongs in a local, untracked metadata file only, and a test asserts no tracked fixture
+carries one.
 
 ### contact-state connection
 
@@ -491,23 +503,59 @@ contact model surfaces here instead of being silently contradicted.
 | `AWAITING_REPLY` | we asked and the answer is outstanding |
 | `NEEDS_HUMAN` | contact-state itself routes the record to `REVIEW` |
 | `UNRESOLVED` | the prospect names a contact id the store does not hold |
-| `AMBIGUOUS_MATCH` | the prospect claims no contact, but a stored one looks like the same party |
-| `UNCHECKED` | no store was consulted, or the prospect declared no contact link |
-| `NEVER_CONTACTED` | store consulted, nothing matched, nothing looked close |
+| `AMBIGUOUS_MATCH` | something in the store looks like this party, or a declared link disagrees with one |
+| `UNCHECKED` | no store, an unindexed store, or a candidate the store cannot be asked about |
+| `NEVER_CONTACTED` | the store was checked, every contact in it was excluded, and none was this party |
 
 Postures are ordered most-restrictive-first: a prospect resolving to two threads, one of
 them opted out, is opted out.
 
-`contact_ids: []` is a *positive* claim — "the store was checked and holds nothing for this
-party" — and is the only route to `NEVER_CONTACTED`. Omitting the field is a different
-claim, `UNCHECKED`, and cannot produce a candidate for review. Absence of evidence is not
-evidence of absence.
+Beside the posture, every prospect carries a **conclusion** — `MATCHED`, `NO_MATCH`,
+`INCONCLUSIVE` or `NOT_CONSULTED` — because "checked, and this party is new" and "nobody
+looked" are different facts, and a report that cannot tell them apart cannot be trusted to
+say anybody is new. A posture of `NEVER_CONTACTED` always carries the conclusion
+`NO_MATCH`, and a test asserts it.
 
-`AMBIGUOUS_MATCH` is the identity guard. When a prospect declares no contact, its directory
-name and aliases are compared against every stored id, name, organization and thread
-reference; any shared uncommon token raises a hand. The matcher is deliberately crude —
-it decides nothing, it only refuses to let "never contacted" pass unchecked when somebody
-in the store looks like the same party.
+#### Looking a candidate up: `lib/contact-match.mjs`
+
+`contact_ids: []` is a *positive* claim by a human — "I read the store and it holds nothing
+for this party". Omitting the field used to mean nothing ever happened; it now means **the
+store is searched by identity**, and the search has five possible answers:
+
+| Answer | Reached when | Posture |
+| --- | --- | --- |
+| `MATCHED` | an identifier this party owns is one a contact claims | the contact's own posture |
+| `AMBIGUOUS` | something looks similar and nothing is exact | `AMBIGUOUS_MATCH` |
+| `NO_MATCH` | every contact carries identity evidence and none of it is this party | `NEVER_CONTACTED` |
+| `UNIDENTIFIABLE` | the candidate carries no identifier the store could be checked against | `UNCHECKED` |
+| `STORE_NOT_INDEXED` | some contact in the store carries no identity evidence at all | `UNCHECKED` |
+
+Matching is **exact only**. A GitHub login, an `owner/name` repository, a full alias
+carrying at least one uncommon word, an address, a host, or a link a human wrote down by
+hand — those match. A similar personal name, a shared organization, a username fragment
+inside another username, a bare repository name without its owner, and the same kind of
+project do not: each raises a hand, and a raised hand is `AMBIGUOUS_MATCH`, never a match
+and never a non-match. Contacts declare their identifiers in the `identity` block
+documented in [`internal/contact-state/SEEDING.md`](../contact-state/SEEDING.md).
+
+Two preconditions guard the only answer that lets a candidate through:
+
+- **The store must be fully indexed.** A contact with no identity evidence cannot be
+  recognized, so it cannot be excluded, so nobody can be shown to be a stranger — one
+  opaque contact makes every automatic lookup `UNCHECKED`. An empty store counts as
+  unindexed too: it is indistinguishable from the wrong file.
+- **The candidate must be identifiable.** Its directory name is a name discovery invented,
+  so "no manual link points at it" is not "this party is not in the store". That is why
+  the manifest carries `owner`, `repository` and `url`.
+
+A declared link is authoritative about *which* contact this is, but not against the store.
+When a human wrote `contact_ids: []` and the store's own identifiers recognize the party —
+the most dangerous disagreement in this pipeline — the result is `AMBIGUOUS_MATCH`, never a
+decision in either direction.
+
+A store named with `--contacts` that cannot be read or does not validate is a **hard
+failure**: both CLIs exit 1. Nothing anywhere degrades a failed load into "no store" or
+into an empty one, because an empty store reads as "checked, nobody is in there".
 
 One Prospect Burn rule belongs to no single prospect: while somebody already owes us an
 answer on a validation axis, opening the same question with a second stranger buys no
@@ -959,9 +1007,10 @@ documented buckets`) so a future threshold change has to restate its effect on t
 ## Tests
 
 ```
-node --test internal/distribution-scanner/tests/scanner.test.mjs     # 20
-node --test internal/distribution-scanner/tests/prospect.test.mjs    # 20
-node --test internal/distribution-scanner/tests/discovery.test.mjs   # 34
+node --test internal/distribution-scanner/tests/scanner.test.mjs       # 20
+node --test internal/distribution-scanner/tests/prospect.test.mjs      # 20
+node --test internal/distribution-scanner/tests/discovery.test.mjs     # 34
+node --test internal/distribution-scanner/tests/contact-store.test.mjs # 20
 ```
 
 No dependencies, no install step, no network. Node 22 built-ins only. **No test here makes
@@ -994,6 +1043,26 @@ The discovery suite pins the v3 queue the same way, and adds the properties v3 i
   rather than losing the run;
 - the same snapshot produces the same evaluation, byte for byte, and no module in the
   offline half reads a clock or a random number.
+
+The contact-store suite covers the one question the engine has to get right in only one
+direction — "is this party somebody we already wrote to?" — and every way of getting no
+answer at all:
+
+- the store answers only on an exact identifier; a similar name, a login fragment, a bare
+  repository name and a shared category raise a hand and never merge two parties;
+- every contact state blocks what it should: opted out, closed, awaiting a reply, and a
+  ticket robot's receipt that never becomes a human reply or a released wait;
+- "checked, and this party is new" is reachable, and always carries the conclusion that
+  reached it — a `NEVER_CONTACTED` posture with nothing behind it is a test failure;
+- one contact with no identity evidence makes every automatic lookup inconclusive, and an
+  empty store proves nothing;
+- a candidate with no public identity is unchecked rather than a stranger;
+- a missing store, an unreadable one, a malformed one and a duplicated contact id all fail
+  closed, and both CLIs exit 1 rather than continuing without one;
+- a human's declared link is checked against the store, and a disagreement — above all a
+  declared "never contacted" the store recognizes — stops at a human;
+- no identifier, name or organization crosses the boundary into a report, and no tracked
+  fixture carries anything real.
 
 ## Known limitations
 

@@ -330,7 +330,11 @@ test('the seven mechanical checks are unchanged', () => {
 test('external metadata is validated, and an absent field is never guessed', () => {
  assert.deepEqual(emptyEntry(), {
   aliases: [], activity: 'UNKNOWN', activity_evidence: null,
-  public_contact_route: 'UNKNOWN', contact_route_evidence: null, contact_ids: undefined, notes: null
+  public_contact_route: 'UNKNOWN', contact_route_evidence: null, contact_ids: undefined, notes: null,
+  // The candidate's public identity: what the contact store gets checked *with*. Absent
+  // by default, like every other field here, and an absent identity is why a candidate
+  // reads UNCHECKED rather than "never contacted".
+  owner: null, repository: null, url: null, emails: []
  });
  const loaded = loadMetadata(JSON.stringify({schema: 'yn0-prospect-metadata-v1', prospects: {a: {activity: 'ACTIVE'}}}));
  assert.equal(loaded.prospects.get('a').activity, 'ACTIVE');
