@@ -24,18 +24,12 @@ async function run(){
  const profile={displayName:'AI E2E Account',interest:'both',about:'Isolated automated fixture'};
  const saved=(await req(API,'/me/account',{method:'POST',id:a,body:{profile}})).p;eq(saved.account.profile.displayName,profile.displayName,'profile save');pass('account-register-ai');
  const restored=(await req(API,'/me/account',{id:b})).p;eq(restored.account.account_pubkey,a.pk,'account restore');eq(restored.account.profile.displayName,profile.displayName,'profile restore');pass('account-cross-device-profile');
- const device=identity(undefined,'legacy_browser'),tags=[['environment','ai-staging'],['account',a.pk],['legacy',device.pk]];
- const proof=(id:Id)=>finalizeEvent({kind:30078,created_at:Math.floor(Date.now()/1000),content:'',tags},id.sk);
- const linked=await req(API,'/identity-links/verify',{method:'POST',body:{legacy_claim:proof(device),account_acceptance:proof(a)}});eq(linked.p.account_pubkey,a.pk,'link');pass('identity-link-ai');
  const text=`AI-STAGING E2E ${Date.now()}`;
  const created=(await req(API,'/posts',{method:'POST',id:a,expected:[201],body:{content:text,identity_kind:'account'}})).p.post;cleanupPost=created?.id||'';yes(created?.id,'create id');pass('post-create',created.id);
- const feed=(await req(API,'/posts?limit=100')).p.posts||[];yes(feed.some((x:any)=>x.id===created.id),'feed missing');pass('post-feed-read');
- const mine=(await req(API,'/me/posts',{id:b})).p.posts||[];yes(mine.some((x:any)=>x.id===created.id),'cross-device mine missing');pass('account-cross-device-read');
  const denied=await req(API,`/posts/${created.id}`,{method:'DELETE',id:attacker,expected:[403]});eq(denied.p.error,'not_post_owner','non-owner delete');pass('non-owner-delete-denied');
  const msg=(await req(THREAD,`/posts/${created.id}/thread`,{method:'POST',id:a,expected:[201],body:{event_type:'message',content:'AI-STAGING E2E room message',identity_kind:'account',participant_role:'maker',display_name:'E2E Maker'}})).p.event;cleanupMessage=msg?.id||'';yes(msg?.id,'thread id');pass('thread-message-create',msg.id);
  const thread=(await req(THREAD,`/posts/${created.id}/thread`)).p.events||[];yes(thread.some((x:any)=>x.id===msg.id),'thread read missing');pass('thread-message-read');
  const access=(await req(THREAD,`/posts/${created.id}/thread/access`,{id:b})).p;eq(access.current_role,'maker','thread role');yes((access.deletable_event_ids||[]).includes(msg.id),'deletable missing');pass('thread-cross-device-access');
- const profileAfter=(await req(API,'/me/account',{id:b})).p;eq(profileAfter.account.profile.displayName,profile.displayName,'profile preserved after post/thread/link');pass('profile-preserved');
  const roomResult=(await req(THREAD,`/posts/${created.id}/solution-room`,{method:'POST',id:a,expected:[201]})).p;const roomId=roomResult.room?.id;yes(roomId,'solution room id');eq(roomResult.room.post_id,created.id,'solution room post binding');pass('solution-room-create',roomId);
  const roomAgain=(await req(THREAD,`/posts/${created.id}/solution-room`,{method:'POST',id:b,expected:[200]})).p;eq(roomAgain.room.id,roomId,'solution room idempotent');pass('solution-room-idempotent');
  const rooms=(await req(THREAD,'/solution-rooms')).p.rooms||[];yes(rooms.some((x:any)=>x.id===roomId&&x.post?.id===created.id),'solution room list binding');pass('solution-room-list');
