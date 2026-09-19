@@ -66,6 +66,39 @@ async function own(pubkey:string,kind:string){
 }
 function uuid(value:any){return typeof value==='string'&&/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(value)}
 function roomId(value:any){return typeof value==='string'&&/^[0-9a-f-]{36}$/i.test(value)}
+async function activeRole(postId:string,pubkey:string,role:'voice'|'maker'){
+  const {data,error}=await db.from(T('boyaki_thread_events'))
+    .select('id').eq('post_id',postId).eq('owner_account_pubkey',pubkey).eq('participant_role',role).eq('status','active').limit(1);
+  if(error)throw Error(error.message);
+  return Boolean(data?.length);
+}
+async function getOrCreateRoom(postId:string,makerPubkey:string){
+  const existing=await db.from(T('boyaki_solution_rooms'))
+    .select('id,post_id,created_by_pubkey,status,created_at,updated_at').eq('post_id',postId).maybeSingle();
+  if(existing.error)throw Error(existing.error.message);
+  if(existing.data)return existing.data;
+  const {data,error}=await db.from(T('boyaki_solution_rooms'))
+    .insert({post_id:postId,created_by_pubkey:makerPubkey,status:'active'})
+    .select('id,post_id,created_by_pubkey,status,created_at,updated_at').single();
+  if(error){
+    if((error as any).code==='23505'){
+      const retry=await db.from(T('boyaki_solution_rooms')).select('id,post_id,created_by_pubkey,status,created_at,updated_at').eq('post_id',postId).single();
+      if(retry.error)throw Error(retry.error.message);
+      return retry.data;
+    }
+    throw Error(error.message);
+  }
+  return data;
+}
+async function roomAccess(room:any,pubkey:string){
+  if(room.created_by_pubkey===pubkey)return {can_write:true,role:'maker',invitation:null};
+  if(await activeRole(room.post_id,pubkey,'maker'))return {can_write:true,role:'maker',invitation:null};
+  const {data:invitation,error}=await db.from(T('boyaki_solution_room_invitations'))
+    .select('id,status,room_id,post_id,inviter_maker_pubkey,invitee_account_pubkey,created_at,updated_at,accepted_at')
+    .eq('room_id',room.id).eq('invitee_account_pubkey',pubkey).maybeSingle();
+  if(error)throw Error(error.message);
+  return {can_write:invitation?.status==='accepted',role:invitation?.status==='accepted'?'voice':null,invitation:invitation||null};
+}
 
 function median(values:number[]){if(!values.length)return null;const xs=[...values].sort((a,b)=>a-b),mid=Math.floor(xs.length/2);return xs.length%2?xs[mid]:Math.round((xs[mid-1]+xs[mid])/2)}
 async function demandEvidenceForPost(postId:string){
@@ -114,26 +147,14 @@ async function getSolutionRoom(req:Request,id:string){
 async function ensureSolutionRoom(req:Request,postId:string){
   const event=await auth(req,'',false);await consume(event,req);
   await own(event.pubkey,'account');
-  const {data:post,error:postError}=await db.from(T('boyaki_posts'))
-    .select('id,status').eq('id',postId).maybeSingle();
+  const {data:post,error:postError}=await db.from(T('boyaki_posts')).select('id,status').eq('id',postId).maybeSingle();
   if(postError)throw Error(postError.message);
   if(!post||post.status!=='active')return json(req,404,{error:'post_not_found'});
-  const existing=await db.from(T('boyaki_solution_rooms'))
-    .select('id,post_id,created_by_pubkey,status,created_at,updated_at').eq('post_id',postId).maybeSingle();
+  if(!await activeRole(postId,event.pubkey,'maker'))return json(req,403,{error:'maker_role_required'});
+  const existing=await db.from(T('boyaki_solution_rooms')).select('id').eq('post_id',postId).maybeSingle();
   if(existing.error)throw Error(existing.error.message);
-  if(existing.data)return json(req,200,{room:existing.data,created:false,environment:'AI-STAGING'});
-  const {data,error}=await db.from(T('boyaki_solution_rooms'))
-    .insert({post_id:postId,created_by_pubkey:event.pubkey,status:'active'})
-    .select('id,post_id,created_by_pubkey,status,created_at,updated_at').single();
-  if(error){
-    if((error as any).code==='23505'){
-      const retry=await db.from(T('boyaki_solution_rooms')).select('id,post_id,created_by_pubkey,status,created_at,updated_at').eq('post_id',postId).single();
-      if(retry.error)throw Error(retry.error.message);
-      return json(req,200,{room:retry.data,created:false,environment:'AI-STAGING'});
-    }
-    throw Error(error.message);
-  }
-  return json(req,201,{room:data,created:true,environment:'AI-STAGING'});
+  const room=await getOrCreateRoom(postId,event.pubkey);
+  return json(req,existing.data?200:201,{room,created:!existing.data,environment:'AI-STAGING'});
 }
 async function listRoomMessages(req:Request,id:string){
   const {data,error}=await db.from(T('boyaki_solution_room_messages'))
@@ -144,10 +165,12 @@ async function listRoomMessages(req:Request,id:string){
 }
 async function createRoomMessage(req:Request,id:string,raw:string){
   const event=await auth(req,raw,true);await consume(event,req);
-  const {data:room,error:roomError}=await db.from(T('boyaki_solution_rooms')).select('id,status').eq('id',id).maybeSingle();
+  const {data:room,error:roomError}=await db.from(T('boyaki_solution_rooms')).select('id,post_id,created_by_pubkey,status').eq('id',id).maybeSingle();
   if(roomError)throw Error(roomError.message);
   if(!room||room.status!=='active')return json(req,404,{error:'solution_room_not_found'});
   await own(event.pubkey,'account');
+  const access=await roomAccess(room,event.pubkey);
+  if(!access.can_write)return json(req,403,{error:'room_invitation_required'});
   const {data:account,error:accountError}=await db.from(T('boyaki_accounts')).select('account_pubkey,profile').eq('account_pubkey',event.pubkey).maybeSingle();
   if(accountError)throw Error(accountError.message);
   const body=JSON.parse(raw||'{}'),content=typeof body.content==='string'?body.content.trim():'';
@@ -160,7 +183,7 @@ async function createRoomMessage(req:Request,id:string,raw:string){
   }).select('id,room_id,author_pubkey,owner_account_pubkey,display_name,content,status,created_at').single();
   if(error)throw Error(error.message);
   await db.from(T('boyaki_solution_rooms')).update({updated_at:new Date().toISOString()}).eq('id',id);
-  return json(req,201,{message:data,environment:'AI-STAGING'});
+  return json(req,201,{message:data,room_role:access.role,environment:'AI-STAGING'});
 }
 async function deleteRoomMessage(req:Request,id:string){
   const event=await auth(req);await consume(event,req);
@@ -175,10 +198,11 @@ async function deleteRoomMessage(req:Request,id:string){
 }
 async function createSolutionCase(req:Request,room:string,raw:string){
   const event=await auth(req,raw,true);await consume(event,req);
-  const {data:roomRow,error:roomError}=await db.from(T('boyaki_solution_rooms')).select('id,post_id,status').eq('id',room).maybeSingle();
+  const {data:roomRow,error:roomError}=await db.from(T('boyaki_solution_rooms')).select('id,post_id,created_by_pubkey,status').eq('id',room).maybeSingle();
   if(roomError)throw Error(roomError.message);
   if(!roomRow||roomRow.status!=='active')return json(req,404,{error:'solution_room_not_found'});
   await own(event.pubkey,'account');
+  if(!await activeRole(roomRow.post_id,event.pubkey,'maker'))return json(req,403,{error:'maker_role_required'});
   const body=JSON.parse(raw||'{}');
   const title=typeof body.title==='string'?body.title.trim():'';
   const contribution=typeof body.contribution==='string'?body.contribution.trim():'';
@@ -245,6 +269,58 @@ async function listMyVoiceHistory(req:Request){
   });
 }
 
+async function createRoomInvitation(req:Request,postId:string,raw:string){
+  const event=await auth(req,raw,true);await consume(event,req);await own(event.pubkey,'account');
+  const {data:post,error:postError}=await db.from(T('boyaki_posts')).select('id,status').eq('id',postId).maybeSingle();
+  if(postError)throw Error(postError.message);
+  if(!post||post.status!=='active')return json(req,404,{error:'post_not_found'});
+  if(!await activeRole(postId,event.pubkey,'maker'))return json(req,403,{error:'maker_role_required'});
+  const body=JSON.parse(raw||'{}'),threadEventId=String(body.thread_event_id||'');
+  if(!uuid(threadEventId))return json(req,400,{error:'invalid_thread_event_id'});
+  const {data:voiceEvent,error:voiceError}=await db.from(T('boyaki_thread_events'))
+    .select('id,post_id,owner_account_pubkey,participant_role,status,display_name').eq('id',threadEventId).maybeSingle();
+  if(voiceError)throw Error(voiceError.message);
+  if(!voiceEvent||voiceEvent.post_id!==postId||voiceEvent.status!=='active'||voiceEvent.participant_role!=='voice')return json(req,400,{error:'voice_thread_event_required'});
+  if(!voiceEvent.owner_account_pubkey)return json(req,409,{error:'voice_account_required'});
+  if(voiceEvent.owner_account_pubkey===event.pubkey)return json(req,409,{error:'cannot_invite_self'});
+  const room=await getOrCreateRoom(postId,event.pubkey),now=new Date().toISOString();
+  const {data:existing,error:existingError}=await db.from(T('boyaki_solution_room_invitations'))
+    .select('id,status,room_id,post_id,inviter_maker_pubkey,invitee_account_pubkey,source_thread_event_id,created_at,updated_at,accepted_at')
+    .eq('room_id',room.id).eq('invitee_account_pubkey',voiceEvent.owner_account_pubkey).maybeSingle();
+  if(existingError)throw Error(existingError.message);
+  if(existing?.status==='accepted'||existing?.status==='pending')return json(req,200,{room,invitation:existing,idempotent:true,environment:'AI-STAGING'});
+  const payload={room_id:room.id,post_id:postId,inviter_maker_pubkey:event.pubkey,invitee_account_pubkey:voiceEvent.owner_account_pubkey,source_thread_event_id:threadEventId,status:'pending',updated_at:now,accepted_at:null};
+  const query=existing
+    ?db.from(T('boyaki_solution_room_invitations')).update(payload).eq('id',existing.id)
+    :db.from(T('boyaki_solution_room_invitations')).insert(payload);
+  const {data,error}=await query.select('id,status,room_id,post_id,inviter_maker_pubkey,invitee_account_pubkey,source_thread_event_id,created_at,updated_at,accepted_at').single();
+  if(error)throw Error(error.message);
+  return json(req,existing?200:201,{room,invitation:data,idempotent:false,environment:'AI-STAGING'});
+}
+async function acceptRoomInvitation(req:Request,id:string){
+  const event=await auth(req);await consume(event,req);await own(event.pubkey,'account');
+  const {data:invitation,error:lookupError}=await db.from(T('boyaki_solution_room_invitations'))
+    .select('id,status,room_id,post_id,inviter_maker_pubkey,invitee_account_pubkey,source_thread_event_id,created_at,updated_at,accepted_at').eq('id',id).maybeSingle();
+  if(lookupError)throw Error(lookupError.message);
+  if(!invitation)return json(req,404,{error:'invitation_not_found'});
+  if(invitation.invitee_account_pubkey!==event.pubkey)return json(req,403,{error:'not_invitation_recipient'});
+  if(invitation.status==='accepted')return json(req,200,{invitation,idempotent:true,environment:'AI-STAGING'});
+  if(invitation.status!=='pending')return json(req,409,{error:'invitation_not_pending'});
+  const now=new Date().toISOString();
+  const {data,error}=await db.from(T('boyaki_solution_room_invitations')).update({status:'accepted',accepted_at:now,updated_at:now})
+    .eq('id',id).select('id,status,room_id,post_id,inviter_maker_pubkey,invitee_account_pubkey,source_thread_event_id,created_at,updated_at,accepted_at').single();
+  if(error)throw Error(error.message);
+  return json(req,200,{invitation:data,idempotent:false,environment:'AI-STAGING'});
+}
+async function getRoomAccess(req:Request,id:string){
+  const event=await auth(req);await own(event.pubkey,'account');
+  const {data:room,error}=await db.from(T('boyaki_solution_rooms')).select('id,post_id,created_by_pubkey,status').eq('id',id).maybeSingle();
+  if(error)throw Error(error.message);
+  if(!room||room.status!=='active')return json(req,404,{error:'solution_room_not_found'});
+  const access=await roomAccess(room,event.pubkey);
+  return json(req,200,{room_id:id,actor_pubkey:event.pubkey,...access,environment:'AI-STAGING'});
+}
+
 async function deleteSolutionCase(req:Request,id:string){
   const event=await auth(req);await consume(event,req);
   const {data:item,error:lookupError}=await db.from(T('boyaki_solution_cases')).select('maker_account_pubkey,status').eq('id',id).maybeSingle();
@@ -264,7 +340,7 @@ Deno.serve(async req=>{
   try{
     if(req.method==='GET'&&path==='/health')return json(req,200,{
       ok:true,service:'ai-staging-boyaki-thread-api',canonical_threads:true,room_chat:true,
-      post_bound_solution_rooms:true,solution_cases:true,voice_history:true,case_evidence_snapshot:true,environment:'AI-STAGING',version:'ai-staging-case-evidence-v5'
+      post_bound_solution_rooms:true,room_invitations:true,solution_cases:true,voice_history:true,case_evidence_snapshot:true,environment:'AI-STAGING',version:'ai-staging-invitation-flow-v6'
     });
 
     const threadMatch=/^\/posts\/([0-9a-f-]+)\/thread$/i.exec(path);
@@ -273,12 +349,16 @@ Deno.serve(async req=>{
     const roomMatch=/^\/solution-rooms\/([0-9a-f-]{36})$/i.exec(path);
     const roomMessageMatch=/^\/solution-rooms\/([0-9a-f-]{36})\/messages$/i.exec(path);
     const roomCaseMatch=/^\/solution-rooms\/([0-9a-f-]{36})\/cases$/i.exec(path);
+    const roomAccessMatch=/^\/solution-rooms\/([0-9a-f-]{36})\/access$/i.exec(path);
+    const inviteMatch=/^\/posts\/([0-9a-f-]+)\/solution-room\/invitations$/i.exec(path);
+    const inviteAcceptMatch=/^\/solution-room-invitations\/([0-9a-f-]+)\/accept$/i.exec(path);
     const roomMessageDeleteMatch=/^\/solution-room-messages\/([0-9a-f-]+)$/i.exec(path);
     const caseDeleteMatch=/^\/solution-cases\/([0-9a-f-]+)$/i.exec(path);
 
     if(req.method==='GET'&&path==='/solution-rooms')return listSolutionRooms(req);
     if(req.method==='GET'&&roomMatch&&roomId(roomMatch[1]))return getSolutionRoom(req,roomMatch[1]);
     if(req.method==='GET'&&roomMessageMatch&&roomId(roomMessageMatch[1]))return listRoomMessages(req,roomMessageMatch[1]);
+    if(req.method==='GET'&&roomAccessMatch&&roomId(roomAccessMatch[1]))return getRoomAccess(req,roomAccessMatch[1]);
     if(req.method==='GET'&&path==='/me/solution-cases')return listMySolutionCases(req);
     if(req.method==='GET'&&path==='/me/voice-history')return listMyVoiceHistory(req);
 
@@ -301,16 +381,32 @@ Deno.serve(async req=>{
         .or(`author_pubkey.eq.${event.pubkey},owner_account_pubkey.eq.${event.pubkey}`).order('created_at',{ascending:false});
       const rows=data||[],role=rows.find((x:any)=>x.participant_role==='voice'||x.participant_role==='maker'),named=rows.find((x:any)=>x.display_name);
       const existingRoom=await db.from(T('boyaki_solution_rooms')).select('id').eq('post_id',accessMatch[1]).eq('status','active').maybeSingle();
+      let myInvitation:any=null,roomInvitations:any[]=[];
+      if(existingRoom.data?.id){
+        const mine=await db.from(T('boyaki_solution_room_invitations'))
+          .select('id,status,room_id,post_id,inviter_maker_pubkey,invitee_account_pubkey,source_thread_event_id,created_at,updated_at,accepted_at')
+          .eq('room_id',existingRoom.data.id).eq('invitee_account_pubkey',event.pubkey).maybeSingle();
+        if(mine.error)throw Error(mine.error.message);myInvitation=mine.data||null;
+        if(role?.participant_role==='maker'){
+          const invites=await db.from(T('boyaki_solution_room_invitations'))
+            .select('id,status,room_id,post_id,inviter_maker_pubkey,invitee_account_pubkey,source_thread_event_id,created_at,updated_at,accepted_at')
+            .eq('room_id',existingRoom.data.id).order('created_at',{ascending:true});
+          if(invites.error)throw Error(invites.error.message);roomInvitations=invites.data||[];
+        }
+      }
       return json(req,200,{
         can_post_as_poster:post.author_pubkey===event.pubkey||post.owner_account_pubkey===event.pubkey,
         actor_pubkey:event.pubkey,current_role:role?.participant_role||null,current_display_name:named?.display_name||null,
-        deletable_event_ids:rows.map((x:any)=>x.id),solution_room_id:existingRoom.data?.id||null
+        deletable_event_ids:rows.map((x:any)=>x.id),solution_room_id:existingRoom.data?.id||null,
+        my_invitation:myInvitation,room_invitations:roomInvitations
       });
     }
 
     const raw=await req.text();
 
     if(req.method==='POST'&&ensureRoomMatch&&uuid(ensureRoomMatch[1]))return ensureSolutionRoom(req,ensureRoomMatch[1]);
+    if(req.method==='POST'&&inviteMatch&&uuid(inviteMatch[1]))return createRoomInvitation(req,inviteMatch[1],raw);
+    if(req.method==='POST'&&inviteAcceptMatch&&uuid(inviteAcceptMatch[1]))return acceptRoomInvitation(req,inviteAcceptMatch[1]);
     if(req.method==='POST'&&roomMessageMatch&&roomId(roomMessageMatch[1]))return createRoomMessage(req,roomMessageMatch[1],raw);
     if(req.method==='POST'&&roomCaseMatch&&roomId(roomCaseMatch[1]))return createSolutionCase(req,roomCaseMatch[1],raw);
 
