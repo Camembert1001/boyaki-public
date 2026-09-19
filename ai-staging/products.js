@@ -12,8 +12,8 @@ function card(product){
   for(const [label,count] of [['同じ悩み',evidence.same_problem?.count||0],['試したい',evidence.would_try?.count||0],['払ってもいい',evidence.would_pay?.count||0]]){const chip=document.createElement('span');chip.className=`step${count?' on':''}`;chip.textContent=`${label} ${count}`;ladder.append(chip)}
   if(evidence.would_pay?.median_yen){const chip=document.createElement('span');chip.className='step on';chip.textContent=`支払中央値 ${yen(evidence.would_pay.median_yen)}`;ladder.append(chip)}
   article.append(ladder);
-  const source=String(product.source_post?.content||'').trim();
-  if(source){const p=document.createElement('p');p.className='hint';p.textContent=`元のBOYAKI: ${source.length>120?source.slice(0,120)+'…':source}`;article.append(p)}
+  const sourcePost=product.source_post,source=String(sourcePost?.content||'').trim();
+  if(source){const p=document.createElement('p');p.className='hint';const label=sourcePost?.shared_problem?'共有Problem':'元のBOYAKI';p.textContent=`${label}: ${source.length>120?source.slice(0,120)+'…':source}`;article.append(p)}
   const actions=document.createElement('div');actions.className='actions';const open=document.createElement('a');open.className='button-link';open.href=`./product.html?id=${encodeURIComponent(product.id)}`;open.textContent='商品を見る';actions.append(open);article.append(actions);
   return article;
 }

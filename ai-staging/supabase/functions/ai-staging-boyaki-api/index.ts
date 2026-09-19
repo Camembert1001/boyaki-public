@@ -90,12 +90,56 @@ async function deleteDemand(req:Request,postId:string,signal:string){
  if(error)throw Error(error.message);
  return json(req,200,{ok:true,post_id:postId,signal,environment:'AI-STAGING'});
 }
+async function listProblems(req:Request,url:URL){
+ const n=Math.max(1,Math.min(Number(url.searchParams.get('limit')||100)||100,200));
+ const{data:problemRows,error:problemError}=await db.from(T('boyaki_problem_statements'))
+   .select('id,post_id,statement,status,created_at,updated_at')
+   .eq('status','active').order('updated_at',{ascending:false}).limit(Math.min(n*2,400));
+ if(problemError)throw Error(problemError.message);
+ const rawProblems=problemRows||[],postIds=rawProblems.map((x:any)=>x.post_id);
+ if(!postIds.length)return json(req,200,{problems:[],environment:'AI-STAGING',market_scope:'shared_problem_only'});
+ const postOut=await db.from(T('boyaki_posts'))
+   .select('id,status,created_at,withdrawn_at').in('id',postIds).in('status',['active','withdrawn']);
+ if(postOut.error)throw Error(postOut.error.message);
+ const postMap=new Map((postOut.data||[]).map((x:any)=>[x.id,x]));
+ const liveProblems=rawProblems.filter((x:any)=>postMap.has(x.post_id)).slice(0,n);
+ const liveIds=liveProblems.map((x:any)=>x.post_id);
+ let demand:any[]=[];
+ if(liveIds.length){
+   const out=await db.from(T('boyaki_demand_signals')).select('post_id,signal,amount_yen').in('post_id',liveIds);
+   if(out.error)throw Error(out.error.message);demand=out.data||[];
+ }
+ const byPost=new Map<string,any>();
+ for(const row of demand){
+   let s=byPost.get(row.post_id);if(!s){s={same_problem:0,would_try:0,would_pay:0,pay_amounts:[]};byPost.set(row.post_id,s)}
+   if(row.signal==='same_problem')s.same_problem++;
+   else if(row.signal==='would_try')s.would_try++;
+   else if(row.signal==='would_pay'){s.would_pay++;if(Number(row.amount_yen)>0)s.pay_amounts.push(Number(row.amount_yen))}
+ }
+ return json(req,200,{
+   problems:liveProblems.map((problem:any)=>{
+     const post=postMap.get(problem.post_id),s=byPost.get(problem.post_id)||{same_problem:0,would_try:0,would_pay:0,pay_amounts:[]};
+     const summary={same_problem:s.same_problem,would_try:s.would_try,would_pay:s.would_pay,median_yen:median(s.pay_amounts)};
+     return {
+       id:problem.id,post_id:problem.post_id,statement:problem.statement,
+       source_status:post.status,source_withdrawn:post.status==='withdrawn',
+       source_created_at:post.created_at,source_withdrawn_at:post.withdrawn_at,
+       created_at:problem.created_at,updated_at:problem.updated_at,
+       demand_summary:summary,
+       demand_total:summary.same_problem+summary.would_try+summary.would_pay,
+       shared_problem:true
+     };
+   }),
+   environment:'AI-STAGING',market_scope:'shared_problem_only'
+ });
+}
 
 Deno.serve(async(req)=>{if(req.method==='OPTIONS')return new Response(null,{status:204,headers:cors(req)});const u=new URL(req.url),m='/ai-staging-boyaki-api',i=u.pathname.indexOf(m),p=i>=0?(u.pathname.slice(i+m.length)||'/'):u.pathname;try{
-if(req.method==='GET'&&p==='/health')return json(req,200,{ok:true,service:'ai-staging-boyaki-api',canonical_storage:true,demand_evidence:true,shared_problem_transition:true,environment:'AI-STAGING',parent:'STAGING',version:'ai-staging-problem-transition-v6'});
+if(req.method==='GET'&&p==='/health')return json(req,200,{ok:true,service:'ai-staging-boyaki-api',canonical_storage:true,demand_evidence:true,shared_problem_transition:true,problem_market:true,environment:'AI-STAGING',parent:'STAGING',version:'ai-staging-problem-market-v7'});
 const demandMineMatch=/^\/posts\/([0-9a-f-]+)\/demand\/mine$/i.exec(p),demandMatch=/^\/posts\/([0-9a-f-]+)\/demand$/i.exec(p),demandDeleteMatch=/^\/posts\/([0-9a-f-]+)\/demand\/(same_problem|would_try|would_pay)$/i.exec(p);
 if(req.method==='GET'&&demandMineMatch&&uuid(demandMineMatch[1]))return demandMine(req,demandMineMatch[1]);
 if(req.method==='GET'&&demandMatch&&uuid(demandMatch[1]))return demandAggregate(req,demandMatch[1]);
+if(req.method==='GET'&&p==='/problems')return listProblems(req,u);
 if(req.method==='GET'&&p==='/posts'){
  const n=Math.max(1,Math.min(Number(u.searchParams.get('limit')||50)||50,100));
  const{data,error}=await db.from(T('boyaki_posts')).select('id,author_pubkey,content,created_at,status,withdrawn_at').in('status',['active','withdrawn']).order('created_at',{ascending:false}).limit(Math.min(n*2,200));if(error)throw Error(error.message);

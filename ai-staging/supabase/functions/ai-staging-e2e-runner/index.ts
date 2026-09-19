@@ -20,7 +20,7 @@ async function auth(i:Id,url:string,method:string,raw=''){const tags:any[]=[['u'
 async function req(base:string,path:string,opt:any={}){const method=opt.method||'GET',body=opt.body??null,i=opt.id??null,expected=opt.expected||[200],url=base+(path.startsWith('/')?path:`/${path}`),raw=body===null?'':JSON.stringify(body),headers=i?await auth(i,url,method,raw):{'Content-Type':'application/json'};const r=await fetch(url,{method,headers,body:raw||undefined});const responseBody=await r.text();let p:any={};try{p=JSON.parse(responseBody)}catch{p={body:responseBody}};responses.push({method,url,status:r.status,body:p,request_id:r.headers.get('sb-request-id')});if(!expected.includes(r.status))fail(`${method} ${path} -> ${r.status}: ${JSON.stringify(p)}`);return{status:r.status,p}}
 let cleanupAccount:Id|null=null,cleanupPost='',cleanupMessage='',cleanupRoomMessage='',cleanupCase='';
 async function run(){
- const h=(await req(API,'/health')).p;eq(h.ok,true,'api health');eq(h.environment,'AI-STAGING','api environment');pass('api-health',h);
+ const h=(await req(API,'/health')).p;eq(h.ok,true,'api health');eq(h.environment,'AI-STAGING','api environment');eq(h.problem_market,true,'problem market health');pass('api-health',h);
  const th=(await req(THREAD,'/health')).p;eq(th.ok,true,'thread health');eq(th.environment,'AI-STAGING','thread environment');pass('thread-health',th);
  const a=identity(), b:Id={sk:a.sk,pk:a.pk,kind:'account'}, attacker=identity();
  cleanupAccount=a;
@@ -51,6 +51,7 @@ async function run(){
  const after=(await req(API,'/me/posts',{id:a})).p.posts||[],row=after.find((x:any)=>x.id===created.id);eq(row?.status,'withdrawn','post status');eq(row?.content,null,'original post purge');eq(row?.problem_statement,problemText,'shared problem retained');pass('post-withdrawal-purge');
  const feed2=(await req(API,'/posts?limit=100')).p.posts||[],problemRow=feed2.find((x:any)=>x.id===created.id);yes(problemRow,'shared problem missing from feed');eq(problemRow.content,problemText,'feed shared problem');eq(problemRow.author_pubkey,null,'withdrawn source author hidden');pass('shared-problem-remains-discoverable');
  const roomAfterPostDelete=(await req(THREAD,`/solution-rooms/${roomId}`)).p.room;eq(roomAfterPostDelete.post.status,'withdrawn','source post status after withdrawal');eq(roomAfterPostDelete.post.content,problemText,'room shared problem fallback');pass('post-withdrawal-preserves-solution-room-history');
+ const market=(await req(API,'/problems?limit=200')).p;eq(market.market_scope,'shared_problem_only','problem market scope');const marketProblem=(market.problems||[]).find((x:any)=>x.post_id===created.id);yes(marketProblem,'shared problem missing from market');eq(marketProblem.statement,problemText,'market problem text');eq(marketProblem.source_withdrawn,true,'market source withdrawal');pass('shared-problem-market-discovery');
  const {error:fixtureDeleteError}=await db.from(T('boyaki_posts')).delete().eq('id',created.id);if(fixtureDeleteError)fail('fixture post cleanup: '+fixtureDeleteError.message);
  await db.from(T('boyaki_accounts')).delete().eq('account_pubkey',a.pk);
  cleanupPost='';cleanupMessage='';cleanupRoomMessage='';cleanupCase='';cleanupAccount=null;

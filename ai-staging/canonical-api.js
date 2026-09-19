@@ -5,7 +5,7 @@ const COMMERCE='https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/ai-staging
 const store=window.BOYAKI_STORAGE;
 export const fromHex=h=>new Uint8Array((h.match(/.{1,2}/g)||[]).map(b=>parseInt(b,16)));
 export const toHex=bytes=>[...bytes].map(b=>b.toString(16).padStart(2,'0')).join('');
-window.BOYAKI_AI_STAGING_CLIENT_VERSION='20260919-problem-transition-v8';
+window.BOYAKI_AI_STAGING_CLIENT_VERSION='20260919-problem-market-v9';
 function identity(){
   const h=store.local.getItem('boyaki-account-sk')||store.session.getItem('boyaki-account-sk');
   if(h){const sk=fromHex(h);return{sk,pk:getPublicKey(sk),kind:'account'}}
@@ -33,6 +33,7 @@ export const client={
   getAccount:(signer=null)=>main('/me/account',{signed:true,signer}),
   saveAccount:(profile,signer=null)=>main('/me/account',{method:'POST',signed:true,signer,body:{profile}}),
   listPosts:(n=100)=>main(`/posts?limit=${Math.max(1,Math.min(Number(n)||100,100))}`),
+  listProblems:(n=100)=>main(`/problems?limit=${Math.max(1,Math.min(Number(n)||100,200))}`),
   listMine:()=>main('/me/posts',{signed:true}),
   createPost:content=>main('/posts',{method:'POST',signed:true,body:{content,identity_kind:identity().kind}}),
   deletePost:id=>main(`/posts/${encodeURIComponent(id)}`,{method:'DELETE',signed:true}),
@@ -73,4 +74,4 @@ export const client={
   listMySales:()=>commerce('/me/sales',{signed:true})
 };
 window.BOYAKI_CANONICAL=client;
-if(document.querySelector('#feed'))initialize().then(async ok=>{if(ok)await import('./canonical-cutover.js?v=20260919-problem-transition-v8')}).catch(e=>console.error('AI-STAGING initialization failed',e));
+if(document.querySelector('#feed'))initialize().then(async ok=>{if(ok)await import('./canonical-cutover.js?v=20260919-problem-market-v9')}).catch(e=>console.error('AI-STAGING initialization failed',e));
