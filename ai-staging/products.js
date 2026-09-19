@@ -1,4 +1,4 @@
-import { client } from './canonical-api.js?v=20260919-commerce-v6';
+import { client } from './canonical-api.js?v=20260919-thread-room-product-v7';
 const $=s=>document.querySelector(s);
 const yen=v=>new Intl.NumberFormat('ja-JP',{style:'currency',currency:'JPY',maximumFractionDigits:0}).format(Number(v)||0);
 function card(product){
