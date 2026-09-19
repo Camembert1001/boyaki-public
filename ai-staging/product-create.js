@@ -17,8 +17,8 @@ function renderCase(item){
   }
   if(evidence.would_pay?.median_yen){const chip=document.createElement('span');chip.className='step on';chip.textContent=`支払中央値 ${yen(evidence.would_pay.median_yen)}`;ladder.append(chip)}
   box.append(ladder);
-  const source=String(item.room?.post?.content||'').trim();
-  if(source){const q=document.createElement('p');q.className='hint';q.textContent=`元のBOYAKI: ${source}`;box.append(q)}
+  const post=item.room?.post,source=String(post?.content||'').trim();
+  if(source){const q=document.createElement('p');q.className='hint';q.textContent=`${post?.source_withdrawn?'共有Problem（元BOYAKI本文は取り下げ済み）':'元のBOYAKI'}: ${source}`;box.append(q)}
 }
 async function load(){
   const id=client.identity();
