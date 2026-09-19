@@ -6,7 +6,7 @@ const status=document.querySelector('#voice-contribution-status');
 function fmt(value){return value?new Date(value).toLocaleString('ja-JP'):''}
 function excerpt(post){
   const text=String(post?.content||'').trim();
-  if(!text)return post?.status==='deleted'?'元のBOYAKIは取り下げ済み':'元のBOYAKIを取得できません';
+  if(!text)return post?.source_withdrawn?'共有Problem':'元のBOYAKIを取得できません';
   return text.length>110?`${text.slice(0,110)}…`:text;
 }
 function eventLabel(type){
@@ -18,11 +18,11 @@ function demandLabel(signal){
 function cardBase(title,post,createdAt){
   const card=document.createElement('article');card.className='participation-panel';
   const h=document.createElement('h3');h.textContent=title;card.append(h);
-  const source=document.createElement('p');source.className='hint';source.textContent=`BOYAKI: ${excerpt(post)}`;card.append(source);
+  const source=document.createElement('p');source.className='hint';source.textContent=`${post?.source_withdrawn?'共有Problem':'BOYAKI'}: ${excerpt(post)}`;card.append(source);
   const meta=document.createElement('p');meta.className='hint';meta.textContent=`${fmt(createdAt)} · Voice · AI-STAGING`;card.append(meta);
-  if(post?.id&&post?.status==='active'){
+  if(post?.id&&(post?.status==='active'||post?.source_withdrawn)){
     const actions=document.createElement('div');actions.className='actions';
-    const link=document.createElement('a');link.className='button-link';link.href=`./?problem=${encodeURIComponent(post.id)}`;link.textContent='BOYAKIを見る';actions.append(link);card.append(actions);
+    const link=document.createElement('a');link.className='button-link';link.href=`./?problem=${encodeURIComponent(post.id)}`;link.textContent=post?.source_withdrawn?'共有Problemを見る':'BOYAKIを見る';actions.append(link);card.append(actions);
   }
   return card;
 }
