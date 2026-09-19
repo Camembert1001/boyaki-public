@@ -67,6 +67,22 @@ async function own(pubkey:string,kind:string){
 function uuid(value:any){return typeof value==='string'&&/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(value)}
 function roomId(value:any){return typeof value==='string'&&/^[0-9a-f-]{36}$/i.test(value)}
 
+function median(values:number[]){if(!values.length)return null;const xs=[...values].sort((a,b)=>a-b),mid=Math.floor(xs.length/2);return xs.length%2?xs[mid]:Math.round((xs[mid-1]+xs[mid])/2)}
+async function demandEvidenceForPost(postId:string){
+  const{data,error}=await db.from(T('boyaki_demand_signals'))
+    .select('signal,amount_yen,condition_text,actor_identity_kind,updated_at')
+    .eq('post_id',postId);
+  if(error)throw Error(error.message);
+  const rows=data||[],same=rows.filter((x:any)=>x.signal==='same_problem'),trying=rows.filter((x:any)=>x.signal==='would_try'),pay=rows.filter((x:any)=>x.signal==='would_pay');
+  const amounts=pay.map((x:any)=>Number(x.amount_yen)).filter((x:number)=>Number.isFinite(x)&&x>0);
+  return {
+    same_problem:{count:same.length,account_count:same.filter((x:any)=>x.actor_identity_kind==='account').length},
+    would_try:{count:trying.length,account_count:trying.filter((x:any)=>x.actor_identity_kind==='account').length},
+    would_pay:{count:pay.length,account_count:pay.filter((x:any)=>x.actor_identity_kind==='account').length,min_yen:amounts.length?Math.min(...amounts):null,median_yen:median(amounts),max_yen:amounts.length?Math.max(...amounts):null},
+    pay_conditions:pay.filter((x:any)=>x.condition_text).sort((a:any,b:any)=>String(b.updated_at).localeCompare(String(a.updated_at))).slice(0,12).map((x:any)=>({amount_yen:x.amount_yen,condition_text:x.condition_text}))
+  };
+}
+
 async function listSolutionRooms(req:Request){
   const {data:rooms,error}=await db.from(T('boyaki_solution_rooms'))
     .select('id,post_id,created_by_pubkey,status,created_at,updated_at')
@@ -92,7 +108,8 @@ async function getSolutionRoom(req:Request,id:string){
   const {data:post,error:postError}=await db.from(T('boyaki_posts'))
     .select('id,author_pubkey,owner_account_pubkey,content,status,created_at').eq('id',room.post_id).maybeSingle();
   if(postError)throw Error(postError.message);
-  return json(req,200,{room:{...room,post:post||null},environment:'AI-STAGING'});
+  const demand_evidence=post?await demandEvidenceForPost(room.post_id):null;
+  return json(req,200,{room:{...room,post:post||null,demand_evidence},environment:'AI-STAGING'});
 }
 async function ensureSolutionRoom(req:Request,postId:string){
   const event=await auth(req,'',false);await consume(event,req);
@@ -158,7 +175,7 @@ async function deleteRoomMessage(req:Request,id:string){
 }
 async function createSolutionCase(req:Request,room:string,raw:string){
   const event=await auth(req,raw,true);await consume(event,req);
-  const {data:roomRow,error:roomError}=await db.from(T('boyaki_solution_rooms')).select('id,status').eq('id',room).maybeSingle();
+  const {data:roomRow,error:roomError}=await db.from(T('boyaki_solution_rooms')).select('id,post_id,status').eq('id',room).maybeSingle();
   if(roomError)throw Error(roomError.message);
   if(!roomRow||roomRow.status!=='active')return json(req,404,{error:'solution_room_not_found'});
   await own(event.pubkey,'account');
@@ -166,9 +183,10 @@ async function createSolutionCase(req:Request,room:string,raw:string){
   const title=typeof body.title==='string'?body.title.trim():'';
   const contribution=typeof body.contribution==='string'?body.contribution.trim():'';
   if(!title||title.length>100||!contribution||contribution.length>800)return json(req,400,{error:'invalid_solution_case'});
+  const evidence_snapshot=await demandEvidenceForPost(roomRow.post_id);
   const {data,error}=await db.from(T('boyaki_solution_cases')).insert({
-    room_id:room,maker_account_pubkey:event.pubkey,title,contribution,status:'active'
-  }).select('id,room_id,maker_account_pubkey,title,contribution,status,created_at,updated_at').single();
+    room_id:room,maker_account_pubkey:event.pubkey,title,contribution,evidence_snapshot,status:'active'
+  }).select('id,room_id,maker_account_pubkey,title,contribution,evidence_snapshot,status,created_at,updated_at').single();
   if(error)throw Error(error.message);
   await db.from(T('boyaki_solution_rooms')).update({updated_at:new Date().toISOString()}).eq('id',room);
   return json(req,201,{case:data,environment:'AI-STAGING'});
@@ -176,7 +194,7 @@ async function createSolutionCase(req:Request,room:string,raw:string){
 async function listMySolutionCases(req:Request){
   const event=await auth(req);
   const {data:cases,error}=await db.from(T('boyaki_solution_cases'))
-    .select('id,room_id,maker_account_pubkey,title,contribution,status,created_at,updated_at')
+    .select('id,room_id,maker_account_pubkey,title,contribution,evidence_snapshot,status,created_at,updated_at')
     .eq('maker_account_pubkey',event.pubkey).eq('status','active').order('created_at',{ascending:false}).limit(200);
   if(error)throw Error(error.message);
   const roomIds=[...new Set((cases||[]).map((x:any)=>x.room_id).filter(Boolean))];
@@ -246,7 +264,7 @@ Deno.serve(async req=>{
   try{
     if(req.method==='GET'&&path==='/health')return json(req,200,{
       ok:true,service:'ai-staging-boyaki-thread-api',canonical_threads:true,room_chat:true,
-      post_bound_solution_rooms:true,solution_cases:true,voice_history:true,environment:'AI-STAGING',version:'ai-staging-contribution-history-v4'
+      post_bound_solution_rooms:true,solution_cases:true,voice_history:true,case_evidence_snapshot:true,environment:'AI-STAGING',version:'ai-staging-case-evidence-v5'
     });
 
     const threadMatch=/^\/posts\/([0-9a-f-]+)\/thread$/i.exec(path);
