@@ -12,7 +12,9 @@ function render(p){
   box.append(meta,h,desc,price);
   const source=p.source_post,sourceText=String(source?.content||'').trim();
   const sourceBox=document.createElement('div');sourceBox.className='candidate-block';
-  const st=document.createElement('strong');st.textContent='元のBOYAKI';sourceBox.append(st);
+  const st=document.createElement('strong');
+  st.textContent=source?.source_withdrawn?'共有Problem（元BOYAKI本文は取り下げ済み）':'元のBOYAKI';
+  sourceBox.append(st);
   const sp=document.createElement('p');sp.textContent=sourceText||'元のBOYAKIは取り下げ済み';sourceBox.append(sp);box.append(sourceBox);
   if(p.solution_case){const caseBox=document.createElement('div');caseBox.className='candidate-block';caseBox.innerHTML='<strong>Solution Case</strong>';const t=document.createElement('p');t.textContent=p.solution_case.title;const c=document.createElement('p');c.className='hint';c.textContent=p.solution_case.contribution;caseBox.append(t,c);box.append(caseBox)}
   const actions=document.createElement('div');actions.className='actions';
@@ -64,7 +66,7 @@ $('#publish-back')?.addEventListener('click',async()=>{
     state.textContent=result.idempotent?'すでに掲載済みでした。':'元のBOYAKIスレッドにProductを掲載しました。';
   }catch(err){
     console.error('publish back failed',err);const code=String(err?.message||err);
-    state.textContent=code==='source_post_not_active'?'元のBOYAKIが取り下げ済みなので掲載できません。':'元スレッドへ掲載できませんでした。';
+    state.textContent=code==='source_thread_not_available'?'元のスレッドが共同Problemとして残っていないため掲載できません。':'元スレッドへ掲載できませんでした。';
     button.disabled=false;button.textContent='元スレッドに掲載する';
   }
 });
