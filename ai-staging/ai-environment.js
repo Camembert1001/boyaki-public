@@ -11,8 +11,9 @@
   document.documentElement.dataset.boyakiEnvironment='ai-staging';
   const base='https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/';
   const functions=['ai-staging-boyaki-api','ai-staging-boyaki-thread-api','ai-staging-e2e-runner'];
+  const sharedIdentityResolve=base+'boyaki-api/account-credentials/resolve';
   const root=new URL('/boyaki-public/ai-staging/',location.origin);
-  const allowed=value=>{const u=new URL(value,location.href);return (u.origin===root.origin&&u.pathname.startsWith(root.pathname))||functions.some(f=>u.href===base+f||u.href.startsWith(base+f+'/')||u.href.startsWith(base+f+'?'))};
+  const allowed=value=>{const u=new URL(value,location.href);return (u.origin===root.origin&&u.pathname.startsWith(root.pathname))||functions.some(f=>u.href===base+f||u.href.startsWith(base+f+'/')||u.href.startsWith(base+f+'?'))||u.href===sharedIdentityResolve||u.href.startsWith(sharedIdentityResolve+'?')};
   // Only method, URL and status. Never record credentials, bodies or headers.
   let audit;try{audit=JSON.parse(window.BOYAKI_STORAGE.session.getItem('network-audit')||'[]')}catch{audit=[]}
   const record=(url,method,status)=>{const u=new URL(url,location.href);audit.push({url:u.origin+u.pathname,method,status});audit=audit.slice(-1000);window.BOYAKI_STORAGE.session.setItem('network-audit',JSON.stringify(audit))};
