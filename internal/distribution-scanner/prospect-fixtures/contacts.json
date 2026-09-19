@@ -1,0 +1,101 @@
+{
+ "schema": "yn0-contact-state-v1",
+ "contacts": [
+  {
+   "id": "opted-out-shape",
+   "name": "Prospect A",
+   "organization": "Example indie game project",
+   "channel": "GITHUB_ISSUE",
+   "events": [
+    {
+     "type": "OUTREACH_SENT",
+     "at": "2026-09-01T09:00:00Z",
+     "waiting_for": "FIRST_REPLY"
+    },
+    {
+     "type": "OPT_OUT",
+     "at": "2026-09-02T10:00:00Z"
+    }
+   ]
+  },
+  {
+   "id": "closed-thread-shape",
+   "name": "Prospect B",
+   "organization": "Example indie game studio",
+   "channel": "GMAIL",
+   "events": [
+    {
+     "type": "OUTREACH_SENT",
+     "at": "2026-09-01T09:00:00Z",
+     "waiting_for": "FIRST_REPLY"
+    },
+    {
+     "type": "INBOUND_REPLY",
+     "at": "2026-09-02T11:00:00Z"
+    },
+    {
+     "type": "CONVERSATION_ENDED",
+     "at": "2026-09-03T09:00:00Z",
+     "direction": "outbound"
+    }
+   ]
+  },
+  {
+   "id": "awaiting-first-reply-shape",
+   "name": "Prospect C",
+   "organization": "Example indie game project",
+   "channel": "GMAIL",
+   "events": [
+    {
+     "type": "OUTREACH_SENT",
+     "at": "2026-09-05T09:00:00Z",
+     "waiting_for": "FIRST_REPLY"
+    }
+   ]
+  },
+  {
+   "id": "payer-question-open-shape",
+   "name": "Prospect D",
+   "organization": "Example indie game studio",
+   "channel": "GMAIL",
+   "events": [
+    {
+     "type": "OUTREACH_SENT",
+     "at": "2026-09-01T09:00:00Z",
+     "waiting_for": "FIRST_REPLY"
+    },
+    {
+     "type": "INBOUND_REPLY",
+     "at": "2026-09-02T11:00:00Z"
+    },
+    {
+     "type": "QUESTION_SENT",
+     "at": "2026-09-03T09:00:00Z",
+     "waiting_for": "PAYER_ANSWER"
+    }
+   ]
+  },
+  {
+   "id": "vendor-thread-shape",
+   "name": "Prospect E",
+   "organization": "Example localization vendor",
+   "channel": "GMAIL",
+   "events": [
+    {
+     "type": "OUTREACH_SENT",
+     "at": "2026-09-01T09:00:00Z",
+     "waiting_for": "FIRST_REPLY"
+    },
+    {
+     "type": "INBOUND_REPLY",
+     "at": "2026-09-02T11:00:00Z"
+    },
+    {
+     "type": "CONVERSATION_ENDED",
+     "at": "2026-09-04T09:00:00Z",
+     "direction": "outbound"
+    }
+   ]
+  }
+ ]
+}
