@@ -49,7 +49,7 @@ async function run(){
  await req(API,`/posts/${created.id}`,{method:'DELETE',id:b});pass('post-delete');
  const after=(await req(API,'/me/posts',{id:a})).p.posts||[],row=after.find((x:any)=>x.id===created.id);eq(row?.status,'deleted','post status');eq(row?.content,null,'post purge');pass('post-delete-purge');
  const feed2=(await req(API,'/posts?limit=100')).p.posts||[];yes(!feed2.some((x:any)=>x.id===created.id),'deleted still feed');pass('deleted-hidden-from-feed');
- const roomGone=await req(THREAD,`/solution-rooms/${roomId}`,{expected:[404]});eq(roomGone.p.error,'solution_room_not_found','post delete room cascade');pass('post-delete-cascades-solution-room');
+ const roomAfterPostDelete=(await req(THREAD,`/solution-rooms/${roomId}`)).p.room;eq(roomAfterPostDelete.post.status,'deleted','source post status after delete');eq(roomAfterPostDelete.post.content,null,'source post content purge in room');pass('post-delete-preserves-solution-room-history');
  return{ok:true,environment:'ai-staging',results,responses};
 }
 try{return new Response(JSON.stringify(await run()),{headers:{'content-type':'application/json',...cors}})}catch(e){results.push({name:'execution',status:'FAIL',detail:String((e as any)?.message||e)});for(const [base,path] of [[THREAD,cleanupCase?`/solution-cases/${cleanupCase}`:''],[THREAD,cleanupRoomMessage?`/solution-room-messages/${cleanupRoomMessage}`:''],[THREAD,cleanupMessage?`/thread/${cleanupMessage}`:''],[API,cleanupPost?`/posts/${cleanupPost}`:'']]){if(path&&cleanupAccount)try{await req(base,path,{method:'DELETE',id:cleanupAccount})}catch{}}return new Response(JSON.stringify({ok:false,error:String((e as any)?.message||e),results,responses}),{status:500,headers:{'content-type':'application/json',...cors}})}});
