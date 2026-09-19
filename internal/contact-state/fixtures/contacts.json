@@ -1,0 +1,181 @@
+{
+  "schema": "yn0-contact-state-v1",
+  "contacts": [
+    {
+      "id": "no-reply-yet",
+      "name": "Prospect A",
+      "organization": "Example indie game project",
+      "channel": "GITHUB_ISSUE",
+      "events": [
+        {"type": "OUTREACH_SENT", "at": "2026-09-05T09:00:00Z", "waiting_for": "FIRST_REPLY"}
+      ]
+    },
+    {
+      "id": "useful-payer-unknown",
+      "name": "Prospect B",
+      "organization": "Example indie game project",
+      "channel": "GMAIL",
+      "events": [
+        {"type": "OUTREACH_SENT", "at": "2026-09-05T09:00:00Z", "waiting_for": "FIRST_REPLY"},
+        {"type": "INBOUND_REPLY", "at": "2026-09-06T01:12:00Z"},
+        {
+          "type": "VALIDATION_RECORDED",
+          "axis": "problem",
+          "status": "POSITIVE",
+          "evidence": [
+            {
+              "source": "gmail",
+              "message_id": "fixture-b-1",
+              "quote_or_summary": "Says placeholder drift in their JA locale reached QA twice this year.",
+              "observed_at": "2026-09-06T01:12:00Z"
+            }
+          ]
+        },
+        {
+          "type": "VALIDATION_RECORDED",
+          "axis": "usefulness",
+          "status": "POSITIVE",
+          "evidence": [
+            {
+              "source": "gmail",
+              "message_id": "fixture-b-1",
+              "quote_or_summary": "Ran the preflight on their own locale files and says it caught two real issues.",
+              "observed_at": "2026-09-06T01:12:00Z"
+            }
+          ]
+        },
+        {"type": "QUESTION_SENT", "at": "2026-09-06T09:00:00Z", "waiting_for": "PAYER_ANSWER"}
+      ]
+    },
+    {
+      "id": "payer-positive",
+      "name": "Prospect C",
+      "organization": "Example indie game studio",
+      "channel": "GMAIL",
+      "events": [
+        {"type": "OUTREACH_SENT", "at": "2026-09-04T09:00:00Z", "waiting_for": "FIRST_REPLY"},
+        {"type": "INBOUND_REPLY", "at": "2026-09-05T02:00:00Z"},
+        {"type": "QUESTION_SENT", "at": "2026-09-05T09:30:00Z", "waiting_for": "PAYER_ANSWER"},
+        {"type": "INBOUND_REPLY", "at": "2026-09-07T03:00:00Z"},
+        {
+          "type": "VALIDATION_RECORDED",
+          "axis": "usefulness",
+          "status": "POSITIVE",
+          "evidence": [
+            {
+              "source": "gmail",
+              "message_id": "fixture-c-1",
+              "quote_or_summary": "Says the 40-string sample already covers most of their menu strings.",
+              "observed_at": "2026-09-05T02:00:00Z"
+            }
+          ]
+        },
+        {
+          "type": "VALIDATION_RECORDED",
+          "axis": "payer",
+          "status": "POSITIVE",
+          "evidence": [
+            {
+              "source": "gmail",
+              "message_id": "fixture-c-2",
+              "quote_or_summary": "Answered the price question directly: would buy the 410-string kit at $5.",
+              "observed_at": "2026-09-07T03:00:00Z"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "clearly-not-needed",
+      "name": "Prospect D",
+      "organization": "Example indie game project",
+      "channel": "GITHUB_ISSUE",
+      "events": [
+        {"type": "OUTREACH_SENT", "at": "2026-09-03T09:00:00Z", "waiting_for": "FIRST_REPLY"},
+        {"type": "INBOUND_REPLY", "at": "2026-09-04T04:00:00Z"},
+        {
+          "type": "VALIDATION_RECORDED",
+          "axis": "problem",
+          "status": "NEGATIVE",
+          "evidence": [
+            {
+              "source": "github_issue",
+              "message_id": "fixture-d-1",
+              "quote_or_summary": "Says they ship English only and have no plan to localize.",
+              "observed_at": "2026-09-04T04:00:00Z"
+            }
+          ]
+        },
+        {
+          "type": "VALIDATION_RECORDED",
+          "axis": "usefulness",
+          "status": "NEGATIVE",
+          "evidence": [
+            {
+              "source": "github_issue",
+              "message_id": "fixture-d-1",
+              "quote_or_summary": "States plainly that the tool is not useful to them; asks for nothing further.",
+              "observed_at": "2026-09-04T04:00:00Z"
+            }
+          ]
+        },
+        {"type": "REPLY_WAIVED", "at": "2026-09-04T10:00:00Z"}
+      ]
+    },
+    {
+      "id": "muraoka",
+      "name": "Muraoka",
+      "channel": "GMAIL",
+      "events": [
+        {"type": "OUTREACH_SENT", "at": "2026-09-08T09:00:00Z", "waiting_for": "FIRST_REPLY"},
+        {"type": "INBOUND_REPLY", "at": "2026-09-09T00:41:00Z"},
+        {"type": "QUESTION_SENT", "at": "2026-09-09T09:05:00Z", "waiting_for": "PAYER_ANSWER"},
+        {"type": "REPLY_WAIVED", "at": "2026-09-11T08:00:00Z"},
+        {"type": "NO_REPLY_TIMEOUT", "at": "2026-09-18T09:00:00Z"}
+      ]
+    },
+    {
+      "id": "banzai",
+      "name": "Banzai",
+      "channel": "GMAIL",
+      "events": [
+        {"type": "OUTREACH_SENT", "at": "2026-09-06T09:00:00Z", "waiting_for": "FIRST_REPLY"},
+        {
+          "type": "CONVERSATION_ENDED",
+          "at": "2026-09-07T02:20:00Z",
+          "direction": "inbound",
+          "reason": "thanked us for the tool and asked nothing further"
+        },
+        {
+          "type": "VALIDATION_RECORDED",
+          "axis": "usefulness",
+          "status": "AMBIGUOUS",
+          "evidence": [
+            {
+              "source": "gmail",
+              "message_id": "fixture-banzai-1",
+              "quote_or_summary": "Thanked us for the free tool. Did not say whether it was run, useful, or wanted.",
+              "observed_at": "2026-09-07T02:20:00Z"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "atlos",
+      "name": "Atlos",
+      "channel": "GITHUB_ISSUE",
+      "events": [
+        {"type": "OUTREACH_SENT", "at": "2026-09-01T09:00:00Z", "waiting_for": "FIRST_REPLY"},
+        {"type": "NO_REPLY_TIMEOUT", "at": "2026-09-10T09:00:00Z"},
+        {
+          "type": "CONVERSATION_ENDED",
+          "at": "2026-09-12T09:00:00Z",
+          "direction": "outbound",
+          "reason": "no response; shelved"
+        },
+        {"type": "INBOUND_REPLY", "at": "2026-09-17T23:40:00Z"}
+      ]
+    }
+  ]
+}
