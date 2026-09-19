@@ -15,6 +15,25 @@ function postExcerpt(item){
   return text.length>100?`${text.slice(0,100)}…`:text;
 }
 
+function yen(value){const n=Number(value);return Number.isFinite(n)&&n>0?new Intl.NumberFormat('ja-JP',{style:'currency',currency:'JPY',maximumFractionDigits:0}).format(n):''}
+function evidenceBlock(snapshot){
+  const evidence=snapshot||{},wrap=document.createElement('div');wrap.className='candidate-block';
+  const title=document.createElement('strong');title.textContent='Case作成時の需要証拠';wrap.append(title);
+  const ladder=document.createElement('div');ladder.className='demand-ladder';
+  for(const [label,count] of [
+    ['同じ悩み',evidence.same_problem?.count||0],
+    ['試したい',evidence.would_try?.count||0],
+    ['払ってもいい',evidence.would_pay?.count||0]
+  ]){const chip=document.createElement('span');chip.className=`step${count?' on':''}`;chip.textContent=`${label} ${count}`;ladder.append(chip)}
+  if(evidence.would_pay?.median_yen){const chip=document.createElement('span');chip.className='step on';chip.textContent=`支払中央値 ${yen(evidence.would_pay.median_yen)}`;ladder.append(chip)}
+  wrap.append(ladder);
+  const conditions=evidence.pay_conditions||[];
+  if(conditions.length){
+    for(const row of conditions.slice(0,5)){const p=document.createElement('p');p.className='hint';p.textContent=`${yen(row.amount_yen)} — ${row.condition_text}`;wrap.append(p)}
+  }
+  return wrap;
+}
+
 async function render(){
   if(!box)return;
   if(!accountIdentity()){
@@ -49,6 +68,7 @@ async function render(){
           card.append(title,contribution,sourceBox);
         }else card.append(title,contribution);
 
+        card.append(evidenceBlock(item.evidence_snapshot));
         const meta=document.createElement('p');
         meta.className='hint';
         meta.textContent=`${fmt(item.created_at)} · Solution Case · AI-STAGING`;
