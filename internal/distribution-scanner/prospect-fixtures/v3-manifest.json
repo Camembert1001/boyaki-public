@@ -1,0 +1,390 @@
+{
+ "schema": "yn0-candidate-manifest-v1",
+ "as_of": "2026-09-19T00:00:00Z",
+ "budget": {
+  "limits": {
+   "requests": 200,
+   "pages": 2,
+   "repositories": 200,
+   "inspections": 60,
+   "candidates": 40,
+   "files": 400,
+   "bytes": 8388608
+  },
+  "spent": {
+   "requests": 41,
+   "pages": 4,
+   "repositories": 96,
+   "inspections": 24,
+   "candidates": 10,
+   "files": 20,
+   "bytes": 20480
+  },
+  "truncated": false,
+  "reason": null
+ },
+ "strategies": [
+  {
+   "strategy_id": "paid-localization",
+   "source": "github_search_repositories",
+   "query": "invented shape: paid localization route",
+   "discovered_count": 40,
+   "inspected_count": 10,
+   "localization_asset_count": 6,
+   "ja_locale_count": 5,
+   "materialized_count": 5,
+   "skipped_count": 30
+  },
+  {
+   "strategy_id": "volunteer-translation",
+   "source": "github_search_repositories",
+   "query": "invented shape: volunteer translation route",
+   "discovered_count": 56,
+   "inspected_count": 14,
+   "localization_asset_count": 7,
+   "ja_locale_count": 5,
+   "materialized_count": 5,
+   "skipped_count": 42
+  }
+ ],
+ "candidates": {
+  "paid-studio-alpha": {
+   "owner": "example-studio-alpha",
+   "activity": "ACTIVE",
+   "activity_evidence": "invented shape: last push 7 day(s) before 2026-09-19T00:00:00Z",
+   "public_contact_route": "GITHUB_ISSUE",
+   "contact_route_evidence": "invented shape: issues are enabled on the repository",
+   "contact_ids": [],
+   "discovery": {
+    "tree_file_count": 12,
+    "localization_asset_count": 2,
+    "languages": [
+     "en",
+     "ja"
+    ],
+    "materialized_file_count": 2,
+    "truncated": false
+   },
+   "strategy_ids": [
+    "paid-localization"
+   ],
+   "repository": "example-studio-alpha/paid-studio-alpha",
+   "url": "https://example.invalid/example-studio-alpha/paid-studio-alpha",
+   "signals": [
+    {
+     "signal": "PAID_LOCALIZATION_OFFERED",
+     "source": "https://example.invalid/paid-studio-alpha/services",
+     "observed": "invented shape: a public services page lists a per-word rate for Japanese game localization"
+    },
+    {
+     "signal": "HANDS_ON_LQA",
+     "source": "https://example.invalid/paid-studio-alpha/issues/12",
+     "observed": "invented shape: the same party files and closes locale-specific bug reports on its own tracker"
+    },
+    {
+     "signal": "HANDLES_LOCALIZATION_FILES",
+     "source": "https://example.invalid/paid-studio-alpha/blob/main/locales/ja.json",
+     "observed": "invented shape: locale files are committed and edited in this repository"
+    }
+   ]
+  },
+  "paid-studio-alpha-tools": {
+   "owner": "example-studio-alpha",
+   "activity": "ACTIVE",
+   "activity_evidence": "invented shape: last push 7 day(s) before 2026-09-19T00:00:00Z",
+   "public_contact_route": "GITHUB_ISSUE",
+   "contact_route_evidence": "invented shape: issues are enabled on the repository",
+   "contact_ids": [],
+   "discovery": {
+    "tree_file_count": 12,
+    "localization_asset_count": 2,
+    "languages": [
+     "en",
+     "ja"
+    ],
+    "materialized_file_count": 2,
+    "truncated": false
+   },
+   "strategy_ids": [
+    "paid-localization"
+   ],
+   "repository": "example-studio-alpha/paid-studio-alpha-tools",
+   "url": "https://example.invalid/example-studio-alpha/paid-studio-alpha-tools",
+   "signals": [
+    {
+     "signal": "HANDLES_LOCALIZATION_FILES",
+     "source": "https://example.invalid/example-studio-alpha/paid-studio-alpha-tools/blob/main/locales/ja.json",
+     "observed": "invented shape: locale files are committed and edited in this repository"
+    }
+   ]
+  },
+  "volunteer-fan-translation": {
+   "owner": "example-volunteer-circle",
+   "activity": "ACTIVE",
+   "activity_evidence": "invented shape: last push 7 day(s) before 2026-09-19T00:00:00Z",
+   "public_contact_route": "GITHUB_ISSUE",
+   "contact_route_evidence": "invented shape: issues are enabled on the repository",
+   "contact_ids": [],
+   "discovery": {
+    "tree_file_count": 12,
+    "localization_asset_count": 2,
+    "languages": [
+     "en",
+     "ja"
+    ],
+    "materialized_file_count": 2,
+    "truncated": false
+   },
+   "strategy_ids": [
+    "volunteer-translation"
+   ],
+   "repository": "example-volunteer-circle/volunteer-fan-translation",
+   "url": "https://example.invalid/example-volunteer-circle/volunteer-fan-translation",
+   "signals": [
+    {
+     "signal": "HANDLES_LOCALIZATION_FILES",
+     "source": "https://example.invalid/example-volunteer-circle/volunteer-fan-translation/blob/main/locales/ja.json",
+     "observed": "invented shape: locale files are committed and edited in this repository"
+    },
+    {
+     "signal": "NONCOMMERCIAL_ONLY",
+     "source": "https://example.invalid/example-volunteer-circle/volunteer-fan-translation#license",
+     "observed": "invented shape: the readme states the project is non-commercial and accepts no money"
+    },
+    {
+     "signal": "VOLUNTEER_TRANSLATION_ONLY",
+     "source": "https://example.invalid/example-volunteer-circle/volunteer-fan-translation/blob/main/TRANSLATING.md",
+     "observed": "invented shape: translation is described as unpaid community work"
+    }
+   ]
+  },
+  "unevidenced-candidate": {
+   "owner": "example-unevidenced-org",
+   "activity": "ACTIVE",
+   "activity_evidence": "invented shape: last push 7 day(s) before 2026-09-19T00:00:00Z",
+   "public_contact_route": "GITHUB_ISSUE",
+   "contact_route_evidence": "invented shape: issues are enabled on the repository",
+   "contact_ids": [],
+   "discovery": {
+    "tree_file_count": 12,
+    "localization_asset_count": 2,
+    "languages": [
+     "en",
+     "ja"
+    ],
+    "materialized_file_count": 2,
+    "truncated": false
+   },
+   "strategy_ids": [
+    "volunteer-translation"
+   ],
+   "repository": "example-unevidenced-org/unevidenced-candidate",
+   "url": "https://example.invalid/example-unevidenced-org/unevidenced-candidate",
+   "signals": []
+  },
+  "kagerou-north-port": {
+   "owner": "north-harbor-games",
+   "activity": "ACTIVE",
+   "activity_evidence": "invented shape: last push 7 day(s) before 2026-09-19T00:00:00Z",
+   "public_contact_route": "GITHUB_ISSUE",
+   "contact_route_evidence": "invented shape: issues are enabled on the repository",
+   "contact_ids": [],
+   "discovery": {
+    "tree_file_count": 12,
+    "localization_asset_count": 2,
+    "languages": [
+     "en",
+     "ja"
+    ],
+    "materialized_file_count": 2,
+    "truncated": false
+   },
+   "strategy_ids": [
+    "paid-localization"
+   ],
+   "repository": "north-harbor-games/kagerou-north-port",
+   "url": "https://example.invalid/north-harbor-games/kagerou-north-port",
+   "signals": [
+    {
+     "signal": "PAID_LOCALIZATION_OFFERED",
+     "source": "https://example.invalid/north-harbor-games/services",
+     "observed": "invented shape: a public services page lists paid localization work"
+    },
+    {
+     "signal": "FREELANCE_OR_STUDIO",
+     "source": "https://example.invalid/north-harbor-games",
+     "observed": "invented shape: the profile presents as a localization studio"
+    }
+   ]
+  },
+  "kagerou-south-port": {
+   "owner": "south-harbor-games",
+   "activity": "ACTIVE",
+   "activity_evidence": "invented shape: last push 7 day(s) before 2026-09-19T00:00:00Z",
+   "public_contact_route": "GITHUB_ISSUE",
+   "contact_route_evidence": "invented shape: issues are enabled on the repository",
+   "contact_ids": [],
+   "discovery": {
+    "tree_file_count": 12,
+    "localization_asset_count": 2,
+    "languages": [
+     "en",
+     "ja"
+    ],
+    "materialized_file_count": 2,
+    "truncated": false
+   },
+   "strategy_ids": [
+    "volunteer-translation"
+   ],
+   "repository": "south-harbor-games/kagerou-south-port",
+   "url": "https://example.invalid/south-harbor-games/kagerou-south-port",
+   "signals": []
+  },
+  "unsupported-po-repo": {
+   "owner": "example-po-project",
+   "activity": "ACTIVE",
+   "activity_evidence": "invented shape: last push 7 day(s) before 2026-09-19T00:00:00Z",
+   "public_contact_route": "GITHUB_ISSUE",
+   "contact_route_evidence": "invented shape: issues are enabled on the repository",
+   "contact_ids": [],
+   "discovery": {
+    "tree_file_count": 9,
+    "localization_asset_count": 2,
+    "languages": [
+     "en",
+     "ja"
+    ],
+    "materialized_file_count": 2,
+    "truncated": false
+   },
+   "strategy_ids": [
+    "volunteer-translation"
+   ],
+   "repository": "example-po-project/unsupported-po-repo",
+   "url": "https://example.invalid/example-po-project/unsupported-po-repo",
+   "signals": []
+  },
+  "noisy-locale-repo": {
+   "owner": "example-noisy-project",
+   "activity": "ACTIVE",
+   "activity_evidence": "invented shape: last push 7 day(s) before 2026-09-19T00:00:00Z",
+   "public_contact_route": "GITHUB_ISSUE",
+   "contact_route_evidence": "invented shape: issues are enabled on the repository",
+   "contact_ids": [],
+   "discovery": {
+    "tree_file_count": 12,
+    "localization_asset_count": 2,
+    "languages": [
+     "en",
+     "ja"
+    ],
+    "materialized_file_count": 2,
+    "truncated": false
+   },
+   "strategy_ids": [
+    "paid-localization"
+   ],
+   "repository": "example-noisy-project/noisy-locale-repo",
+   "url": "https://example.invalid/example-noisy-project/noisy-locale-repo",
+   "signals": [
+    {
+     "signal": "PAID_LOCALIZATION_OFFERED",
+     "source": "https://example.invalid/noisy-locale-repo/services",
+     "observed": "invented shape: a public services page lists a per-word rate for Japanese game localization"
+    },
+    {
+     "signal": "HANDS_ON_LQA",
+     "source": "https://example.invalid/noisy-locale-repo/issues/12",
+     "observed": "invented shape: the same party files and closes locale-specific bug reports on its own tracker"
+    },
+    {
+     "signal": "HANDLES_LOCALIZATION_FILES",
+     "source": "https://example.invalid/noisy-locale-repo/blob/main/locales/ja.json",
+     "observed": "invented shape: locale files are committed and edited in this repository"
+    }
+   ]
+  },
+  "unchecked-contact-repo": {
+   "owner": "example-unchecked-org",
+   "activity": "ACTIVE",
+   "activity_evidence": "invented shape: last push 7 day(s) before 2026-09-19T00:00:00Z",
+   "public_contact_route": "GITHUB_ISSUE",
+   "contact_route_evidence": "invented shape: issues are enabled on the repository",
+   "discovery": {
+    "tree_file_count": 12,
+    "localization_asset_count": 2,
+    "languages": [
+     "en",
+     "ja"
+    ],
+    "materialized_file_count": 2,
+    "truncated": false
+   },
+   "strategy_ids": [
+    "paid-localization"
+   ],
+   "repository": "example-unchecked-org/unchecked-contact-repo",
+   "url": "https://example.invalid/example-unchecked-org/unchecked-contact-repo",
+   "signals": [
+    {
+     "signal": "PAID_LOCALIZATION_OFFERED",
+     "source": "https://example.invalid/unchecked-contact-repo/services",
+     "observed": "invented shape: a public services page lists a per-word rate for Japanese game localization"
+    },
+    {
+     "signal": "HANDS_ON_LQA",
+     "source": "https://example.invalid/unchecked-contact-repo/issues/12",
+     "observed": "invented shape: the same party files and closes locale-specific bug reports on its own tracker"
+    },
+    {
+     "signal": "HANDLES_LOCALIZATION_FILES",
+     "source": "https://example.invalid/unchecked-contact-repo/blob/main/locales/ja.json",
+     "observed": "invented shape: locale files are committed and edited in this repository"
+    }
+   ]
+  },
+  "opted-out-repo": {
+   "owner": "example-optout-project",
+   "activity": "ACTIVE",
+   "activity_evidence": "invented shape: last push 7 day(s) before 2026-09-19T00:00:00Z",
+   "public_contact_route": "GITHUB_ISSUE",
+   "contact_route_evidence": "invented shape: issues are enabled on the repository",
+   "contact_ids": [
+    "opted-out-shape"
+   ],
+   "discovery": {
+    "tree_file_count": 12,
+    "localization_asset_count": 2,
+    "languages": [
+     "en",
+     "ja"
+    ],
+    "materialized_file_count": 2,
+    "truncated": false
+   },
+   "strategy_ids": [
+    "volunteer-translation"
+   ],
+   "repository": "example-optout-project/opted-out-repo",
+   "url": "https://example.invalid/example-optout-project/opted-out-repo",
+   "signals": [
+    {
+     "signal": "PAID_LOCALIZATION_OFFERED",
+     "source": "https://example.invalid/opted-out-repo/services",
+     "observed": "invented shape: a public services page lists a per-word rate for Japanese game localization"
+    },
+    {
+     "signal": "HANDS_ON_LQA",
+     "source": "https://example.invalid/opted-out-repo/issues/12",
+     "observed": "invented shape: the same party files and closes locale-specific bug reports on its own tracker"
+    },
+    {
+     "signal": "HANDLES_LOCALIZATION_FILES",
+     "source": "https://example.invalid/opted-out-repo/blob/main/locales/ja.json",
+     "observed": "invented shape: locale files are committed and edited in this repository"
+    }
+   ]
+  }
+ }
+}

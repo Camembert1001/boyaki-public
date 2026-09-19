@@ -563,6 +563,292 @@ email address or a live URL. Real contacts and real prospect metadata live in
 `*.local.json` / `*.local.md`, which `.gitignore` keeps out of this repository — the same
 rule [`internal/contact-state/`](../contact-state/) already enforces, and for the same reason.
 
+## Prospect Discovery v3
+
+v2 answers "is this repository worth a person's attention?" about a repository somebody
+already put in front of it. That leaves the expensive half of the job with the human: the
+looking. v3 adds the half in front, and one behind:
+
+```
+validation hypothesis                (lib/hypothesis.mjs - derived from contact-state)
+  -> search strategy                 (discovery/lib/strategies.mjs)
+  -> repository discovery            (discovery/lib/github.mjs - the only network)
+  -> localization asset discovery    (lib/assets.mjs, applied to remote paths)
+  -> activity / repository evidence  (discovery/lib/explore.mjs)
+  == candidate manifest ==             the boundary; everything below is offline
+  -> v2 mechanical scan              (prospect.mjs, unchanged)
+  -> contact-state posture           (lib/contact-link.mjs, unchanged)
+  -> validation value                (lib/value.mjs + lib/signals.mjs)
+  -> identity / de-duplication       (lib/identity.mjs)
+  -> candidate queue                 (lib/queue.mjs)
+  -> HUMAN REVIEW
+```
+
+**The pipeline ends at HUMAN REVIEW and there is no step after it.** Nothing in either
+half sends mail, opens an issue, writes a comment, fills in a form, drives a browser or
+posts anything anywhere. The exploration half is allowed a network and uses it to read;
+its HTTP client refuses every method but `GET` by name, so there is no function in this
+repository that could write to GitHub even if something called it. Tests assert the
+absence rather than the intention.
+
+### What success looks like
+
+Not "more candidates". The metric is still information gained per contact, and v3 is built
+to spend a great deal of machine attention in order to spend *less* human attention:
+
+```
+many repositories discovered
+  -> some with localization assets
+    -> fewer with Japanese
+      -> fewer the checker can read
+        -> fewer with a finding that survives "could this be on purpose?"
+          -> fewer whose public work bears on the question we are actually asking
+            -> HUMAN REVIEW
+```
+
+None of those numbers is compiled in. A change that raises the size of the last group
+without raising the evidence behind it is a regression. A run where most candidates reach
+`READY_FOR_REVIEW` is a filter failure, not a good day.
+
+### The two halves, and why they are separate
+
+`lib/` is offline: filesystem and pure functions, no network, no credentials, no clock.
+`discovery/` is the only place allowed to make a request, and it is not allowed to import
+from `lib/` except for pure classifiers, nor `lib/` from it at all. A test walks both trees
+and fails on `node:http`, `fetch(`, an SMTP library, `api.github.com` or a cross-import on
+the wrong side.
+
+The seam between them is a file: the **candidate manifest**
+(`yn0-candidate-manifest-v1`). Exploration writes one; the review pass reads one. That is
+what makes the second half reproducible - the same manifest, workspace, contact store and
+hypothesis produce byte-identical output forever, while the exploration that produced them
+is free to return something different tomorrow.
+
+A manifest is local data. It describes repositories, never people, and belongs in a
+`*.local.json` path: real prospect data is never committed to this repository.
+
+### Exploration
+
+```
+node internal/distribution-scanner/discovery/explore.mjs \
+  --workspace ~/prospects/workspace.local \
+  --out ~/prospects/manifest.local.json \
+  --max-inspections 40 --max-candidates 25
+```
+
+`--plan` prints the strategies and the budget and makes no request at all.
+
+Credentials come from `GITHUB_TOKEN` or `GH_TOKEN` in the environment and from nowhere
+else - never a literal, never the manifest, never a log line. Without one the run still
+works against GitHub's unauthenticated limits, which is what the default budget is sized
+for. Behind an HTTP proxy, Node does not read `HTTPS_PROXY` for `fetch` by default; run
+with `NODE_USE_ENV_PROXY=1` if requests are refused.
+
+What exploration does per repository, in order, stopping at the first step that says no:
+
+| Step | Dropped when |
+| --- | --- |
+| search result | it is a fork, or archived - before an inspection is spent on it |
+| file tree listed | the listing fails; the repository is skipped and the run continues |
+| assets classified | `lib/assets.mjs`, the same classifier the offline inventory uses |
+| Japanese present | no Japanese asset: nothing the checker could say anything about |
+| files materialized | only the classified locale files, only under the file and byte budget |
+
+Activity comes from the repository's last push against `--as-of`, an explicit instant that
+is recorded in the manifest, so "ACTIVE" means something checkable rather than "when I ran
+it". A public contact route is `GITHUB_ISSUE` when issues are enabled, `NONE` when the
+repository is archived, and `UNKNOWN` otherwise - never `NONE` on the strength of issues
+being switched off, because that is not proof that no public route exists.
+
+**Exploration never fills in `contact_ids`.** `undefined` means nobody checked the contact
+store, which is the truth, and which is what keeps a freshly discovered candidate out of
+`READY_FOR_REVIEW` until a person has looked.
+
+### Search strategies
+
+Each route is a record with an id, a query and a rationale (`discovery/strategies.json`),
+and each one carries its own counters back in the manifest. That is the whole point: a
+strategy returning 500 repositories and two useful candidates is worse than one returning
+80 and four, and only per-strategy counters can say so.
+
+The shipped set - game localization, Japanese locale, Unity, Godot, Ren'Py, RPG Maker,
+indie i18n, localization QA tooling - is a starting guess and explicitly not the right
+answer. It is a file so that replacing a route that yields nothing is an edit.
+
+### Discovery budget
+
+Exploration is the half that can run forever and get an account rate limited, so it does
+not start without a ceiling: `requests`, `repositories`, `inspections`, `candidates`,
+`files` and `bytes` are global running totals, and `pages` is a cap *per strategy* - a
+global page total would let the first strategy spend every later strategy's pages and make
+them look barren for reasons that have nothing to do with the strategy.
+
+Running out is not a crash. `spend()` returns false, the caller stops, the manifest it has
+is written with `truncated` and a reason, and `--resume` merges the next run onto it. When
+GitHub reports no remaining quota the run halts and says so; it does not wait the limit
+out, because a crawler that sleeps for an hour is not what this is.
+
+### Validation hypothesis
+
+v3 separates "a good repository" from "a repository worth asking *now*". The second needs
+to know what we already have evidence for, and that is an input:
+
+```
+node internal/distribution-scanner/review.mjs <workspace> \
+  --manifest ~/prospects/manifest.local.json \
+  --contacts internal/contact-state/contacts.local.json
+```
+
+With `--contacts` and no `--hypothesis`, the hypothesis is **derived from the contact
+store**, on contact-state's own bar: an axis is `SETTLED` when some contact's record
+carries a `POSITIVE`, which that model already refuses to store without cited evidence.
+`NEGATIVE` or `AMBIGUOUS` makes it `PARTIAL`; everything else is `OPEN`. The axes are
+contact-state's `VALIDATION_AXES` - there is no second list and no second source of truth.
+
+The axis asked about defaults to the least-settled one, deepest in the funnel first, and
+`--asking` overrides it. Nothing about the current position is written down in code: a
+store in which the payer question has been answered moves the focus without a source
+change, and a store that says nothing leaves every axis open, which is the least
+presumptuous default rather than a claim.
+
+Only the store may say an answer is *outstanding on the wire*. A hypothesis file can
+assert that an axis is settled; it cannot assert that somebody owes us a reply.
+
+### Validation value
+
+For each axis, what would an answer from this candidate teach us that we do not have? The
+inputs are cited observations about **published work** drawn from a closed vocabulary
+(`lib/signals.mjs`) - a services page offering paid localization, a shipped commercial
+release, hands-on LQA, locale files edited in-repo, a CI localization step, and the ones
+that argue the other way, like a project stating it is non-commercial.
+
+Two rules make the layer checkable:
+
+- **An unknown signal id is an error**, not an unrecognised extra. Nothing can widen the
+  vocabulary by accident.
+- **No citation, no signal.** Every observation carries a public source and what was seen
+  there. A value the report cannot show a source for is a value nobody can check, and the
+  same observation cited twice counts once.
+
+The verdict is an ordered rule, reported with its number:
+
+| # | Condition | Value |
+| --- | --- | --- |
+| 1 | the axis is already settled by evidence we have | `LOW` |
+| 2 | no cited public evidence touches this axis | `UNKNOWN` |
+| 3 | only evidence arguing against | `LOW` |
+| 4 | a single supporting observation | `LOW` |
+| 5 | supporting and opposing evidence both present | `MEDIUM` |
+| 6 | two or more supporting, at least one specific enough to stand alone | `HIGH` |
+| 7 | two or more supporting, none specific on its own | `MEDIUM` |
+
+Rule 1 is the one that separates v3 from v2: the same evidence that makes a candidate
+`HIGH` on an open axis is worth nothing on a settled one.
+
+#### What is never inferred
+
+Not narrowed, not approximated, not scored:
+
+> purchasing authority · budget · income · willingness to pay · reply probability ·
+> company size · personality · technical ability · current tool stack · whether they
+> would buy YN0
+
+Every verdict on every axis carries that list, unfilled, under `unknown`. None of them is
+a signal, none is derivable from one, and a test fails if any of them ever becomes a field
+in the report. This is not a predictor of who will buy; it is a measure of what an answer
+would be worth, and the difference is the whole design.
+
+**Only two signals may ever be asserted by a machine**, and both are about files it read:
+`HANDLES_LOCALIZATION_FILES` and `CI_LOCALIZATION_STEP`. Everything payer-relevant
+requires a human to have read a public page and quoted it. That is not a gap to close
+later - inferring "this party sells localization" from repository shape is exactly the
+guess about a stranger this engine is built not to make.
+
+### The candidate queue
+
+v2's verdicts are unchanged: no fourth verdict was added to `candidates.mjs`, no rule was
+re-ordered, and `READY_FOR_REVIEW` was not widened by a single case. The queue is a layer
+above that takes v2's verdict as a fact.
+
+| Lane | Meaning |
+| --- | --- |
+| `READY_FOR_REVIEW` | v2 proposed it, the question is open, this candidate's work bears on it |
+| `HUMAN_REVIEW` | a human decides - including "no public evidence either way" |
+| `RESERVE` | a good candidate, held; the report says what would release it |
+| `IGNORE` | v2 dropped it, with a rule number |
+
+Ordered, first match wins:
+
+| # | Condition | Lane |
+| --- | --- | --- |
+| 1 | v2 dropped it | `IGNORE` |
+| 2 | contact history is not "consulted, and nothing there" | `HUMAN_REVIEW` |
+| 3 | v2 held it because this exact question is outstanding elsewhere | `RESERVE` |
+| 4 | v2 held it for a human for any other reason | `HUMAN_REVIEW` |
+| 5 | the candidate may be the same party as another candidate | `HUMAN_REVIEW` |
+| 6 | the axis this round asks about is outstanding elsewhere | `RESERVE` |
+| 7 | a better-evidenced candidate is definitely the same party | `RESERVE` |
+| 8 | no validation axis is open at all | `RESERVE` |
+| 9 | no public evidence bears on the axis we are asking about | `HUMAN_REVIEW` |
+| 10 | the public evidence argues against asking this one | `RESERVE` |
+| 11 | otherwise | `READY_FOR_REVIEW` |
+
+`RESERVE` is the lane the layer exists for. While one contact owes us an answer on an
+axis, opening the same question with a second stranger buys no information we are not
+already about to get - but the candidate is still good, and discarding it means finding it
+again later. So exploration continues, evaluation continues, candidates accumulate with
+their evidence intact, and the gate in front of contact stays shut:
+
+```
+discover continuously - evaluate continuously - preserve candidates - contact gate closed
+```
+
+### Identity and de-duplication
+
+Two repositories from one party are one contact. `lib/identity.mjs` answers only three
+ways, and the uncertain one is not a decision:
+
+- **`MATCH`** - the same declared owner. The better-evidenced one stays in its lane; the
+  others go to `RESERVE` naming it.
+- **`AMBIGUOUS`** - their names share an uncommon token and nothing else. **Never merged.**
+  Both go to a human, who is the only thing here allowed to conclude anything.
+- **`UNRESOLVED`** - no owner is declared, so there is nothing to compare.
+
+There is no fuzzy score and no threshold to tune. A declared owner is an identity; a shared
+token is a hand raised.
+
+### Exploration yield
+
+Per strategy, and overall: how many repositories a route had to chew through for each
+candidate a person ends up reading.
+
+```
+discovered -> localizationAssets -> japanese -> scannable -> meaningfulFinding
+           -> highConfidence -> validationRelevant -> humanReview
+```
+
+The funnel is a **prefix**, not a set: a candidate that misses a stage is not counted past
+it, so a repository whose only findings are typographic cannot be credited with a
+high-confidence one and inflate everything below. Lane counts are reported beside the
+funnel, because those are what a person actually has to read.
+
+Zero denominators produce `null`, never a `0` that reads like a measured zero, and a rate
+computed from fewer than 20 samples is marked `*`. Nothing here optimises, tunes or turns
+a strategy off - the point is to let a person compare routes and decide.
+
+### v3 fixtures
+
+`prospect-fixtures/v3-workspace` holds ten invented candidates, one per shape the queue has
+to get right, with `v3-manifest.json`, `v3-contacts.json`, `v3-contacts-payer-open.json`
+and `v3-hypothesis.json` beside it. Ten candidates in, one proposed. Run the same fixtures
+against the store where a payer question is already outstanding and it becomes **zero**
+proposed and six in `RESERVE` - the Prospect Burn gate, visible as a number.
+
+Every fixture is invented, every candidate id names a shape, every contact id ends in
+`-shape`, every cited source is on `example.invalid`, and every observation says
+`invented shape:` out loud. Tests fail if a tracked fixture ever grows something that looks
+like an address, a real host, or a real contact's name.
+
 ## Benchmark validation
 
 The classifier was validated against the real repositories issue #9 records, cloned at
@@ -602,15 +888,39 @@ documented buckets`) so a future threshold change has to restate its effect on t
 ```
 node --test internal/distribution-scanner/tests/scanner.test.mjs
 node --test internal/distribution-scanner/tests/prospect.test.mjs
+node --test internal/distribution-scanner/tests/discovery.test.mjs
 ```
 
-No dependencies, no install step, no network. Node 22 built-ins only.
+No dependencies, no install step, no network. Node 22 built-ins only. **No test here makes
+a network call**, including the ones covering the explorer: it takes its GitHub client as
+an argument and the suite passes a fake.
 
-The prospect suite pins the whole rule table, walks every contact posture against the
+The prospect suite pins the whole v2 rule table, walks every contact posture against the
 strongest possible evidence to prove only `NEVER_CONTACTED` can reach `READY_FOR_REVIEW`,
 and asserts the two properties that are easier to keep by test than by intention: that no
 module here can reach a person, and that no real contact information can reach a tracked
 fixture.
+
+The discovery suite pins the v3 queue the same way, and adds the properties v3 introduces:
+
+- exploration cannot creep into the checker, in either direction;
+- the client issues `GET` and offers no other verb, so nothing here can write to GitHub;
+- a candidate nobody has checked against the contact store can never be proposed, and with
+  no store at all nothing can;
+- `DO_NOT_CONTACT` lands in `IGNORE` against the strongest evidence the rule table allows;
+- while an answer is outstanding on an axis, nothing is proposed on it, and the candidates
+  are held in `RESERVE` with their evidence rather than dropped;
+- free and volunteer evidence never reaches payer `HIGH`, contested evidence is capped, and
+  no combination in the whole vocabulary can exceed those ceilings;
+- `UNKNOWN` is never read as evidence in either direction;
+- nothing about a person is inferred, and no forbidden field ever appears in the report;
+- an ambiguous identity is raised and never merged; a definite duplicate is held, not lost;
+- an unsupported format still reaches a human, and a noisy locale is never promoted by good
+  public evidence;
+- the budget is a ceiling the explorer cannot exceed, and running out writes a manifest
+  rather than losing the run;
+- the same snapshot produces the same evaluation, byte for byte, and no module in the
+  offline half reads a clock or a random number.
 
 ## Known limitations
 
@@ -652,3 +962,32 @@ Prospect Discovery adds its own:
 - **A workspace is one directory deep.** Nested checkouts, monorepos with several
   products, and a repository that is itself the workspace root all need `--single` or a
   different layout.
+
+Prospect Discovery v3 adds its own again:
+
+- **The payer-relevant evidence is not machine-derivable, on purpose.** Exploration can
+  assert two signals, both about files it read. A candidate's payer value stays `UNKNOWN`
+  until a human reads a public page and cites it, which means a fully automatic run
+  produces `HUMAN_REVIEW`, never a proposal. That is the intended failure direction, and it
+  is also the honest answer to "how much of the human's job is left": the looking is
+  removed, the judging is not.
+- **Repository search is one source.** `github_search_repositories` is the only implemented
+  strategy source, and GitHub's search ranks by its own relevance, which is not the same as
+  the relevance here. A route that returns nothing may be a bad query rather than a bad
+  hypothesis.
+- **Discovery sees only the default branch**, and only its file tree. A repository whose
+  localization lives on another branch, in a submodule, or behind a build step is invisible.
+- **A truncated tree is a partial inventory.** GitHub stops returning very large trees;
+  the flag is passed through to the manifest rather than worked around, so a huge monorepo
+  may report fewer assets than it has.
+- **Activity is a last-push date.** It distinguishes a dead repository from a live one and
+  nothing more; a busy repository whose maintainer has moved on reads `ACTIVE`.
+- **Identity matching needs a declared owner.** Two repositories by one person under two
+  accounts are two candidates, and the token check that would raise a hand about it only
+  fires on an uncommon shared word.
+- **The signal vocabulary is a first draft.** Which observations bear on which axis, and
+  which of them are specific enough to stand alone, are judgements calibrated on invented
+  fixtures - which is why every one of them is reported with its citation rather than
+  folded into a number.
+- **Yield needs volume to mean anything.** Every conversion from fewer than 20 samples is
+  marked, and comparing two strategies on a handful of candidates each compares noise.

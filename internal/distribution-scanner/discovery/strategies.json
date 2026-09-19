@@ -1,0 +1,61 @@
+{
+  "schema": "yn0-search-strategies-v1",
+  "strategies": [
+    {
+      "strategy_id": "game-localization",
+      "source": "github_search_repositories",
+      "query": "game localization in:name,description,readme language:JSON",
+      "per_page": 30,
+      "rationale": "The broadest route. Expected to be high volume and low yield; it exists as the baseline the narrower routes have to beat."
+    },
+    {
+      "strategy_id": "japanese-locale",
+      "source": "github_search_repositories",
+      "query": "japanese translation game in:name,description,readme",
+      "per_page": 30,
+      "rationale": "Aims straight at the JA half of the pair the checker needs, at the cost of catching translation projects that ship no product."
+    },
+    {
+      "strategy_id": "unity-localization",
+      "source": "github_search_repositories",
+      "query": "unity localization in:name,description,readme",
+      "per_page": 30,
+      "rationale": "Engine-scoped. Unity projects usually keep locale data as JSON or CSV in-repo, which is what the inventory can see."
+    },
+    {
+      "strategy_id": "godot-localization",
+      "source": "github_search_repositories",
+      "query": "godot localization translation in:name,description,readme",
+      "per_page": 30,
+      "rationale": "Engine-scoped. Godot's own tooling prefers CSV, so this route is expected to produce DETECTED_BUT_UNSUPPORTED more often than scannable pairs - which is itself worth measuring."
+    },
+    {
+      "strategy_id": "renpy-translation",
+      "source": "github_search_repositories",
+      "query": "renpy translation in:name,description,readme",
+      "per_page": 30,
+      "rationale": "Visual novels are localization-heavy by construction and frequently ship Japanese."
+    },
+    {
+      "strategy_id": "rpgmaker-localization",
+      "source": "github_search_repositories",
+      "query": "rpg maker translation localization in:name,description,readme",
+      "per_page": 30,
+      "rationale": "RPG Maker projects often carry JSON locale data and a Japanese original."
+    },
+    {
+      "strategy_id": "indie-game-i18n",
+      "source": "github_search_repositories",
+      "query": "indie game i18n topic:localization",
+      "per_page": 30,
+      "rationale": "Topic-scoped rather than text-scoped: narrower, and the repositories that self-label are more likely to own their localization."
+    },
+    {
+      "strategy_id": "localization-qa-tooling",
+      "source": "github_search_repositories",
+      "query": "localization QA lint checker in:name,description,readme",
+      "per_page": 30,
+      "rationale": "Looks for parties who already treat locale defects as a mechanical problem - the workflow axis rather than the problem axis."
+    }
+  ]
+}
