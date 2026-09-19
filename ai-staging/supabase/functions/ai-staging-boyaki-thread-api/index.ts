@@ -330,7 +330,7 @@ async function createRoomInvitation(req:Request,postId:string,raw:string){
     if(!voiceEvent.owner_account_pubkey)return json(req,409,{error:'voice_account_required'});
     inviteeAccount=voiceEvent.owner_account_pubkey;
   }
-  if(inviteeAccount===event.pubkey)return json(req,409,{error:'cannot_invite_self'});
+  if(inviteeAccount===event.pubkey&&inviteeContext!=='source_owner')return json(req,409,{error:'cannot_invite_self'});
   const room=await getOrCreateRoom(postId,event.pubkey),now=new Date().toISOString();
   const {data:existing,error:existingError}=await db.from(T('boyaki_solution_room_invitations'))
     .select('id,status,room_id,post_id,inviter_maker_pubkey,invitee_account_pubkey,source_thread_event_id,invitee_context,created_at,updated_at,accepted_at')
@@ -464,7 +464,7 @@ Deno.serve(async req=>{
         can_post_as_poster:post.status==='active'&&isSourceOwner,
         is_source_owner:isSourceOwner,
         source_owner_has_account:Boolean(post.owner_account_pubkey),
-        source_owner_invitable:Boolean(post.owner_account_pubkey&&post.owner_account_pubkey!==event.pubkey),
+        source_owner_invitable:Boolean(post.owner_account_pubkey),
         source_withdrawn:post.status==='withdrawn',
         problem_statement:shell.problem,
         actor_pubkey:event.pubkey,current_role:role?.participant_role||null,current_display_name:named?.display_name||null,
