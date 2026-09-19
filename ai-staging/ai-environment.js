@@ -10,7 +10,7 @@
   window.BOYAKI_AI_STAGING=true;window.BOYAKI_ENVIRONMENT='ai-staging';window.BOYAKI_PLAINTEXT_NOSTR_PUBLICATION_DISABLED=true;
   document.documentElement.dataset.boyakiEnvironment='ai-staging';
   const base='https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/';
-  const functions=['ai-staging-boyaki-api','ai-staging-boyaki-thread-api','ai-staging-commerce-api','ai-staging-e2e-runner'];
+  const functions=['ai-staging-boyaki-api','ai-staging-boyaki-thread-api','ai-staging-commerce-api','ai-staging-inbox-api','ai-staging-e2e-runner'];
   const sharedIdentityResolve=base+'boyaki-api/account-credentials/resolve';
   const root=new URL('/boyaki-public/ai-staging/',location.origin);
   const allowed=value=>{const u=new URL(value,location.href);return (u.origin===root.origin&&u.pathname.startsWith(root.pathname))||functions.some(f=>u.href===base+f||u.href.startsWith(base+f+'/')||u.href.startsWith(base+f+'?'))||u.href===sharedIdentityResolve||u.href.startsWith(sharedIdentityResolve+'?')};
