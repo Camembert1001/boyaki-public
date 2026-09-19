@@ -17,17 +17,20 @@ function roomCard(room){
   card.dataset.solutionRoomId=room.id;
 
   const post=room.post;
+  const sourceActive=post?.status==='active'&&Boolean(post?.content);
   const meta=document.createElement('p');
   meta.className='eyebrow';
   meta.textContent=`Solution Room · ${fmt(room.updated_at||room.created_at)}`;
 
   const title=document.createElement('h3');
-  const raw=String(post?.content||'元のBOYAKIを取得できませんでした').trim();
+  const raw=sourceActive?String(post.content).trim():'元のBOYAKIは取り下げ済み';
   title.textContent=raw.length>72?`${raw.slice(0,72)}…`:raw;
 
   const hint=document.createElement('p');
   hint.className='hint';
-  hint.textContent='このRoomのSolution LogとSolution CaseはAI-STAGINGだけに保存され、通常STAGINGの活動履歴とは分離されています。';
+  hint.textContent=sourceActive
+    ?'このRoomのSolution LogとSolution CaseはAI-STAGINGだけに保存され、通常STAGINGの活動履歴とは分離されています。'
+    :'元のBOYAKIは取り下げ済みですが、Maker側のSolution Log / Caseは履歴として保持されています。';
 
   const actions=document.createElement('div');
   actions.className='actions';
@@ -38,7 +41,7 @@ function roomCard(room){
   open.textContent='Solution Roomを開く';
   actions.append(open);
 
-  if(post?.id){
+  if(sourceActive&&post?.id){
     const source=document.createElement('a');
     source.className='button-link';
     source.href=`./?problem=${encodeURIComponent(post.id)}`;
