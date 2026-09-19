@@ -1,5 +1,5 @@
 (()=>{
-  const VERSION='quality-index-v1';
+  const VERSION='quality-index-v2-canonical-thread';
   const parseCount=(card,label)=>{
     for(const chip of card.querySelectorAll('.chip')){
       const text=(chip.textContent||'').trim();
@@ -40,9 +40,7 @@
   }
   function suppressLegacyMakerSpaceNav(){
     document.querySelectorAll('[data-maker-space-link]').forEach(el=>el.remove());
-    document.querySelectorAll('.topbar nav a,.topbar nav button').forEach(el=>{
-      if(el.textContent?.trim()==='活動する')el.remove();
-    });
+    document.querySelectorAll('.topbar nav a,.topbar nav button').forEach(el=>{if(el.textContent?.trim()==='活動する')el.remove()});
   }
   function loadPublicSuppression(){
     if(document.querySelector('script[data-public-suppression-loader]'))return;
@@ -56,44 +54,40 @@
     window.BOYAKI_PLAINTEXT_NOSTR_PUBLICATION_DISABLED=true;
     const backendReady=()=>window.BOYAKI_CANONICAL_BACKEND_READY===true;
     const rootWriteActive=()=>backendReady()&&window.BOYAKI_CANONICAL_ROOT_WRITE_CUTOVER_ACTIVE===true;
-    const threadWriteActive=()=>backendReady()&&window.BOYAKI_CANONICAL_THREAD_WRITE_CUTOVER_ACTIVE===true;
-    const blockedMessage='削除可能なAccount単位の保存基盤へ移行中です。下書きはこの端末に残り、Nostr Relayへは送信していません。';
-    const setBlockedStatus=(button)=>{
+    const threadWriteActive=()=>backendReady()&&window.BOYAKI_CANONICAL_THREAD_BACKEND_READY===true&&window.BOYAKI_CANONICAL_THREAD_WRITE_CUTOVER_ACTIVE===true;
+    const diagnostic=()=>`backend=${backendReady()?'1':'0'};root=${window.BOYAKI_CANONICAL_ROOT_WRITE_CUTOVER_ACTIVE===true?'1':'0'};thread_backend=${window.BOYAKI_CANONICAL_THREAD_BACKEND_READY===true?'1':'0'};thread=${window.BOYAKI_CANONICAL_THREAD_WRITE_CUTOVER_ACTIVE===true?'1':'0'};client=${String(window.BOYAKI_CANONICAL_CLIENT_VERSION||'unknown')}`;
+    const setBlockedStatus=(button,isThread=false)=>{
       const status=document.querySelector('#status');
-      if(status)status.textContent=blockedMessage;
-      if(button){button.disabled=true;button.textContent='公開基盤を移行中'}
+      if(status)status.textContent=`削除可能なBOYAKI管理DBへの保存経路を確認中です。${diagnostic()}（Nostr Relayへは送信していません）`;
+      if(button){
+        button.disabled=false;
+        if(!button.dataset.boyakiOriginalLabel)button.dataset.boyakiOriginalLabel=button.textContent||'';
+        if(button.dataset.boyakiOriginalLabel)button.textContent=button.dataset.boyakiOriginalLabel;
+      }
     };
     document.addEventListener('click',e=>{
       const button=e.target?.closest?.('[data-v53-publish="1"]');
       if(!button)return;
       if(rootWriteActive())return;
-      e.preventDefault();
-      e.stopImmediatePropagation();
-      setBlockedStatus(button);
+      e.preventDefault();e.stopImmediatePropagation();setBlockedStatus(button,false);
     },true);
     document.addEventListener('submit',e=>{
       const form=e.target;
       if(!(form instanceof HTMLFormElement))return;
       const isThreadPlaintext=form.matches('[data-form="clarify"],[data-form="proposal"],[data-form="poster-response"]')||!!form.closest('.poster-clarification-answer');
-      if(!isThreadPlaintext||threadWriteActive())return;
-      e.preventDefault();
-      e.stopImmediatePropagation();
-      setBlockedStatus(form.querySelector('button[type="submit"],button:not([type])'));
+      if(!isThreadPlaintext)return;
+      const canonicalThread=form.dataset.canonicalThreadForm==='1';
+      // Canonical DB forms may pass only when the canonical thread backend is healthy.
+      // Every legacy thread form remains blocked even after canonical cutover, so
+      // enabling threads can never reopen plaintext Nostr publication.
+      if(canonicalThread&&threadWriteActive())return;
+      e.preventDefault();e.stopImmediatePropagation();
+      setBlockedStatus(form.querySelector('button[type="submit"],button:not([type])'),true);
     },true);
-  }
-  async function loadCanonicalCutover(){
-    try{
-      await import('./canonical-api.js?v=20260909-live-v1');
-      await import('./canonical-cutover.js?v=20260909-root-v1');
-    }catch(err){
-      console.error('canonical cutover bootstrap failed',err);
-      window.BOYAKI_CANONICAL_ROOT_WRITE_CUTOVER_ACTIVE=false;
-    }
   }
   window.BOYAKI_PROBLEM_INDEX_GATE={version:VERSION,evaluate,apply};
   new MutationObserver(ms=>{for(const m of ms)for(const n of m.addedNodes)if(n.nodeType===1)scan(n)}).observe(document.documentElement,{childList:true,subtree:true});
   loadPublicSuppression();
   installCanonicalStorageCutoverGuard();
-  loadCanonicalCutover();
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{scan();suppressLegacyMakerSpaceNav()});else{scan();suppressLegacyMakerSpaceNav()}
 })();
