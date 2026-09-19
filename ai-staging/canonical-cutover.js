@@ -125,6 +125,37 @@ async function hydrateCanonicalThread(article,post){
   }
   if(!events.length){const empty=document.createElement('p');empty.className='hint';empty.textContent='まだ追加質問・解決案・投稿者の返答はありません。';list.append(empty)}
 
+  const solutionStep=document.createElement('div');
+  solutionStep.className='participation-panel';
+  solutionStep.dataset.solutionRoomTransition='1';
+  const solutionTitle=document.createElement('p');solutionTitle.className='hint';solutionTitle.innerHTML='<strong>解決を具体化する</strong>';
+  const solutionHint=document.createElement('p');solutionHint.className='hint';
+  solutionHint.textContent='スレッドで輪郭が見えたら、このBOYAKI専用のSolution Roomへ進めます。Roomの会話・CaseはAI-STAGING内だけに保存されます。';
+  const solutionActions=document.createElement('div');solutionActions.className='actions';
+  if(access.solution_room_id){
+    const open=document.createElement('a');open.className='button-link';open.href=`./solution-room.html?room=${encodeURIComponent(access.solution_room_id)}`;open.textContent='Solution Roomを開く';solutionActions.append(open);
+  }else if(client.identity()){
+    const create=document.createElement('button');create.type='button';create.textContent='Solution Roomを作る';
+    const solutionStatus=document.createElement('span');solutionStatus.className='hint';
+    create.addEventListener('click',async()=>{
+      create.disabled=true;create.textContent='作成中…';solutionStatus.textContent='';
+      try{
+        const result=await client.ensureSolutionRoom(post.id),roomId=result?.room?.id;
+        if(!roomId)throw new Error('solution_room_id_missing');
+        location.href=`./solution-room.html?room=${encodeURIComponent(roomId)}`;
+      }catch(err){
+        console.error('solution room create failed',err);
+        create.disabled=false;create.textContent='Solution Roomを作る';
+        solutionStatus.textContent='Roomを作成できませんでした。再試行してください。';
+      }
+    });
+    solutionActions.append(create,solutionStatus);
+  }else{
+    const login=document.createElement('a');login.className='button-link';login.href='./mypage.html';login.textContent='ログインしてRoomを作る';solutionActions.append(login);
+  }
+  solutionStep.append(solutionTitle,solutionHint,solutionActions);
+  mount.append(solutionStep);
+
   const roleKey=`boyaki-thread-role:${post.id}`;
   const applyRole=role=>{
     window.BOYAKI_STORAGE.local.setItem(roleKey,role);
