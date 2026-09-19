@@ -312,8 +312,8 @@ async function buildInbox(account:string){
   for(const item of items)item.seen=seen.has(item.key);
 
   items.sort((a,b)=>{
-    const seenDiff=Number(a.seen)-Number(b.seen);if(seenDiff)return seenDiff;
     const p=(priorityRank[a.priority]??9)-(priorityRank[b.priority]??9);if(p)return p;
+    const seenDiff=Number(a.seen)-Number(b.seen);if(seenDiff)return seenDiff;
     return String(b.occurred_at||'').localeCompare(String(a.occurred_at||''));
   });
 
