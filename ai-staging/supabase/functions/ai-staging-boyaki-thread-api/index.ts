@@ -124,10 +124,11 @@ async function roomAccess(room:any,pubkey:string){
   if(room.created_by_pubkey===pubkey)return {can_write:true,role:'maker',invitation:null};
   if(await activeRole(room.post_id,pubkey,'maker'))return {can_write:true,role:'maker',invitation:null};
   const {data:invitation,error}=await db.from(T('boyaki_solution_room_invitations'))
-    .select('id,status,room_id,post_id,inviter_maker_pubkey,invitee_account_pubkey,created_at,updated_at,accepted_at')
+    .select('id,status,room_id,post_id,inviter_maker_pubkey,invitee_account_pubkey,source_thread_event_id,invitee_context,created_at,updated_at,accepted_at')
     .eq('room_id',room.id).eq('invitee_account_pubkey',pubkey).maybeSingle();
   if(error)throw Error(error.message);
-  return {can_write:invitation?.status==='accepted',role:invitation?.status==='accepted'?'voice':null,invitation:invitation||null};
+  const problem=await problemForPost(room.post_id),accepted=invitation?.status==='accepted'&&Boolean(problem);
+  return {can_write:accepted,role:accepted?'voice':null,invitation:invitation||null};
 }
 
 function median(values:number[]){if(!values.length)return null;const xs=[...values].sort((a,b)=>a-b),mid=Math.floor(xs.length/2);return xs.length%2?xs[mid]:Math.round((xs[mid-1]+xs[mid])/2)}
@@ -270,10 +271,12 @@ async function listMySolutionCases(req:Request){
     posts=out.data||[];
   }
   const roomMap=new Map(rooms.map((x:any)=>[x.id,x]));
+  const problemRows=postIds.length?await Promise.all(postIds.map((id:string)=>problemForPost(id))):[];
+  const problemMapByPost=new Map(problemRows.filter(Boolean).map((x:any)=>[x.post_id,x]));
   const postMap=new Map(posts.map((x:any)=>[x.id,x]));
   const enriched=(cases||[]).map((item:any)=>{
-    const room=roomMap.get(item.room_id)||null;
-    return {...item,room:room?{...room,post:postMap.get(room.post_id)||null}:null};
+    const room=roomMap.get(item.room_id)||null,post=room?postMap.get(room.post_id)||null:null;
+    return {...item,room:room?{...room,post:publicPost(post,problemMapByPost.get(room.post_id)||null)}:null};
   });
   return json(req,200,{cases:enriched,environment:'AI-STAGING'});
 }
@@ -294,11 +297,14 @@ async function listMyVoiceHistory(req:Request){
     const out=await db.from(T('boyaki_posts')).select('id,content,status,created_at').in('id',postIds);
     if(out.error)throw Error(out.error.message);posts=out.data||[];
   }
+  const problemRows=postIds.length?await Promise.all(postIds.map((id:string)=>problemForPost(id))):[];
+  const problemMapByPost=new Map(problemRows.filter(Boolean).map((x:any)=>[x.post_id,x]));
   const postMap=new Map(posts.map((x:any)=>[x.id,x]));
+  const source=(postId:string)=>publicPost(postMap.get(postId)||null,problemMapByPost.get(postId)||null);
   return json(req,200,{
     account_pubkey:account,
-    thread_contributions:(events||[]).map((x:any)=>({...x,post:postMap.get(x.post_id)||null})),
-    demand_signals:(demand||[]).map((x:any)=>({...x,post:postMap.get(x.post_id)||null})),
+    thread_contributions:(events||[]).map((x:any)=>({...x,post:source(x.post_id)})),
+    demand_signals:(demand||[]).map((x:any)=>({...x,post:source(x.post_id)})),
     environment:'AI-STAGING'
   });
 }
