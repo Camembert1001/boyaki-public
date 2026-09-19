@@ -21,12 +21,13 @@ async function loadSource(){
   try{
     const result=await client.getSolutionRoom(room);
     const post=result.room?.post;
-    const text=String(post?.content||'元のBOYAKIを取得できませんでした').trim();
+    const sourceActive=post?.status==='active'&&Boolean(post?.content);
+    const text=sourceActive?String(post.content).trim():'元のBOYAKIは取り下げ済みです。Solution CaseはこのRoomの履歴として保存できます。';
     source.replaceChildren();
     const eyebrow=document.createElement('p');eyebrow.className='eyebrow';eyebrow.textContent='Source BOYAKI';
     const raw=document.createElement('p');raw.className='raw';raw.textContent=text;
     source.append(eyebrow,raw);
-    if(post?.id){
+    if(sourceActive&&post?.id){
       const open=document.createElement('a');open.className='button-link';open.href=`./?problem=${encodeURIComponent(post.id)}`;open.textContent='元のBOYAKIを見る';source.append(open);
     }
   }catch(err){
