@@ -42,6 +42,12 @@
     <section id="composer" class="card hero">
       <p class="eyebrow">まずは公開せず、一言から。</p>
       <h1>困ったこと、そのまま話して。</h1>
+      <div class="journey-guide" aria-label="BOYAKIの流れ">
+        <div class="journey-step is-current"><strong>BOYAKI</strong><span>ボヤく</span></div>
+        <div class="journey-step is-future"><strong>Thread</strong><span>話し合う</span></div>
+        <div class="journey-step is-future"><strong>Solution</strong><span>一緒に解決</span></div>
+        <div class="journey-step is-future"><strong>Product</strong><span>届ける</span></div>
+      </div>
       <p class="hint"><strong>まずこのブラウザ内で問題を整理します。</strong><br>解決候補として残したくなったら、その時点で公開して、似たことで困っている人や作れる人を集められます。</p>
       <form id="raw-form">
         <label class="sr-only" for="raw">困りごと</label>
@@ -51,7 +57,7 @@
         </div>
         <p class="hint">タイトル・カテゴリ・予算・仕様は不要。最初の一言だけでOK。ここではまだ公開されません。</p>
       </form>
-      <p class="hint">話す → 問題を整理する → 望めば解決候補として公開する → 似た人・Makerを集める → 解決を試す</p>
+      <p class="hint">今は「ボヤく」段階。公開後にThreadで話し、必要なときだけ共同解決とProductへ進みます。</p>
       <div id="status" role="status" aria-live="polite"></div>
     </section>
 
@@ -108,8 +114,8 @@
   </template>
 
   <script src="./chat-first-v53.js?v=20260918-ai-v1"></script>
-  <script src="./onboarding.js?v=20260918-ai-v1"></script>
-  <script type="module" src="./canonical-api.js?v=20260919-problem-market-v9"></script>
+  <script src="./onboarding.js?v=20260920-human-onboarding-v1"></script>
+  <script type="module" src="./canonical-api.js?v=20260920-action-inbox-v10"></script>
   <script type="module" src="./app.js?v=20260918-ai-v1"></script>
   <script>
   (()=>{

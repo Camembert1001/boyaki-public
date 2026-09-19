@@ -1,4 +1,4 @@
-import { client } from './canonical-api.js?v=20260919-problem-transition-v8';
+import { client } from './canonical-api.js?v=20260920-action-inbox-v10';
 const $=s=>document.querySelector(s);
 const caseId=String(new URLSearchParams(location.search).get('case')||'').trim();
 const uuid=/^[0-9a-f]{8}-[0-9a-f-]{27}$/i;
@@ -39,15 +39,15 @@ async function load(){
 $('#product-form').addEventListener('submit',async e=>{
   e.preventDefault();if(!caseRow)return;
   const button=$('#product-submit'),title=$('#product-title').value.trim(),description=$('#product-description').value.trim(),delivery=$('#product-delivery').value.trim(),price=Number($('#product-price').value);
-  button.disabled=true;button.textContent='公開中…';$('#product-status').textContent='AI-STAGINGの商品として公開しています…';
+  button.disabled=true;button.textContent='作成中…';$('#product-status').textContent='Maker SpaceにProductを作成しています…';
   try{
     const result=await client.createProduct(caseRow.id,title,description,price,delivery);
-    $('#product-status').textContent='プロダクトをMaker Spaceに公開しました。商品ページで元のBOYAKIスレッドへの掲載を選べます…';
+    $('#product-status').textContent='ProductをMaker Spaceに作成しました。次の画面で元のProblemに掲載するか選べます。';
     setTimeout(()=>location.href=`./product.html?id=${encodeURIComponent(result.product.id)}`,500);
   }catch(err){
     console.error(err);const code=String(err?.message||err);
     $('#product-status').textContent=code==='case_already_productized'?'このSolution Caseはすでに商品化されています。':'公開できませんでした。入力内容と通信状態を確認してください。';
-    button.disabled=false;button.textContent='プロダクトを公開する';
+    button.disabled=false;button.textContent='Maker SpaceにProductを作成';
   }
 });
 await load();

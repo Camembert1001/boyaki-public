@@ -19,6 +19,7 @@
     <a class="brand" href="./">BOYAKI</a>
     <nav>
       <a class="nav-link" href="./">ホーム</a>
+      <a class="nav-link" href="./?about=1">BOYAKIとは？</a>
       <a class="nav-link" href="./mypage.html#maker">マイページ</a>
       <a class="nav-link active" href="./makers.html">Maker Space</a>
       <a class="nav-link" href="./products.html">プロダクト</a>
@@ -27,6 +28,12 @@
 
   <main class="shell room-shell">
     <a class="button-link room-back" href="./makers.html">← Solution Roomsへ戻る</a>
+    <div class="journey-guide" aria-label="BOYAKIの流れ">
+      <div class="journey-step is-done"><strong>BOYAKI</strong><span>ボヤく</span></div>
+      <div class="journey-step is-done"><strong>Thread</strong><span>話し合う</span></div>
+      <div class="journey-step is-current"><strong>Solution</strong><span>一緒に解決</span></div>
+      <div class="journey-step is-future"><strong>Product</strong><span>届ける</span></div>
+    </div>
 
     <section class="card hero">
       <div class="room-head">
@@ -36,7 +43,8 @@
         </div>
         <span class="chip" id="room-id"></span>
       </div>
-      <p class="lead">BOYAKIスレッドで話したMakerがVoiceを招待し、解決を具体化する場所。</p>
+      <p class="lead">ここは、公開Threadより一段深く「一緒に解決を作る」場所です。</p>
+      <div class="transition-note"><strong>今いる段階：一緒に解決</strong><span>Voiceは使う条件や痛みを具体化し、Makerは解決を形にします。まとまった成果はCaseとして残し、そこからProductへ進めます。</span></div>
       <p id="room-problem" class="raw">元のBOYAKIを読み込んでいます…</p>
       <div class="actions"><a id="room-source-link" class="button-link" href="./">元のBOYAKIを見る</a></div>
       <div id="room-demand-evidence" class="participation-panel"><p class="hint">需要の証拠を読み込んでいます…</p></div>
@@ -54,7 +62,7 @@
           <button type="submit">送信</button>
           <button type="button" id="room-refresh">更新</button>
           <button type="button" id="room-report">ルーム/メッセージを通報する</button>
-          <button type="button" id="solution-case-create">ソリューションケース作成</button>
+          <button type="button" id="solution-case-create">解決をCaseとして残す</button>
         </div>
         <div id="room-status" class="hint room-status" role="status" aria-live="polite"></div>
       </form>
@@ -69,6 +77,6 @@
   </main>
 
   <script src="./legacy-write-freeze.js?v=20260918-ai-v1"></script>
-  <script type="module" src="./solution-room.js?v=20260919-problem-transition-v1"></script>
+  <script type="module" src="./solution-room.js?v=20260920-human-onboarding-v1"></script>
 </body>
 </html>

@@ -29,6 +29,31 @@ function setChip(chips,label,count){
 }
 function eventLabel(type){return type==='proposal'?'解決案':type==='poster_response'?'投稿者の返答':'追加の質問'}
 function eventRole(type){return type==='poster_response'?'original-poster':type==='proposal'?'maker':'questioner'}
+function journeyGuide(stage='thread'){
+  const order=['boyaki','thread','solution','product'],index=Math.max(0,order.indexOf(stage));
+  const labels=[
+    ['BOYAKI','ボヤく'],
+    ['Thread','話し合う'],
+    ['Solution','一緒に解決'],
+    ['Product','届ける']
+  ];
+  const guide=document.createElement('div');guide.className='journey-guide';guide.dataset.journeyGuide='1';
+  labels.forEach(([title,sub],i)=>{
+    const step=document.createElement('div');
+    step.className=`journey-step ${i<index?'is-done':i===index?'is-current':'is-future'}`;
+    step.dataset.journeyStage=order[i];
+    const strong=document.createElement('strong');strong.textContent=title;
+    const span=document.createElement('span');span.textContent=sub;
+    step.append(strong,span);guide.append(step);
+  });
+  return guide;
+}
+function setJourneyStage(guide,stage){
+  const order=['boyaki','thread','solution','product'],index=Math.max(0,order.indexOf(stage));
+  [...guide.querySelectorAll('.journey-step')].forEach((step,i)=>{
+    step.className=`journey-step ${i<index?'is-done':i===index?'is-current':'is-future'}`;
+  });
+}
 
 function makeThreadForm(type,placeholder,label){
   const form=document.createElement('form');
@@ -76,13 +101,23 @@ async function hydrateCanonicalThread(article,post){
   }
 
   mount.replaceChildren();
+  const journey=journeyGuide(access.problem_statement?'solution':'thread');mount.append(journey);
   const entry=document.createElement('div');entry.className='thread-role-tabs';entry.dataset.canonicalThreadControls='1';
-  const entryHint=document.createElement('p');entryHint.className='hint';entryHint.innerHTML='<strong>このBOYAKIに参加する</strong>';
+  const entryHint=document.createElement('p');entryHint.className='hint';entryHint.innerHTML='<strong>このBOYAKIに参加する</strong><br>役割はアカウントの属性ではなく、このProblemで何をするかです。';
+  const roleGuide=document.createElement('div');roleGuide.className='role-guide';
+  const voiceGuide=document.createElement('div');voiceGuide.className='role-guide-card';
+  const voiceTitle=document.createElement('strong');voiceTitle.textContent='Voice';
+  const voiceText=document.createElement('span');voiceText.textContent='困っている・試したい・条件を伝える側';
+  voiceGuide.append(voiceTitle,voiceText);
+  const makerGuide=document.createElement('div');makerGuide.className='role-guide-card';
+  const makerTitle=document.createElement('strong');makerTitle.textContent='Maker';
+  const makerText=document.createElement('span');makerText.textContent='質問し、解決を作って届ける側';
+  makerGuide.append(makerTitle,makerText);roleGuide.append(voiceGuide,makerGuide);
   const actions=document.createElement('div');actions.className='actions';
   const voice=document.createElement('button');voice.type='button';voice.textContent='Voiceとして入る';voice.dataset.canonicalRole='voice';
   const maker=document.createElement('button');maker.type='button';maker.textContent='Makerとして入る';maker.dataset.canonicalRole='maker';
   const roleStatus=document.createElement('p');roleStatus.className='hint';roleStatus.dataset.canonicalRoleStatus='1';
-  actions.append(voice,maker);entry.append(entryHint,actions,roleStatus);mount.append(entry);
+  actions.append(voice,maker);entry.append(entryHint,roleGuide,actions,roleStatus);mount.append(entry);
 
   const controls=document.createElement('div');controls.dataset.canonicalThreadForms='1';mount.append(controls);
   const clarifyDetails=document.createElement('details');clarifyDetails.className='clarify';
@@ -129,6 +164,7 @@ async function hydrateCanonicalThread(article,post){
   try{
     const published=await client.listPostProducts(post.id),products=published.products||[];
     if(products.length){
+      setJourneyStage(journey,'product');
       const productSection=document.createElement('section');productSection.className='participation-panel thread-products';productSection.dataset.threadProducts='1';
       const heading=document.createElement('h3');heading.textContent='この話し合いから生まれたプロダクト';
       const intro=document.createElement('p');intro.className='hint';intro.textContent='MakerがこのスレッドのSolution Roomで作り、元の会話へ掲載したプロダクトです。';
@@ -227,7 +263,7 @@ async function hydrateCanonicalThread(article,post){
   if(access.problem_statement){
     const shared=document.createElement('div');shared.className='participation-panel';shared.dataset.sharedProblem='1';
     const eyebrow=document.createElement('p');eyebrow.className='eyebrow';eyebrow.textContent='Shared Problem';
-    const title=document.createElement('h3');title.textContent='共同解決の対象';
+    const title=document.createElement('h3');title.textContent='みんなで解くProblem';
     const statement=document.createElement('p');statement.className='raw';statement.textContent=access.problem_statement.statement;
     const note=document.createElement('p');note.className='hint';note.textContent='元のBOYAKI本文が取り下げられても、この一般化Problemを入口に同じ痛みを持つVoiceが後から参加できます。';
     shared.append(eyebrow,title,statement,note);mount.append(shared);
@@ -243,14 +279,18 @@ async function hydrateCanonicalThread(article,post){
   if(access.my_invitation?.status==='pending'){
     const isSourceOwnerInvite=access.my_invitation.invitee_context==='source_owner';
     if(isSourceOwnerInvite&&!access.problem_statement){
-      solutionHint.textContent='ここから共同解決フェーズです。あなたの元のBOYAKI文は後から取り下げられますが、個人情報を除いて一般化した「Problem」、他の参加者の発言、Solution、Productは残る場合があります。';
+      solutionHint.textContent='ここが境界です。個人的にボヤく段階から、みんなで解決を作る段階へ進みます。';
       const consent=document.createElement('div');consent.className='candidate-block';consent.dataset.problemConsent='1';
-      const label=document.createElement('label');label.textContent='残してよい「困りごと」だけを、個人名・会社名・固有事情を外して1文にしてください';
+      const explain=document.createElement('div');explain.className='transition-note';
+      const explainTitle=document.createElement('strong');explainTitle.textContent='あなたのBOYAKIと、残るProblemをここで分けます';
+      const explainText=document.createElement('span');explainText.textContent='元のBOYAKI本文は後から取り下げられます。ここで確認した一般化Problem、他の参加者の発言、Solution、Productは共同成果として残る場合があります。';
+      explain.append(explainTitle,explainText);consent.append(explain);
+      const label=document.createElement('label');label.textContent='同じ痛みを持つ人にも通じる形で、残してよいProblemを1文にしてください';
       const textarea=document.createElement('textarea');textarea.rows=3;textarea.minLength=10;textarea.maxLength=300;textarea.placeholder='例: 複数システム間の定型的な手動転記に毎日時間を取られる';
       label.append(textarea);
       const checkLabel=document.createElement('label');checkLabel.className='hint';
       const check=document.createElement('input');check.type='checkbox';
-      checkLabel.append(check,document.createTextNode(' 元のBOYAKI本文は取り下げ可能だが、この一般化Problemと共同成果は残ることを理解した'));
+      checkLabel.append(check,document.createTextNode(' このProblemと共同成果が、元BOYAKI本文を取り下げた後も残る場合があることを確認した'));
       const accept=document.createElement('button');accept.type='button';accept.disabled=true;accept.textContent='同意してSolution Roomへ入る';
       const sync=()=>{accept.disabled=textarea.value.trim().length<10||!check.checked};
       textarea.addEventListener('input',sync);check.addEventListener('change',sync);
@@ -316,7 +356,7 @@ async function hydrateCanonicalThread(article,post){
   const roleKey=`boyaki-thread-role:${post.id}`;
   const applyRole=role=>{
     window.BOYAKI_STORAGE.local.setItem(roleKey,role);
-    roleStatus.textContent=role==='voice'?'Voiceとして参加中です。困りごとの補足・検証に参加できます。':role==='maker'?'Makerとして参加中です。質問・解決案の提案に参加できます。':'参加する役割を選んでください。';
+    roleStatus.textContent=role==='voice'?'Voiceとして参加中。自分の痛み・試したい条件・使った感想を伝えられます。':role==='maker'?'Makerとして参加中。質問し、解決案を出し、必要なら共同解決へ招待できます。':'このProblemでの役割を選んでください。';
     clarifyDetails.hidden=!role;
     proposalDetails.hidden=role!=='maker';
   };
