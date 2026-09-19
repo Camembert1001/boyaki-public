@@ -1,0 +1,11 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="connect-src https://camembert1001.github.io/boyaki-public/ai-staging/ https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/ai-staging-boyaki-api https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/ai-staging-boyaki-api/ https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/ai-staging-boyaki-thread-api https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/ai-staging-boyaki-thread-api/ https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/ai-staging-commerce-api https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/ai-staging-commerce-api/; base-uri 'none'; form-action 'none'; object-src 'none'">
+<script src="./ai-environment.js?v=20260919-commerce-v1"></script>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex,nofollow">
+<link rel="stylesheet" href="./styles.css"><title>商品 — BOYAKI</title></head><body>
+<header class="shell topbar"><a class="brand" href="./">BOYAKI</a><nav><a class="nav-link" href="./">ホーム</a><a class="nav-link active" href="./products.html">プロダクト</a><a class="nav-link" href="./mypage.html">マイページ</a></nav></header>
+<main class="shell maker-space">
+<a class="button-link" href="./products.html">← プロダクト一覧</a>
+<section id="product-detail" class="card hero"><p class="hint">商品を読み込んでいます…</p></section>
+<section id="checkout-card" class="card" hidden><p class="eyebrow">AI-STAGING Checkout</p><h2>テスト購入</h2><p class="hint">ここでは注文・購入権・受け取り導線を検証します。<strong>実際の決済・請求・Makerへの送金は発生しません。</strong></p><div class="actions"><button id="buy-product" type="button">テスト購入する</button></div><p id="checkout-status" class="hint" role="status" aria-live="polite"></p></section>
+<section id="delivery-card" class="card" hidden><p class="eyebrow">Purchased</p><h2>購入後の受け取り</h2><div id="delivery-content" class="delivery-content"></div><p class="hint">この内容はMaker本人または購入権を持つVoiceだけが取得できます。</p></section>
+</main><script type="module" src="./product.js?v=20260919-commerce-v1"></script></body></html>
