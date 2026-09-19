@@ -173,9 +173,9 @@ async function hydrateCanonicalThread(article,post){
       }else if(!access.source_owner_invitable){
         invite.disabled=true;invite.textContent='招待できません';
       }else{
-        invite.textContent='共同解決へ招待';
+        invite.textContent=access.is_source_owner?'共同解決フェーズへ進む':'共同解決へ招待';
         invite.addEventListener('click',async()=>{
-          invite.disabled=true;invite.textContent='招待中…';
+          invite.disabled=true;invite.textContent=access.is_source_owner?'準備中…':'招待中…';
           try{
             await client.inviteSourceOwnerToSolutionRoom(post.id);
             status('元のBOYAKI投稿者へSolution Room招待を送りました。');
@@ -183,7 +183,7 @@ async function hydrateCanonicalThread(article,post){
           }catch(err){
             console.error('source owner room invite failed',err);
             status(`招待できませんでした: ${String(err?.message||err)}`);
-            invite.disabled=false;invite.textContent='共同解決へ招待';
+            invite.disabled=false;invite.textContent=access.is_source_owner?'共同解決フェーズへ進む':'共同解決へ招待';
           }
         });
       }
