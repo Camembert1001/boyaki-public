@@ -19,7 +19,8 @@ const kindLabel=value=>({
   productize_case:'Case → Product',
   publish_product:'Publish back',
   room_activity:'Solution Room',
-  sale:'Sale'
+  sale:'Sale',
+  market_opportunity:'Opportunity'
 }[value]||'Inbox');
 
 function account(){
