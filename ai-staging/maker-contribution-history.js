@@ -1,4 +1,4 @@
-import { client } from './canonical-api.js?v=20260919-thread-room-product-v7';
+import { client } from './canonical-api.js?v=20260919-problem-transition-v8';
 
 const box=document.querySelector('[data-contribution-role="maker"]');
 const status=document.querySelector('#maker-contribution-status');
