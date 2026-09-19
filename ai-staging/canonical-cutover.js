@@ -186,11 +186,18 @@ async function hydrateCanonicalThread(article,post){
 
 function yen(value){const n=Number(value);return Number.isFinite(n)&&n>0?new Intl.NumberFormat('ja-JP',{style:'currency',currency:'JPY',maximumFractionDigits:0}).format(n):''}
 function demandFeedChips(chips,summary){
- const s=summary||{};
+ if(!chips)return;
+ chips.querySelectorAll('[data-demand-feed-chip]').forEach(x=>x.remove());
+ const s=summary?.signals?{
+  same_problem:summary.signals.same_problem?.count||0,
+  would_try:summary.signals.would_try?.count||0,
+  would_pay:summary.signals.would_pay?.count||0,
+  median_yen:summary.signals.would_pay?.median_yen||null
+ }:(summary||{});
  for(const [label,value] of [['同じ悩み',s.same_problem],['試したい',s.would_try],['払ってもいい',s.would_pay]]){
-  if(Number(value)>0){const node=document.createElement('span');node.className='chip';node.textContent=`${label} ${value}`;chips.append(node)}
+  if(Number(value)>0){const node=document.createElement('span');node.className='chip';node.dataset.demandFeedChip='1';node.textContent=`${label} ${value}`;chips.append(node)}
  }
- if(Number(s.median_yen)>0){const node=document.createElement('span');node.className='chip';node.textContent=`支払中央値 ${yen(s.median_yen)}`;chips.append(node)}
+ if(Number(s.median_yen)>0){const node=document.createElement('span');node.className='chip';node.dataset.demandFeedChip='1';node.textContent=`支払中央値 ${yen(s.median_yen)}`;chips.append(node)}
 }
 async function hydrateDemandEvidence(article,post){
  const client=await api();
@@ -239,7 +246,7 @@ async function hydrateDemandEvidence(article,post){
       await reload();mineMap.clear();for(const x of mine.signals||[])mineMap.set(x.signal,x);
       button.textContent=mineMap.has(signal)?`${label} ✓ 取り消す`:label;
       statusNode.textContent='需要シグナルを更新しました。';
-      demandFeedChips(article.querySelector('.chips'),null);
+      demandFeedChips(article.querySelector('.chips'),aggregate);
     }catch(err){console.error('demand signal update failed',err);statusNode.textContent='更新できませんでした。再試行してください。'}
     finally{button.disabled=false}
   };
@@ -270,13 +277,13 @@ async function hydrateDemandEvidence(article,post){
     if(!Number.isInteger(value)||value<1||value>1000000){statusNode.textContent='金額は1〜1,000,000円の整数で入力してください。';return}
     if(!text){statusNode.textContent='「何が実現したら払えるか」を入力してください。';return}
     save.disabled=true;statusNode.textContent='支払意思を保存しています…';
-    try{await client.saveDemand(post.id,'would_pay',{amount_yen:value,condition_text:text});await reload();statusNode.textContent='支払意思を保存しました。購入予約ではありません。';refreshPayState();renderConditions()}
+    try{await client.saveDemand(post.id,'would_pay',{amount_yen:value,condition_text:text});await reload();demandFeedChips(article.querySelector('.chips'),aggregate);statusNode.textContent='支払意思を保存しました。購入予約ではありません。';refreshPayState();renderConditions()}
     catch(err){console.error('payment demand save failed',err);statusNode.textContent='支払意思を保存できませんでした。'}
     finally{save.disabled=false}
   });
   remove.addEventListener('click',async()=>{
     remove.disabled=true;statusNode.textContent='支払意思を取り消しています…';
-    try{await client.deleteDemand(post.id,'would_pay');await reload();statusNode.textContent='支払意思を取り消しました。';refreshPayState();renderConditions()}
+    try{await client.deleteDemand(post.id,'would_pay');await reload();demandFeedChips(article.querySelector('.chips'),aggregate);statusNode.textContent='支払意思を取り消しました。';refreshPayState();renderConditions()}
     catch(err){console.error('payment demand delete failed',err);statusNode.textContent='取り消せませんでした。'}
     finally{remove.disabled=false}
   });
