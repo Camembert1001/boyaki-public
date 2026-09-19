@@ -11,7 +11,7 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {RULES, ADVISORY_RULES, BLANK_RULES} from '../lib/checks.mjs';
 import {CONFIDENCE_BANDS, RULE_CONFIDENCE, UNBANDED_RULES, bandCounts, bandOf, noiseRatio} from '../lib/confidence.mjs';
-import {LOCALE_FORMATS, classifyAsset, inventory, languageTag, summarize} from '../lib/assets.mjs';
+import {LOCALE_FORMATS, classifyAsset, classifyPaths, inventory, languageTag, summarize} from '../lib/assets.mjs';
 import {DEFAULT_PROSPECT_THRESHOLDS, VERDICTS, aggregate, decide} from '../lib/candidates.mjs';
 import {POSTURES, nearMatches, outstandingAxes, readContactStore, resolvePosture} from '../lib/contact-link.mjs';
 import {ProspectMetadataError, emptyEntry, loadMetadata} from '../lib/metadata.mjs';
@@ -119,6 +119,76 @@ test('asset classification needs locale evidence in the path, not just an extens
   assert.ok(['SUPPORTED', 'DETECTED_BUT_UNSUPPORTED'].includes(hit.support), ext);
  }
  assert.deepEqual(summarize([]).formats, []);
+});
+
+// Calibration bug A-1. A language tag that falls out of a longer filename is not evidence
+// of anything by itself: these three are real paths from a real exploration run, and all
+// three were being inventoried as localization assets in a language nobody had written.
+test('a language tag carved out of a longer filename needs locale context to count', () => {
+ const falsePositives = [
+  ['.github/workflows/nightly-windows-ms.yml', 'ms', 'Malay'],
+  ['.github/workflows/oh-my-dsh.yml', 'my', 'Burmese'],
+  ['.github/workflows/Mr-potato-123__dsh-mcp.yml', 'mr', 'Marathi'],
+  // The same names outside .github, so this is the filename rule being tested and not
+  // the skipped-directory rule that also covers those three paths.
+  ['ci/nightly-windows-ms.yml', 'ms', 'Malay'],
+  ['scripts/oh-my-dsh.yml', 'my', 'Burmese'],
+  ['build/config/Mr-potato-123__dsh-mcp.yml', 'mr', 'Marathi'],
+  ['tools/release-is.json', 'is', 'Icelandic'],
+  ['data/level-da.csv', 'da', 'Danish'],
+  // Two more from the same run: a plugin catalogue whose entries are named after their
+  // authors, and a character-encoding table.
+  ['data/plugins/Mr-Neutr0n__dsh-medseek.yml', 'mr', 'Marathi'],
+  ['conf/char_encoding_tbl_eu.txt', 'eu', 'Basque']
+ ];
+ for (const [relPath, tag, language] of falsePositives) {
+  assert.equal(classifyAsset(relPath), null, relPath + ' is not ' + language + ' because it ends in "' + tag + '"');
+ }
+
+ // ... and the conventions that are evidence still are. Each row names the thing in the
+ // path that makes the tag mean something.
+ const keeps = [
+  ['locales/en-US-strings.json', 'en', 'a locale directory'],
+  ['src/ui/strings-ja.json', 'ja', 'a stem that names translations'],
+  ['config/messages_de.properties', 'de', 'a stem that names translations'],
+  ['ja.json', 'ja', 'the whole basename is the tag'],
+  ['assets/data/ja_JP.csv', 'ja', 'the whole basename is the tag'],
+  ['po/oh-my-dsh.po', 'my', 'an extension that exists only for localization'],
+  // Real paths from the same run, on the other side of the line. The locale word is a
+  // token inside a longer name rather than the whole of one, which is how real trees are
+  // written - a whole-segment match would throw all four of these away.
+  ['data/relic_translations_ja.json', 'ja', 'a locale word inside the stem'],
+  ['assets/builtin-dict-ja.json', 'ja', 'a locale word inside the stem'],
+  ['glossaries/bloodborne-ja-zh.json', 'ja', 'a locale word in a directory'],
+  ['samples/03-ui-strings_en-ja/source.en.json', 'en', 'a locale word in a directory'],
+  ['_Inkitmod/chnlocalplus/localisation/replace/de_sections_l_english.yml', 'de', 'a locale directory']
+ ];
+ for (const [relPath, language, because] of keeps) {
+  const hit = classifyAsset(relPath);
+  assert.ok(hit, relPath + ' is a localization asset: ' + because);
+  assert.equal(hit.language, language, relPath);
+ }
+});
+
+// Calibration bug A-2. `walk()` prunes .git, .github, node_modules, dist and the rest as
+// it descends; the remote explorer gets a flat list and cannot prune anything, so both
+// sides go through one function and agree by construction.
+test('the asset inventory skips the same directories however the paths were obtained', () => {
+ const tree = [
+  'locales/en.json',
+  'locales/ja.json',
+  '.github/workflows/i18n-ja.yml',
+  'node_modules/some-package/locales/ja.json',
+  'dist/locales/ja.json',
+  'vendor/lib/i18n/ja.json',
+  'build/i18n/ja.json',
+  'src/index.js'
+ ];
+ assert.deepEqual(classifyPaths(tree).map(asset => asset.path), ['locales/en.json', 'locales/ja.json'],
+  'a vendored or built copy of somebody else\'s locale file is not this project\'s localization');
+ // The rule is about the directories above the file, not about the file's own name.
+ assert.deepEqual(classifyPaths(['dist.json', 'i18n/node_modules.json']).map(asset => asset.path),
+  ['i18n/node_modules.json']);
 });
 
 // The engine's whole reason for existing: drop the weak candidate before a human reads it.

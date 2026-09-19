@@ -11,9 +11,10 @@
 //
 // The first is against the scanner core. Nothing under `../../lib/` is allowed to know
 // this module exists, and this module never calls into the checker: it classifies remote
-// paths with `classifyAsset`, which is a pure function of a string, writes the files it
-// decides to keep into a local workspace, and stops. The scan happens later, offline,
-// from disk, exactly as it does when a human assembles a workspace by hand.
+// paths with `classifyPaths`, the same pure function of a path list the offline inventory
+// uses, writes the files it decides to keep into a local workspace, and stops. The scan
+// happens later, offline, from disk, exactly as it does when a human assembles a
+// workspace by hand.
 //
 // The second is against people. This module reads repositories: names, file trees, locale
 // files, the public flags GitHub returns about a repository. It does not read a profile,
@@ -23,7 +24,7 @@
 // is a claim about the contact store, and only a human who read the store may make it.
 import path from 'node:path';
 import {mkdir, writeFile} from 'node:fs/promises';
-import {classifyAsset} from '../../lib/assets.mjs';
+import {classifyPaths} from '../../lib/assets.mjs';
 import {SCHEMA as MANIFEST_SCHEMA} from '../../lib/manifest.mjs';
 import {emptyCounters} from './strategies.mjs';
 
@@ -125,7 +126,8 @@ async function search(client, strategies, budget, log) {
    budget.record('pages');
    let result;
    try {
-    result = await client.searchRepositories(strategy.query, {page, perPage: strategy.per_page});
+    result = await client.searchRepositories(strategy.query,
+     {page, perPage: strategy.per_page, sort: strategy.sort ?? null, order: strategy.order ?? 'desc'});
    } catch (error) {
     // A failed search must not take the run down with it: the strategy is marked, the
     // budget records why, and the manifest still describes everything found so far.
@@ -193,12 +195,13 @@ async function inspect(client, found, counters, budget, writer, asOf, log) {
   if (tree.remaining === 0) budget.halt('GitHub reports no remaining rate-limit quota');
   bump(strategyIds, 'inspected_count');
 
-  // The same classifier the offline inventory uses, applied to remote paths. It is a pure
-  // function of a string, which is why this is allowed to live on the network side.
-  const assets = tree.paths
-   .map(item => ({...item, asset: classifyAsset(item.path)}))
-   .filter(item => item.asset)
-   .map(item => ({...item.asset, size: item.size}));
+  // The same inventory rule the offline pass uses, applied to remote paths - skip list
+  // included, so a repository explored over the network reports the assets an offline
+  // scan of the same checkout would report and no others. It is a pure function of a list
+  // of strings, which is why this is allowed to live on the network side.
+  const sizes = new Map(tree.paths.map(item => [item.path, item.size]));
+  const assets = classifyPaths(tree.paths.map(item => item.path))
+   .map(asset => ({...asset, size: sizes.get(asset.path) ?? 0}));
   const languages = [...new Set(assets.map(asset => asset.language).filter(Boolean))].sort();
 
   if (assets.length) bump(strategyIds, 'localization_asset_count');
@@ -236,6 +239,9 @@ async function inspect(client, found, counters, budget, writer, asOf, log) {
   }
   bump(strategyIds, 'materialized_count');
 
+  // Deliberately read from the unfiltered tree: `.github/` is skipped for *assets*,
+  // because a workflow file is not locale data, but the workflow's own name is the
+  // evidence CI_LOCALIZATION_STEP cites.
   const workflows = tree.paths.map(item => item.path).filter(item => item.startsWith('.github/workflows/'));
   candidates.set(id, {
    strategy_ids: [...strategyIds].sort(),

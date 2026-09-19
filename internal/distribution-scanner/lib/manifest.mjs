@@ -111,6 +111,10 @@ function normalizeStrategy(raw, label) {
   strategy_id: assertText(raw.strategy_id, label + '.strategy_id'),
   source: raw.source === undefined || raw.source === null ? null : assertText(raw.source, label + '.source'),
   query: raw.query === undefined || raw.query === null ? null : assertText(raw.query, label + '.query'),
+  // How the search was told to rank. Recorded beside the query because the two together
+  // are what a re-run would have to repeat; `null` is the search's own relevance order.
+  sort: raw.sort === undefined || raw.sort === null ? null : assertText(raw.sort, label + '.sort'),
+  order: raw.order === undefined || raw.order === null ? 'desc' : assertText(raw.order, label + '.order'),
   discovered_count: count('discovered_count'),
   inspected_count: count('inspected_count'),
   localization_asset_count: count('localization_asset_count'),

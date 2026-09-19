@@ -30,7 +30,7 @@ import {SCHEMA, renderText, review} from '../lib/review.mjs';
 import {parseArgs} from '../review.mjs';
 
 import {Budget, DEFAULT_BUDGET, LIMITS as LIMIT_KEYS, PER_STRATEGY_LIMITS} from '../discovery/lib/budget.mjs';
-import {StrategyError, loadStrategies} from '../discovery/lib/strategies.mjs';
+import {SORTS, StrategyError, loadStrategies, normalizeStrategy} from '../discovery/lib/strategies.mjs';
 import {createClient} from '../discovery/lib/github.mjs';
 import {activityOf, candidateId, contactRouteOf, explore, machineSignals} from '../discovery/lib/explore.mjs';
 import {parseArgs as parseExploreArgs} from '../discovery/explore.mjs';
@@ -723,7 +723,7 @@ const memoryWriter = () => {
  }};
 };
 
-const strategy = (id, query) => ({strategy_id: id, source: 'github_search_repositories', query, per_page: 30, rationale: null, enabled: true});
+const strategy = (id, query, extra = {}) => ({strategy_id: id, source: 'github_search_repositories', query, per_page: 30, rationale: null, enabled: true, sort: null, order: 'desc', ...extra});
 
 test('exploration writes a manifest and a workspace, and nothing else', async () => {
  const client = fakeGitHub({repositoryCount: 3});
@@ -915,6 +915,90 @@ test('activity, contact route and machine signals are derived only from what was
   .map(item => item.signal), ['HANDLES_LOCALIZATION_FILES', 'CI_LOCALIZATION_STEP']);
 
  assert.equal(candidateId('Example-Org/Some.Repo'), 'example-org__some.repo');
+});
+
+// Calibration, phase 2. v3 ranked every search by `sort=updated`, which is a ranking by
+// churn rather than by the query: on a broad text query the repositories pushed most
+// recently are the ones a robot pushes. How a route ranks is now the route's own declared
+// property, so it can be compared like the query it belongs to.
+test('how a search ranks belongs to the strategy, not to the client', async () => {
+ assert.equal(normalizeStrategy({strategy_id: 'a', query: 'x'}, 's').sort, null,
+  'the default is the search\'s own relevance ranking');
+ assert.equal(normalizeStrategy({strategy_id: 'a', query: 'x'}, 's').order, 'desc');
+ assert.equal(normalizeStrategy({strategy_id: 'a', query: 'x', sort: 'updated'}, 's').sort, 'updated');
+ assert.throws(() => normalizeStrategy({strategy_id: 'a', query: 'x', sort: 'best-match'}, 's'), StrategyError);
+ assert.throws(() => normalizeStrategy({strategy_id: 'a', query: 'x', order: 'random'}, 's'), StrategyError);
+ assert.ok(SORTS.includes(null));
+
+ // The client asks for exactly what the strategy declared, and asks for nothing when the
+ // strategy declared nothing.
+ const asked = [];
+ const transport = async url => {
+  asked.push(new URL(url).searchParams);
+  return {ok: true, status: 200, headers: {get: () => null}, json: async () => ({items: []}), text: async () => ''};
+ };
+ const client = createClient({transport, env: {}});
+ await client.searchRepositories('q');
+ assert.equal(asked[0].get('sort'), null, 'no sort parameter is GitHub\'s documented best match');
+ assert.equal(asked[0].get('order'), null);
+ await client.searchRepositories('q', {sort: 'updated', order: 'asc'});
+ assert.deepEqual([asked[1].get('sort'), asked[1].get('order')], ['updated', 'asc']);
+
+ // And the explorer passes the strategy's ranking down, then records it beside the query,
+ // because the same query ranked two ways is two different first pages.
+ const seen = [];
+ const github = fakeGitHub({repositoryCount: 1});
+ const recording = {...github, searchRepositories: async (query, options) => {
+  seen.push(options);
+  return github.searchRepositories(query, options);
+ }};
+ const result = await explore({
+  client: recording,
+  strategies: [strategy('ranked-route', 'invented shape', {sort: 'updated', order: 'desc'})],
+  budget: new Budget(),
+  writer: memoryWriter(),
+  asOf: '2026-09-19T00:00:00Z'
+ });
+ assert.deepEqual([seen[0].sort, seen[0].order], ['updated', 'desc']);
+ const row = normalizeManifest(result.manifest, 'explored').strategies[0];
+ assert.deepEqual([row.sort, row.order], ['updated', 'desc']);
+});
+
+// Calibration, phase 3. Each of these is a measured failure of the v3 set, written down as
+// a rule so the next edit to strategies.json has to argue with it.
+test('every shipped strategy rests on structural evidence rather than README prose', async () => {
+ const text = await readFile(path.join(scannerDir, 'discovery', 'strategies.json'), 'utf8');
+ const strategies = loadStrategies(text, 'shipped strategies');
+
+ for (const item of strategies) {
+  // A README mentions everything. Matching one is how a curated list of links about game
+  // localization outranks a game that has some: 61% of what the v3 set returned was an
+  // awesome-list, a star-list mirror or an SEO landing repository.
+  assert.doesNotMatch(item.query, /in:[a-z,]*readme/, item.strategy_id + ' must not match on README text');
+
+  // Something in every query has to reach a field the owner declared rather than prose
+  // they happened to write: a topic filter, the topics field itself, or a language
+  // GitHub's linguist assigned.
+  assert.match(item.query, /(^|\s)(topic:|language:)|in:[a-z,]*topics/,
+   item.strategy_id + ' must carry structural evidence');
+
+  // `language:JSON` is the shape that looks structural and is not: linguist decides a
+  // repository's language, and it decides JSON for almost nothing, so the route that
+  // carried it had a population of one.
+  assert.doesNotMatch(item.query, /language:JSON/i, item.strategy_id + ' must not filter on a data-file language');
+
+  // Ranking is left to the search unless a route has a measured reason to override it.
+  assert.equal(item.sort, null, item.strategy_id + ' ranks by relevance');
+ }
+
+ // Two topics are ANDed, and so is free text next to a topic - which is how v3's
+ // `indie game i18n topic:localization` came to match nothing at all. Any route that
+ // narrows with both has to be able to say it still returns something, so the set keeps
+ // routes of both shapes rather than only the narrow ones.
+ const topicOnly = strategies.filter(item => !/in:name/.test(item.query));
+ const textAndTopic = strategies.filter(item => /in:name/.test(item.query));
+ assert.ok(topicOnly.length >= 3, 'the set keeps self-labelled routes');
+ assert.ok(textAndTopic.length >= 3, 'and routes that read the name and description');
 });
 
 test('the shipped strategy set loads and every strategy is comparable', async () => {
