@@ -118,12 +118,14 @@ async function load({silent=false}={}){
       }
     }
     if(stickToBottom||!silent)log.scrollTop=log.scrollHeight;
+    return true;
   }catch(err){
     console.error('solution room load failed',err);
     if(!silent){
       log.innerHTML='<p class="hint">Solution Logを復元できませんでした。通信状態を確認して再試行してください。</p>';
       setStatus('読み込みに失敗しました。','error');
     }
+    return false;
   }finally{loading=false}
 }
 
@@ -156,9 +158,10 @@ if(!viewOnly){
     }
   });
 
-  $('#room-refresh')?.addEventListener('click',()=>{
+  $('#room-refresh')?.addEventListener('click',async()=>{
     setStatus('更新しています…','working');
-    load().then(()=>setStatus('最新のSolution Logを表示しています。','success')).catch(()=>{});
+    const ok=await load();
+    if(ok)setStatus('最新のSolution Logを表示しています。','success');
   });
 
   $('#room-report')?.addEventListener('click',()=>{
