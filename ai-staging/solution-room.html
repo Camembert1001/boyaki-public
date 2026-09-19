@@ -36,7 +36,7 @@
         <span class="chip" id="room-id"></span>
       </div>
       <p class="lead">VoiceとMakerが、このRoomの文脈を引き継いで解決を詰める場所。</p>
-      <p class="hint">このRoomの会話はSolution Logとして時系列で復元されます。</p>
+      <p class="hint">このRoomの会話はAI-STAGING専用DBへSolution Logとして保存されます。STAGINGの投稿・活動履歴には反映されません。</p>
     </section>
 
     <section class="card">
@@ -59,12 +59,12 @@
     <section class="card identity-card">
       <p class="eyebrow">Room identity</p>
       <h2>この活動を誰の履歴として残すか</h2>
-      <p class="hint">BOYAKI AccountをこのRoomの本人identityとして使います。未ログインでもRoomは閲覧できますが、送信にはログインが必要です。</p>
+      <p class="hint">STAGINGと共通のBOYAKI Account IDを本人identityとして使います。Room内の活動データはAI-STAGING側だけに保存されます。未ログインでも閲覧できますが、送信にはログインが必要です。</p>
       <code id="room-identity">loading…</code>
     </section>
   </main>
 
   <script src="./legacy-write-freeze.js?v=20260918-ai-v1"></script>
-  <script type="module" src="./solution-room.js?v=20260918-ai-v1"></script>
+  <script type="module" src="./solution-room.js?v=20260919-solution-room-v2"></script>
 </body>
 </html>
