@@ -1,4 +1,4 @@
-import { client } from './canonical-api.js?v=20260919-solution-flow-v3';
+import { client } from './canonical-api.js?v=20260919-contribution-history-v5';
 
 const box=document.querySelector('[data-contribution-role="maker"]');
 const status=document.querySelector('#maker-contribution-status');
