@@ -1,5 +1,5 @@
 import { getPublicKey } from 'https://esm.sh/nostr-tools@2.17.0';
-import { client, fromHex } from './canonical-api.js?v=20260919-solution-flow-v3';
+import { client, fromHex } from './canonical-api.js?v=20260919-contribution-history-v5';
 
 const $=s=>document.querySelector(s);
 const params=new URLSearchParams(location.search);
@@ -51,11 +51,37 @@ function setStatus(text,state=''){
   if(state)node.dataset.state=state;else delete node.dataset.state;
 }
 
+function yen(value){const n=Number(value);return Number.isFinite(n)&&n>0?new Intl.NumberFormat('ja-JP',{style:'currency',currency:'JPY',maximumFractionDigits:0}).format(n):''}
+function renderDemandEvidence(evidence){
+  const box=$('#room-demand-evidence');if(!box)return;
+  box.replaceChildren();
+  const title=document.createElement('p');title.className='eyebrow';title.textContent='Demand Evidence';
+  const heading=document.createElement('h3');heading.textContent='この問題に集まっている需要';
+  const summary=document.createElement('div');summary.className='demand-ladder';
+  const rows=[
+    ['同じことで困ってる',evidence?.same_problem?.count||0],
+    ['解決したら試したい',evidence?.would_try?.count||0],
+    ['この条件なら払える',evidence?.would_pay?.count||0]
+  ];
+  for(const [label,count] of rows){const chip=document.createElement('span');chip.className=`step${count?' on':''}`;chip.textContent=`${label} ${count}`;summary.append(chip)}
+  if(evidence?.would_pay?.median_yen){const chip=document.createElement('span');chip.className='step on';chip.textContent=`支払中央値 ${yen(evidence.would_pay.median_yen)}`;summary.append(chip)}
+  box.append(title,heading,summary);
+  const conditions=evidence?.pay_conditions||[];
+  if(conditions.length){
+    const note=document.createElement('p');note.className='hint';note.textContent='匿名の成立条件';
+    box.append(note);
+    for(const row of conditions){const item=document.createElement('div');item.className='thread-item';const strong=document.createElement('strong');strong.textContent=yen(row.amount_yen);item.append(strong,document.createTextNode(` — ${row.condition_text}`));box.append(item)}
+  }else{
+    const empty=document.createElement('p');empty.className='hint';empty.textContent='まだ支払条件付きの需要証拠はありません。';box.append(empty);
+  }
+}
+
 async function loadRoomMeta(){
   if(!validRoom)return false;
   try{
     const result=await client.getSolutionRoom(room);
     const data=result.room,post=data?.post;
+    renderDemandEvidence(data?.demand_evidence||{});
     const sourceActive=post?.status==='active'&&Boolean(post?.content);
     const raw=sourceActive?String(post.content).trim():'元のBOYAKIは取り下げ済みです。Solution Roomの履歴は保持されています。';
     $('#room-title').textContent=sourceActive?(raw.length>54?`${raw.slice(0,54)}…`:raw):'取り下げ済みBOYAKIのSolution Room';
