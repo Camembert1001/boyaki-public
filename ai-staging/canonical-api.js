@@ -4,7 +4,7 @@ const THREAD='https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/ai-staging-b
 const store=window.BOYAKI_STORAGE;
 export const fromHex=h=>new Uint8Array((h.match(/.{1,2}/g)||[]).map(b=>parseInt(b,16)));
 export const toHex=bytes=>[...bytes].map(b=>b.toString(16).padStart(2,'0')).join('');
-window.BOYAKI_AI_STAGING_CLIENT_VERSION='20260918-ai-v1';
+window.BOYAKI_AI_STAGING_CLIENT_VERSION='20260919-solution-room-v2';
 function identity(){
   const h=store.local.getItem('boyaki-account-sk')||store.session.getItem('boyaki-account-sk');
   if(h){const sk=fromHex(h);return{sk,pk:getPublicKey(sk),kind:'account'}}
@@ -40,7 +40,10 @@ export const client={
   listThread:id=>thread(`/posts/${encodeURIComponent(id)}/thread`),
   threadAccess:id=>thread(`/posts/${encodeURIComponent(id)}/thread/access`,{signed:true}),
   createThread:(id,event_type,content,parent_event_id=null,extra={})=>thread(`/posts/${encodeURIComponent(id)}/thread`,{method:'POST',signed:true,body:{...extra,event_type,content,parent_event_id,identity_kind:identity().kind}}),
-  deleteThread:id=>thread(`/thread/${encodeURIComponent(id)}`,{method:'DELETE',signed:true})
+  deleteThread:id=>thread(`/thread/${encodeURIComponent(id)}`,{method:'DELETE',signed:true}),
+  listSolutionRoomMessages:room=>thread(`/solution-rooms/${encodeURIComponent(room)}/messages`),
+  createSolutionRoomMessage:(room,content)=>thread(`/solution-rooms/${encodeURIComponent(room)}/messages`,{method:'POST',signed:true,body:{content}}),
+  deleteSolutionRoomMessage:id=>thread(`/solution-room-messages/${encodeURIComponent(id)}`,{method:'DELETE',signed:true})
 };
 window.BOYAKI_CANONICAL=client;
 if(document.querySelector('#feed'))initialize().then(async ok=>{if(ok)await import('./canonical-cutover.js?v=20260918-ai-v1')}).catch(e=>console.error('AI-STAGING initialization failed',e));
