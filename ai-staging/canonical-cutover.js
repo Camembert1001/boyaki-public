@@ -55,7 +55,7 @@ async function hydrateCanonicalThread(article,post){
   }
 
   let thread={events:[]};
-  let access={can_post_as_poster:false,deletable_event_ids:[]};
+  let access={can_post_as_poster:false,deletable_event_ids:[],room_invitations:[],my_invitation:null};
   try{
     thread=await client.listThread(post.id);
     if(client.identity()){
@@ -104,9 +104,10 @@ async function hydrateCanonicalThread(article,post){
   const list=document.createElement('div');list.className='thread';list.dataset.canonicalThreadList='1';mount.append(list);
   for(const ev of events){
     const item=document.createElement('div');item.className=`thread-item ${ev.event_type==='proposal'?'proposal-item':ev.event_type==='clarify'?'clarification-unanswered':''}`;
-    item.dataset.eventId=ev.id;item.dataset.eventType=`boyaki-${ev.event_type.replace('_','-')}`;item.dataset.actorRole=eventRole(ev.event_type);
+    item.dataset.eventId=ev.id;item.dataset.eventType=`boyaki-${ev.event_type.replace('_','-')}`;item.dataset.actorRole=ev.participant_role||eventRole(ev.event_type);
     const strong=document.createElement('strong');strong.textContent=eventLabel(ev.event_type);
-    item.append(strong,document.createTextNode(` · ${short(ev.author_pubkey)}`),document.createElement('br'),document.createTextNode(ev.content||''));
+    const roleText=ev.participant_role?` · ${ev.participant_role==='voice'?'Voice':'Maker'}`:'';
+    item.append(strong,document.createTextNode(`${roleText} · ${short(ev.author_pubkey)}`),document.createElement('br'),document.createTextNode(ev.content||''));
     if(ev.event_type==='clarify'&&access.can_post_as_poster){
       const answered=events.some(x=>x.event_type==='poster_response'&&x.parent_event_id===ev.id);
       if(!answered){
@@ -125,33 +126,104 @@ async function hydrateCanonicalThread(article,post){
   }
   if(!events.length){const empty=document.createElement('p');empty.className='hint';empty.textContent='まだ追加質問・解決案・投稿者の返答はありません。';list.append(empty)}
 
+  try{
+    const published=await client.listPostProducts(post.id),products=published.products||[];
+    if(products.length){
+      const productSection=document.createElement('section');productSection.className='participation-panel thread-products';productSection.dataset.threadProducts='1';
+      const heading=document.createElement('h3');heading.textContent='この話し合いから生まれたプロダクト';
+      const intro=document.createElement('p');intro.className='hint';intro.textContent='MakerがこのスレッドのSolution Roomで作り、元の会話へ掲載したプロダクトです。';
+      productSection.append(heading,intro);
+      for(const product of products){
+        const card=document.createElement('div');card.className='candidate-block';
+        const title=document.createElement('strong');title.textContent=product.title;
+        const desc=document.createElement('p');desc.textContent=product.description||'';
+        const meta=document.createElement('p');meta.className='hint';meta.textContent=`${yen(product.price_yen)} · Maker: ${product.maker?.display_name||short(product.maker_account_pubkey)} · ${product.sold_count||0}件購入`;
+        const productActions=document.createElement('div');productActions.className='actions';
+        const open=document.createElement('a');open.className='button-link';open.href=`./product.html?id=${encodeURIComponent(product.id)}`;open.textContent='プロダクトを見る';
+        productActions.append(open);card.append(title,desc,meta,productActions);productSection.append(card);
+      }
+      mount.append(productSection);
+    }
+  }catch(err){console.warn('thread product hydrate failed',err)}
+
+  if(access.current_role==='maker'){
+    const voiceMap=new Map();
+    for(const ev of events){
+      if(ev.participant_role!=='voice'||!ev.owner_account_pubkey||ev.owner_account_pubkey===access.actor_pubkey)continue;
+      if(!voiceMap.has(ev.owner_account_pubkey))voiceMap.set(ev.owner_account_pubkey,ev);
+    }
+    if(voiceMap.size){
+      const invitePanel=document.createElement('div');invitePanel.className='participation-panel';invitePanel.dataset.roomInvitePanel='1';
+      const h=document.createElement('h3');h.textContent='VoiceをSolution Roomへ招待';
+      const hint=document.createElement('p');hint.className='hint';hint.textContent='スレッドで話したVoiceの中から、解決を一緒に具体化したい人だけを招待します。';
+      invitePanel.append(h,hint);
+      const inviteByVoice=new Map((access.room_invitations||[]).map(x=>[x.invitee_account_pubkey,x]));
+      for(const [pubkey,ev] of voiceMap){
+        const row=document.createElement('div');row.className='thread-item';
+        const name=document.createElement('strong');name.textContent=ev.display_name||`Voice ${short(pubkey)}`;
+        const current=inviteByVoice.get(pubkey);
+        const invite=document.createElement('button');invite.type='button';
+        if(current){
+          invite.disabled=true;invite.textContent=current.status==='accepted'?'参加済み':'招待済み';
+        }else{
+          invite.textContent='Solution Roomへ招待';
+          invite.addEventListener('click',async()=>{
+            invite.disabled=true;invite.textContent='招待中…';
+            try{
+              await client.inviteVoiceToSolutionRoom(post.id,ev.id);
+              status('VoiceをSolution Roomへ招待しました。');
+              await hydrateCanonicalThread(article,post);
+            }catch(err){console.error('room invite failed',err);status(`招待できませんでした: ${String(err?.message||err)}`);invite.disabled=false;invite.textContent='Solution Roomへ招待'}
+          });
+        }
+        row.append(name,document.createTextNode(' '),invite);invitePanel.append(row);
+      }
+      mount.append(invitePanel);
+    }
+  }
+
   const solutionStep=document.createElement('div');
   solutionStep.className='participation-panel';
   solutionStep.dataset.solutionRoomTransition='1';
-  const solutionTitle=document.createElement('p');solutionTitle.className='hint';solutionTitle.innerHTML='<strong>解決を具体化する</strong>';
+  const solutionTitle=document.createElement('p');solutionTitle.className='hint';solutionTitle.innerHTML='<strong>Solution Room</strong>';
   const solutionHint=document.createElement('p');solutionHint.className='hint';
-  solutionHint.textContent='スレッドで輪郭が見えたら、このBOYAKI専用のSolution Roomへ進めます。Roomの会話・CaseはAI-STAGING内だけに保存されます。';
   const solutionActions=document.createElement('div');solutionActions.className='actions';
-  if(access.solution_room_id){
-    const open=document.createElement('a');open.className='button-link';open.href=`./solution-room.html?room=${encodeURIComponent(access.solution_room_id)}`;open.textContent='Solution Roomを開く';solutionActions.append(open);
-  }else if(client.identity()){
-    const create=document.createElement('button');create.type='button';create.textContent='Solution Roomを作る';
-    const solutionStatus=document.createElement('span');solutionStatus.className='hint';
-    create.addEventListener('click',async()=>{
-      create.disabled=true;create.textContent='作成中…';solutionStatus.textContent='';
+
+  if(access.my_invitation?.status==='pending'){
+    solutionHint.textContent='Makerから、このBOYAKIの解決を一緒に詰めるSolution Roomへ招待されています。';
+    const accept=document.createElement('button');accept.type='button';accept.textContent='招待を受けてSolution Roomへ入る';
+    accept.addEventListener('click',async()=>{
+      accept.disabled=true;accept.textContent='参加中…';
       try{
-        const result=await client.ensureSolutionRoom(post.id),roomId=result?.room?.id;
-        if(!roomId)throw new Error('solution_room_id_missing');
+        const result=await client.acceptSolutionRoomInvitation(access.my_invitation.id);
+        const roomId=result?.invitation?.room_id||access.solution_room_id;if(!roomId)throw Error('solution_room_id_missing');
         location.href=`./solution-room.html?room=${encodeURIComponent(roomId)}`;
-      }catch(err){
-        console.error('solution room create failed',err);
-        create.disabled=false;create.textContent='Solution Roomを作る';
-        solutionStatus.textContent='Roomを作成できませんでした。再試行してください。';
-      }
+      }catch(err){console.error('accept room invite failed',err);status(`招待を受けられませんでした: ${String(err?.message||err)}`);accept.disabled=false;accept.textContent='招待を受けてSolution Roomへ入る'}
     });
-    solutionActions.append(create,solutionStatus);
+    solutionActions.append(accept);
+  }else if(access.my_invitation?.status==='accepted'&&access.solution_room_id){
+    solutionHint.textContent='このスレッドから招待されたSolution Roomに参加中です。';
+    const open=document.createElement('a');open.className='button-link';open.href=`./solution-room.html?room=${encodeURIComponent(access.solution_room_id)}`;open.textContent='Solution Roomへ戻る';solutionActions.append(open);
+  }else if(access.current_role==='maker'){
+    solutionHint.textContent='スレッドで話したVoiceを招待し、ここから具体的な解決づくりへ進めます。';
+    if(access.solution_room_id){
+      const open=document.createElement('a');open.className='button-link';open.href=`./solution-room.html?room=${encodeURIComponent(access.solution_room_id)}`;open.textContent='Solution Roomを開く';solutionActions.append(open);
+    }else{
+      const create=document.createElement('button');create.type='button';create.textContent='Solution Roomを作る';
+      create.addEventListener('click',async()=>{
+        create.disabled=true;create.textContent='作成中…';
+        try{
+          const result=await client.ensureSolutionRoom(post.id),roomId=result?.room?.id;if(!roomId)throw Error('solution_room_id_missing');
+          location.href=`./solution-room.html?room=${encodeURIComponent(roomId)}`;
+        }catch(err){console.error('solution room create failed',err);status(`Roomを作成できませんでした: ${String(err?.message||err)}`);create.disabled=false;create.textContent='Solution Roomを作る'}
+      });
+      solutionActions.append(create);
+    }
+  }else if(client.identity()){
+    solutionHint.textContent='Voiceとしてスレッドで話したあと、Makerから招待されるとSolution Roomへ参加できます。';
   }else{
-    const login=document.createElement('a');login.className='button-link';login.href='./mypage.html';login.textContent='ログインしてRoomを作る';solutionActions.append(login);
+    solutionHint.textContent='ログインしてVoice / Makerとしてスレッドに参加できます。';
+    const login=document.createElement('a');login.className='button-link';login.href='./mypage.html';login.textContent='ログイン';solutionActions.append(login);
   }
   solutionStep.append(solutionTitle,solutionHint,solutionActions);
   mount.append(solutionStep);
@@ -184,7 +256,6 @@ async function hydrateCanonicalThread(article,post){
     });
   }
 }
-
 
 function yen(value){const n=Number(value);return Number.isFinite(n)&&n>0?new Intl.NumberFormat('ja-JP',{style:'currency',currency:'JPY',maximumFractionDigits:0}).format(n):''}
 function demandFeedChips(chips,summary){
