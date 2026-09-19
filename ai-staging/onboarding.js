@@ -80,6 +80,8 @@
 
   const open=()=>{if(typeof dialog.showModal==='function')dialog.showModal();else dialog.setAttribute('open','')};
   triggers.forEach(button=>button.addEventListener('click',open));
+  const linked=new URLSearchParams(location.search).get('about')==='1'||location.hash==='#about';
+  if(linked)queueMicrotask(open);
 
   const composer=document.querySelector('#composer');
   if(composer&&!composer.querySelector('[data-onboarding-inline]')){
