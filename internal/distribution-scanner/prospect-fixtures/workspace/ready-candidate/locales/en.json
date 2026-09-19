@@ -1,0 +1,15 @@
+{
+ "menu": {
+  "save": "Save",
+  "load": "Load",
+  "quit": "Quit"
+ },
+ "hud": {
+  "score": "Score: {score}",
+  "greeting": "Welcome back, {name}!"
+ },
+ "dialog": {
+  "confirm": "Are you sure?",
+  "cancel": "Cancel"
+ }
+}

@@ -1,0 +1,3 @@
+# Synthetic fixture. The checker never parses this file.
+msgid "Save"
+msgstr "保存"

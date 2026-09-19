@@ -1,0 +1,4 @@
+# Real contact records and real prospect metadata never belong in this public repo.
+# The scanner and the prospect discovery layer both read local stores; neither is committed.
+*.local.json
+*.local.md

@@ -5,9 +5,15 @@ prospect discovery by scanning a **local** checkout for EN/JA locale pairs, runn
 same mechanical checks the public [JP UI Preflight](../../yn0-jp-ui-preflight/) runs, and
 classifying each pair by how workable the findings look.
 
+On top of that sits [**Prospect Discovery**](#prospect-discovery) (`prospect.mjs`), which
+takes the same scan and narrows a workspace of candidate repositories down to the few
+worth a person's attention — checking each one against the localization assets it holds,
+the confidence of its findings, and [`internal/contact-state/`](../contact-state/).
+
 **This is not a product feature.** It does no outreach, sends no email, opens no issues or
 comments, drives no browser, handles no credentials, and makes no network call. It is
-read-only: it reports, and never rewrites a locale file.
+read-only: it reports, and never rewrites a locale file. Its most positive verdict is
+"a person should look at this", and nothing downstream of that verdict exists here.
 
 ## Usage
 
@@ -202,6 +208,11 @@ matching the Preflight.
 
 ## Prospect classification
 
+This is the *scanner's* per-pair bucket. The repository-level verdicts a reviewer reads —
+`READY_FOR_REVIEW` / `HUMAN_REVIEW` / `IGNORE` — are decided a layer up, in
+[Prospect Discovery](#prospect-discovery), which uses these buckets as one input among
+several.
+
 ### Classifying vs advisory findings
 
 Buckets count **classifying** findings, not every finding. One rule is *advisory*:
@@ -273,6 +284,285 @@ naming convention:
 Codepoints under test are written as `\uXXXX` escapes in the fixtures so the intent is
 readable in a diff.
 
+## Prospect Discovery
+
+The scanner answers "is this EN/JA pair defective?". That is one input to a different
+question, which is the one that actually costs something:
+
+> Is this repository worth a person's attention, before any person spends attention on it?
+
+`prospect.mjs` is that second question. It wraps the scanner without changing it, and
+runs the pipeline the scanner was always the middle of:
+
+```
+repository
+  -> localization asset discovery      (lib/assets.mjs)
+  -> EN/JA pair detection              (lib/discover.mjs, unchanged)
+  -> mechanical scan                   (lib/scanner.mjs, unchanged)
+  -> finding confidence / noise        (lib/confidence.mjs)
+  -> repository suitability evidence   (lib/candidates.mjs + lib/metadata.mjs)
+  -> contact-state check               (lib/contact-link.mjs)
+  -> candidate classification          (lib/candidates.mjs)
+  -> human review
+```
+
+**The pipeline ends at "human review" and there is no step after it.** Nothing in it
+sends mail, opens an issue, writes a comment, fills in a form, drives a browser, holds a
+credential or makes a network call. A test asserts the absence rather than the intention:
+no module under `lib/` may so much as reference `node:http`, `fetch(`, an SMTP library or
+`api.github.com`. The output is a reading list, and `READY_FOR_REVIEW` means "a person
+should look at this", never "contact these people".
+
+### The constraint this is built around
+
+Contacts are a finite resource. The metric is not candidates produced, it is **information
+gain per contact** — which makes the success condition the number of weak candidates
+*dropped* before a human reads them. Ten of the eighteen fixture candidates are dropped,
+six are held for a human decision, and two are proposed for review; a change that raises
+the last number without raising the evidence behind it is a regression, not an improvement.
+
+### Usage
+
+```
+node internal/distribution-scanner/prospect.mjs <workspace> [options]
+```
+
+Each immediate subdirectory of `<workspace>` is one candidate repository; `--single`
+treats the path itself as one. The two inputs that matter are local files:
+
+```
+node internal/distribution-scanner/prospect.mjs ~/prospects \
+  --contacts internal/contact-state/contacts.local.json \
+  --metadata internal/distribution-scanner/prospects.local.json
+```
+
+| Option | Default | Meaning |
+| --- | --- | --- |
+| `--single` | — | Treat the path itself as one repository |
+| `--contacts <file>` | — | contact-state store to check against |
+| `--metadata <file>` | — | External prospect metadata (`yn0-prospect-metadata-v1`) |
+| `--asking <axis>` | — | Validation axis this round would ask about |
+| `--verdict <V>` | — | Report only `READY_FOR_REVIEW` / `HUMAN_REVIEW` / `IGNORE` |
+| `--format <text\|json>` | `text` | Output format on stdout |
+| `--out <file>` | — | Also write the JSON report to a file |
+| `--samples <n>` | `5` | Findings shown per prospect |
+| `--min-completeness <r>` | `0.85` | Locale completeness floor |
+| `--min-high-confidence <n>` | `1` | High-confidence findings required |
+| `--max-noise-ratio <r>` | `0.9` | Share of citable findings that may be intentional-risk |
+
+Without `--contacts`, **no candidate can reach `READY_FOR_REVIEW`**. "We have not written
+to them" is a claim about a store; not having looked at the store is not the same claim.
+
+### Localization asset discovery
+
+`discover.mjs` only sees extensions a registered adapter claims — correctly, because the
+checker can only check what it can parse. For prospect discovery that is the wrong answer:
+a repository whose Japanese lives in `locale/ja.po` is not a repository without Japanese,
+it is one we cannot check yet. So `assets.mjs` inventories everything and labels it:
+
+| Support | Meaning |
+| --- | --- |
+| `SUPPORTED` | a registered file adapter claims the extension; the checker reads it |
+| `DETECTED_BUT_UNSUPPORTED` | the asset exists and nothing here parses it |
+
+Recognised: JSON, CSV, TSV, YAML, XML, INI, plain text, Java properties, Gettext PO,
+XLIFF, Flutter ARB, Fluent, Apple `.strings`, `.NET` `.resx`. A file counts as an asset
+when its extension exists only for localization (`.po`, `.xliff`, `.arb`, `.ftl`,
+`.strings`, `.resx`), or when the path carries locale evidence — a language tag in the
+filename, a language tag inside a locale directory, or a locale directory itself.
+`package.json` and `data/items.json` are not localization assets and `src/it/Main.xml` is
+not Italian.
+
+**`DETECTED_BUT_UNSUPPORTED` is a terminal state, not a backlog.** Nothing here parses a
+PO, CSV or YAML file, and detecting one is not a step towards doing so. A format earns a
+product adapter when a validation response asks for it — not when the inventory notices
+it exists. Until then the right answer is "found it, cannot read it, a human decides",
+which is exactly what rule 8 below says.
+
+### Finding confidence
+
+The seven mechanical checks are unchanged: same rules, same severities, same advisory
+split. On top of them the prospect layer asks one further question, and only for
+discovery:
+
+> Would I be comfortable putting this finding in front of a stranger as the reason I am
+> writing to them?
+
+That is not the same question as "is this a defect?", and Atlos is why it is asked
+separately: a checker whose findings a maintainer can wave away as intentional cannot be a
+CI or release gate — and a finding a maintainer can wave away is not worth one of a finite
+number of first contacts.
+
+| Band | Rules | Why |
+| --- | --- | --- |
+| `HIGH_CONFIDENCE` | `placeholder-set-mismatch`, `halfwidth-katakana` | a user sees the consequence and no house style explains it away |
+| `INTENTIONAL_RISK` | `edge-whitespace`, `fullwidth-space`, `placeholder-multiplicity-mismatch` | real observations a project may well have written on purpose |
+| `INCOMPLETE_LOCALE` | `missing-ja`, `empty-ja` | "not finished yet" — true, and not something to write to anyone about |
+
+Severity and confidence are orthogonal, and deliberately so. `halfwidth-katakana` is a
+WARN and high-confidence, because half-width katakana in a UI string is a legacy encoding
+artifact rather than a style; `fullwidth-space` is the same severity and is not, because
+U+3000 is ordinary Japanese typography. A rule with no band is treated as
+`INTENTIONAL_RISK`, so a new check cannot raise a candidate to `READY_FOR_REVIEW` by
+accident — and a test fails until the new check is banded on purpose.
+
+Two derived numbers fall out of the bands:
+
+- **locale completeness** — `1 - untranslated/EN keys`. Governs "is this locale finished
+  enough to judge?".
+- **noise ratio** — the share of *citable* findings that are not high-confidence,
+  `1 - high/(high + intentional-risk)`. Incomplete-locale findings are excluded on
+  purpose: completeness already governs them, and folding them in here would let a
+  half-finished locale bury two genuine placeholder bugs.
+
+### Repository suitability evidence
+
+Some things worth knowing are not in the files: whether anyone still maintains the
+repository, and whether there is a public route to its maintainers at all. Neither is
+fetched. Wiring a GitHub client into the scanner core to answer "is this repo alive?"
+would trade away the property that makes the core safe — filesystem-only, no credentials,
+no network — for a field a human can type. So the shape is the opposite: an optional
+input file, validated on load, absent by default.
+
+```json
+{
+  "schema": "yn0-prospect-metadata-v1",
+  "prospects": {
+    "some-repository-directory": {
+      "aliases": ["a name this project is also known by"],
+      "activity": "ACTIVE",
+      "activity_evidence": "commits this month",
+      "public_contact_route": "GITHUB_ISSUE",
+      "contact_route_evidence": "issues open, template present",
+      "contact_ids": [],
+      "notes": "free text for the reviewer"
+    }
+  }
+}
+```
+
+`activity` is `ACTIVE` / `MAINTAINED` / `DORMANT` / `UNKNOWN`; `public_contact_route` is
+`GITHUB_ISSUE` / `GITHUB_DISCUSSION` / `PUBLIC_EMAIL` / `OTHER` / `NONE` / `UNKNOWN`. An
+absent field is never guessed — it reads `UNKNOWN`, and `UNKNOWN` routes to a human rather
+than assuming the best. An unknown *field name* is an error, so `contact_id` instead of
+`contact_ids` fails loudly rather than silently meaning "nobody checked".
+
+### contact-state connection
+
+[`internal/contact-state/`](../contact-state/) stays the single source of truth for "what
+state is this contact in?". This layer reads it and stores nothing: no contact record is
+created, copied, summarised into the report, or written back. What crosses the boundary is
+**one enum per prospect** — a *posture* — plus the contact ids it came from. A test asserts
+the report contains no contact's name or organization.
+
+The direction is one-way. Discovery asks contact-state a question; it never tells
+contact-state anything, and it never reimplements the state machine — every posture is a
+fold of `derive()`'s own `next_action` and the stored conversation, so a change to the
+contact model surfaces here instead of being silently contradicted.
+
+| Posture | Reached when |
+| --- | --- |
+| `DO_NOT_CONTACT` | `reopen_condition = NEVER` — they opted out |
+| `CLOSED` | the conversation is over |
+| `INBOUND_ONLY` | closed, reopens only if they write to us |
+| `ALREADY_CONTACTED` | a live thread exists, or we owe them a reply |
+| `AWAITING_REPLY` | we asked and the answer is outstanding |
+| `NEEDS_HUMAN` | contact-state itself routes the record to `REVIEW` |
+| `UNRESOLVED` | the prospect names a contact id the store does not hold |
+| `AMBIGUOUS_MATCH` | the prospect claims no contact, but a stored one looks like the same party |
+| `UNCHECKED` | no store was consulted, or the prospect declared no contact link |
+| `NEVER_CONTACTED` | store consulted, nothing matched, nothing looked close |
+
+Postures are ordered most-restrictive-first: a prospect resolving to two threads, one of
+them opted out, is opted out.
+
+`contact_ids: []` is a *positive* claim — "the store was checked and holds nothing for this
+party" — and is the only route to `NEVER_CONTACTED`. Omitting the field is a different
+claim, `UNCHECKED`, and cannot produce a candidate for review. Absence of evidence is not
+evidence of absence.
+
+`AMBIGUOUS_MATCH` is the identity guard. When a prospect declares no contact, its directory
+name and aliases are compared against every stored id, name, organization and thread
+reference; any shared uncommon token raises a hand. The matcher is deliberately crude —
+it decides nothing, it only refuses to let "never contacted" pass unchecked when somebody
+in the store looks like the same party.
+
+One Prospect Burn rule belongs to no single prospect: while somebody already owes us an
+answer on a validation axis, opening the same question with a second stranger buys no
+information we are not already about to get. `--asking <axis>` turns that into rule 16 —
+candidates are held while the same question is outstanding anywhere in the store.
+
+### Candidate classification
+
+Three verdicts, decided by an ordered rule table. The first matching rule wins, and its
+number and text are reported, so "why was this dropped" always has a rule number as its
+answer. Every rule fails closed: where the machine is unsure the answer is `HUMAN_REVIEW`
+or `IGNORE`, never `READY_FOR_REVIEW`.
+
+| # | Condition | Verdict |
+| --- | --- | --- |
+| 1 | contact opted out | `IGNORE` |
+| 2 | conversation closed (reopens on inbound, or not at all) | `IGNORE` |
+| 3 | a thread already exists / an answer is outstanding | `IGNORE` |
+| 4 | contact identity unresolved, ambiguous, or flagged by the model | `HUMAN_REVIEW` |
+| 5 | repository is dormant | `IGNORE` |
+| 6 | no public contact route | `IGNORE` |
+| 7 | no localization assets of any known format | `IGNORE` |
+| 8 | assets exist, in no format the checker can read | `HUMAN_REVIEW` |
+| 9 | assets are readable but form no EN/JA pair | `IGNORE` |
+| 10 | locale too incomplete to judge | `IGNORE` |
+| 11 | nothing but clean strings and untranslated keys | `IGNORE` |
+| 12 | findings exist, none survives "could this be on purpose?" | `HUMAN_REVIEW` |
+| 13 | a defensible finding drowned in ones that are not | `IGNORE` |
+| 14 | contact history never checked | `HUMAN_REVIEW` |
+| 15 | repository activity unknown | `HUMAN_REVIEW` |
+| 16 | the same validation question is already outstanding elsewhere | `HUMAN_REVIEW` |
+| 17 | otherwise | `READY_FOR_REVIEW` |
+
+Read as prose: `READY_FOR_REVIEW` needs a readable EN/JA pair, a locale complete enough to
+judge, at least one high-confidence finding that is not buried, a known-alive repository
+with a public route, and a contact store that was actually consulted and came back empty.
+Anything a human has to settle — an unresolved identity, an unreadable format, findings
+that might all be intentional, missing metadata — is `HUMAN_REVIEW`. Everything else is
+dropped with its reason.
+
+A test walks all ten postures against the strongest possible evidence and asserts that
+only `NEVER_CONTACTED` can produce `READY_FOR_REVIEW`. `DO_NOT_CONTACT` reaching a review
+queue is the failure this table exists to make impossible.
+
+### Prospect fixtures
+
+`prospect-fixtures/` holds one invented workspace, one synthetic contact store and one
+metadata file — one candidate directory per rule in the table above:
+
+| Candidate | Shape | Verdict (rule) |
+| --- | --- | --- |
+| `opted-out` | strong findings, contact opted out | `IGNORE` (1) |
+| `closed-conversation` | strong findings, thread closed `INBOUND_ONLY` | `IGNORE` (2) |
+| `already-contacted` | strong findings, first reply outstanding | `IGNORE` (3) |
+| `unknown-contact-id` | names a contact id the store does not hold | `HUMAN_REVIEW` (4) |
+| `ambiguous-identity` | claims never contacted, alias matches a stored party | `HUMAN_REVIEW` (4) |
+| `dormant-repo` | strong findings, repository archived | `IGNORE` (5) |
+| `no-public-route` | strong findings, no public way to reach anyone | `IGNORE` (6) |
+| `no-locale-assets` | no localization of any kind | `IGNORE` (7) |
+| `unsupported-format-repo` | EN and JA, both in `.po` | `HUMAN_REVIEW` (8) |
+| `english-side-repo` | readable locale assets, no Japanese side | `IGNORE` (9) |
+| `incomplete-locale` | 50% translated, one real finding under it | `IGNORE` (10) |
+| `clean-repo` | clean pair | `IGNORE` (11) |
+| `intentional-risk-repo` | padding, U+3000, repeated placeholder — nothing else | `HUMAN_REVIEW` (12) |
+| `noise-dominated` | one placeholder bug under twenty padded strings | `IGNORE` (13) |
+| `undeclared-contact-link` | strong findings, contact link never declared | `HUMAN_REVIEW` (14) |
+| `unknown-activity` | strong findings, nobody recorded whether it is alive | `HUMAN_REVIEW` (15) |
+| `ready-candidate` | complete locale, one placeholder bug, store consulted | `READY_FOR_REVIEW` (17) |
+| `mixed-format-candidate` | readable pair plus PO and CSV alongside | `READY_FOR_REVIEW` (17) |
+
+**None of it is real.** Every contact id ends in `-shape`, every name is `Prospect <letter>`,
+every organization starts with `Example`, and no thread reference is carried at all. A test
+fails if a tracked file under `prospect-fixtures/` ever contains something shaped like an
+email address or a live URL. Real contacts and real prospect metadata live in
+`*.local.json` / `*.local.md`, which `.gitignore` keeps out of this repository — the same
+rule [`internal/contact-state/`](../contact-state/) already enforces, and for the same reason.
+
 ## Benchmark validation
 
 The classifier was validated against the real repositories issue #9 records, cloned at
@@ -311,9 +601,16 @@ documented buckets`) so a future threshold change has to restate its effect on t
 
 ```
 node --test internal/distribution-scanner/tests/scanner.test.mjs
+node --test internal/distribution-scanner/tests/prospect.test.mjs
 ```
 
 No dependencies, no install step, no network. Node 22 built-ins only.
+
+The prospect suite pins the whole rule table, walks every contact posture against the
+strongest possible evidence to prove only `NEVER_CONTACTED` can reach `READY_FOR_REVIEW`,
+and asserts the two properties that are easier to keep by test than by intention: that no
+module here can reach a person, and that no real contact information can reach a tracked
+fixture.
 
 ## Known limitations
 
@@ -334,3 +631,24 @@ No dependencies, no install step, no network. Node 22 built-ins only.
 - One EN and one JA file per group are scanned; alternates are reported, not compared.
 - `null` locale values flatten to an empty string, so a `null` JA value reads as
   `empty-ja`.
+
+Prospect Discovery adds its own:
+
+- **`DETECTED_BUT_UNSUPPORTED` is as far as an unsupported format goes.** The inventory
+  can see a PO or CSV file; nothing reads one, and nothing is planned to until a
+  validation response asks for it.
+- **Activity and contact route are typed in, not fetched.** They are only as current as
+  the last person who filled in the metadata file, and an empty metadata file means every
+  candidate stops at `HUMAN_REVIEW`. That is the intended failure direction.
+- **Identity matching is a hand-raise, not a resolver.** `AMBIGUOUS_MATCH` fires on a
+  shared uncommon token; it will miss a party recorded under a wholly different name, and
+  it has no idea that two directory names are the same project.
+- **Thresholds are judgements.** The completeness floor, the high-confidence minimum and
+  the noise ceiling are first guesses calibrated on the fixtures, exposed as flags
+  precisely because they are not facts.
+- **`HIGH_CONFIDENCE` is currently two rules.** That is narrow on purpose — it is what
+  makes `READY_FOR_REVIEW` mean something — but it also means a repository whose only
+  problems are typographic can never be proposed, only held for a human.
+- **A workspace is one directory deep.** Nested checkouts, monorepos with several
+  products, and a repository that is itself the workspace root all need `--single` or a
+  different layout.
