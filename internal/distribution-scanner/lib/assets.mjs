@@ -17,7 +17,7 @@
 //
 // Filesystem only: no network, no credentials, no mutation.
 import path from 'node:path';
-import {walk} from './discover.mjs';
+import {isSkippedPath, walk} from './discover.mjs';
 import {LOCALE_EXTENSIONS} from './adapters/index.mjs';
 
 export const SUPPORT_STATES = ['SUPPORTED', 'DETECTED_BUT_UNSUPPORTED'];
@@ -52,6 +52,26 @@ export const LOCALE_DIR_HINTS = new Set([
  'locale', 'locales', 'message', 'messages', 'translation', 'translations'
 ]);
 
+// Words that say "translations" wherever they appear in a path - in a directory name that
+// is not exactly a locale directory (`03-ui-strings_en-ja/`), or in the part of a filename
+// left over once the language tag is taken out (`relic_translations_ja.json`).
+//
+// Everything in LOCALE_DIR_HINTS counts, plus the words that usually name a file. Kept
+// narrow on purpose: `text`, `resources` and `data` name as many things that are not
+// translations as things that are, and this set only ever admits a language tag that was
+// already found - it never makes a path an asset on its own.
+export const LOCALE_WORD_HINTS = new Set([
+ ...LOCALE_DIR_HINTS,
+ 'string', 'strings', 'localization', 'localisation', 'localize', 'localise',
+ 'localized', 'localised', 'loc', 'dict', 'dicts', 'dictionary', 'dictionaries',
+ 'glossary', 'glossaries', 'caption', 'captions', 'subtitle', 'subtitles'
+]);
+
+// `03-ui-strings_en-ja` -> ['03', 'ui', 'strings', 'en', 'ja']. A token match rather than a
+// whole-segment match, because real trees write `ui_strings`, `relic_translations` and
+// `chnlocalplus/localisation` far more often than they write a bare `locales`.
+const saysLocale = text => text.toLowerCase().split(/[^a-z0-9]+/).some(token => LOCALE_WORD_HINTS.has(token));
+
 // Two- and three-letter subtags common enough in real locale trees to be worth
 // recognising. An allowlist rather than a pattern, because `/it/`, `/no/` and `/src/`
 // are all three letters or fewer and only one of them is a language.
@@ -79,18 +99,24 @@ export function languageTag(text) {
 
 // The language token inside a basename: the whole name, or a `stem SEP tag` /
 // `tag SEP stem` split. Mirrors discover.mjs's parseBase, widened past en/ja.
+//
+// `stem` is what was left over, normalized, and `null` when the whole basename was the
+// tag. The caller needs it because the two cases are not equally strong evidence: a file
+// *called* `ja` is a locale file by convention, while a tag that merely falls out of a
+// longer name is a coincidence until something else in the path agrees.
 function tagInBase(base) {
+ const stemOf = text => text.replace(/^[-_.]+|[-_.]+$/g, '').toLowerCase();
  const whole = languageTag(base);
- if (whole) return whole;
+ if (whole) return {...whole, stem: null};
  for (let i = 0; i < base.length; i++) {
   if (!SEPARATORS.includes(base[i])) continue;
   const tag = languageTag(base.slice(i + 1));
-  if (tag) return tag;
+  if (tag) return {...tag, stem: stemOf(base.slice(0, i))};
  }
  for (let i = base.length - 1; i > 0; i--) {
   if (!SEPARATORS.includes(base[i])) continue;
   const tag = languageTag(base.slice(0, i));
-  if (tag) return tag;
+  if (tag) return {...tag, stem: stemOf(base.slice(i))};
  }
  return null;
 }
@@ -122,7 +148,21 @@ export function classifyAsset(relPath) {
  const inHintedDir = segments.some(segment => LOCALE_DIR_HINTS.has(segment.toLowerCase()));
  const fromDir = segments.map(segment => tagInBase(segment)).filter(Boolean).pop() ?? null;
 
- if (fromName) return asset(fromName.lang, 'language tag in the filename');
+ // A language tag carved out of a longer filename is only evidence when something else in
+ // the path says "localization": a word in one of the directories above it, a word in the
+ // rest of the filename, or an extension that exists for nothing else. Without that rule
+ // `nightly-windows-ms.yml` is Malay, `oh-my-dsh.yml` is Burmese and
+ // `Mr-potato-123__dsh-mcp.yml` is Marathi - three well-formed tags and three files that
+ // have nothing to do with locale data. A basename that is *entirely* a language tag
+ // (`ja.json`) is the convention itself and still stands alone.
+ const namedForLocale = fromName && (
+  fromName.stem === null ||
+  format.inherent ||
+  saysLocale(fromName.stem) ||
+  segments.some(saysLocale)
+ );
+
+ if (namedForLocale) return asset(fromName.lang, 'language tag in the filename');
  if (fromDir && inHintedDir) return asset(fromDir.lang, 'language tag in a locale directory');
  if (format.inherent) return asset(fromDir ? fromDir.lang : null, 'extension exists only for localization');
  if (inHintedDir) return asset(null, 'file sits in a locale directory');
@@ -170,7 +210,17 @@ export function summarize(assets) {
  };
 }
 
+// The inventory rule applied to a list of repo-relative paths, and the only place that
+// decides what counts. Both halves of v3 call it - `inventory()` below with paths walked
+// off a disk, `discovery/lib/explore.mjs` with paths GitHub listed - so the same
+// repository yields the same asset inventory whichever side looked at it. Previously the
+// skip list existed only on the offline side, and a remote run counted `.github/`,
+// `node_modules/` and `dist/` as localization assets that an offline run of the same
+// repository never saw.
+export const classifyPaths = relPaths =>
+ relPaths.filter(relPath => !isSkippedPath(relPath)).map(classifyAsset).filter(Boolean);
+
 // Walk one repository root and inventory every localization asset under it.
 export async function inventory(root) {
- return summarize((await walk(root)).map(classifyAsset).filter(Boolean));
+ return summarize(classifyPaths(await walk(root)));
 }

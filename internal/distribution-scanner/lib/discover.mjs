@@ -10,6 +10,16 @@ export const SKIP_DIRS = new Set([
  'node_modules', 'vendor', 'dist', 'build', 'out', 'target', 'coverage'
 ]);
 
+// Whether a repo-relative path lies under one of them.
+//
+// `walk()` prunes these as it descends, which is all the offline side needs. The remote
+// explorer never descends: GitHub hands it a flat list of every path in the tree, so it
+// has nothing to prune and asks this instead. Both sides asking the same function is the
+// point - otherwise the same repository has two different asset inventories depending on
+// whether it was read from a disk or over the network.
+export const isSkippedPath = relPath =>
+ relPath.split('/').slice(0, -1).some(segment => SKIP_DIRS.has(segment));
+
 // `en`, `ja`, `en-US`, `ja_JP`, `en-Latn` ... the region/script part is optional.
 const LANG_TAG = /^(en|ja)(?:[-_]([A-Za-z]{2,4}))?$/i;
 const SEPARATORS = '-_.';

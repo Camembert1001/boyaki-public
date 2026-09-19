@@ -373,6 +373,28 @@ filename, a language tag inside a locale directory, or a locale directory itself
 `package.json` and `data/items.json` are not localization assets and `src/it/Main.xml` is
 not Italian.
 
+A language tag *carved out of a longer filename* needs something else in the path to agree
+with it: a locale word in one of the directories above the file, a locale word in the rest
+of the filename, or an extension that exists only for localization. A basename that is
+entirely a tag (`ja.json`) is the convention itself and still stands alone. Without that
+rule, `nightly-windows-ms.yml` is Malay, `oh-my-dsh.yml` is Burmese and
+`Mr-potato-123__dsh-mcp.yml` is Marathi — three well-formed language tags and three files
+with nothing to do with locale data, all three measured in a real exploration run.
+
+The word match is on *tokens*, not whole path segments, because real trees are written
+`relic_translations_ja.json`, `03-ui-strings_en-ja/` and `chnlocalplus/localisation/`
+rather than `locales/`. Measured over 236 repositories, requiring a whole-segment match
+would have thrown away 10 repositories with real locale data to remove 5 with none; the
+token match removes the false ones and keeps 9 of the 10.
+
+The inventory also skips the same directories on both sides of the network boundary.
+`walk()` prunes `.git`, `.github`, `node_modules`, `dist`, `vendor` and the rest as it
+descends; the remote explorer gets a flat path list from GitHub and has nothing to prune,
+so both call `isSkippedPath` and the same repository yields the same inventory whether it
+was read from a disk or over the network. A vendored or built copy of somebody else's
+locale file is not this project's localization. (`.github/workflows/` is still read for the
+`CI_LOCALIZATION_STEP` signal, which is about a workflow's name, not about locale data.)
+
 **`DETECTED_BUT_UNSUPPORTED` is a terminal state, not a backlog.** Nothing here parses a
 PO, CSV or YAML file, and detecting one is not a step towards doing so. A format earns a
 product adapter when a validation response asks for it — not when the inventory notices
@@ -666,14 +688,65 @@ store, which is the truth, and which is what keeps a freshly discovered candidat
 
 ### Search strategies
 
-Each route is a record with an id, a query and a rationale (`discovery/strategies.json`),
-and each one carries its own counters back in the manifest. That is the whole point: a
-strategy returning 500 repositories and two useful candidates is worse than one returning
-80 and four, and only per-strategy counters can say so.
+Each route is a record with an id, a query, a ranking and a rationale
+(`discovery/strategies.json`), and each one carries its own counters back in the manifest.
+That is the whole point: a strategy returning 500 repositories and two useful candidates is
+worse than one returning 80 and four, and only per-strategy counters can say so.
 
-The shipped set - game localization, Japanese locale, Unity, Godot, Ren'Py, RPG Maker,
-indie i18n, localization QA tooling - is a starting guess and explicitly not the right
-answer. It is a file so that replacing a route that yields nothing is an edit.
+The v3.1 set was rewritten against a measurement rather than a guess (see **Search
+calibration** below). Three rules came out of it and are asserted by a test, so the next
+edit to `strategies.json` has to argue with them rather than forget them:
+
+- **No route matches on README text.** A README mentions everything, so `in:readme` is how
+  a curated list of links about game localization outranks a game that has some.
+- **Every route reaches a field the owner declared** - a `topic:` filter, the topics field
+  itself, or a language GitHub's linguist assigned - rather than only prose somebody wrote.
+- **Ranking is the search's own relevance** unless a route has a measured reason to
+  override it, and the override is declared per strategy rather than hard-coded in the
+  client.
+
+### Search calibration
+
+v3's entrance was measured against real public repositories, one page per strategy, and it
+was the entrance rather than the filters that was losing the candidates. Three arms, each
+counted over *distinct* repositories:
+
+| | v3 queries, `sort=updated` | v3 queries, best match | v3.1 queries, best match |
+| --- | --- | --- | --- |
+| distinct repositories | 160 | 176 | 237 |
+| with localization assets | 11.9% | 27.8% | 27.0% |
+| with a Japanese asset | 3.1% | 13.6% | 12.7% |
+| with a scannable EN/JA pair | 3.8% | 4.5% | 4.2% |
+| list-shaped or SEO-shaped | 27.5% | 22.7% | 3.8% |
+| duplicate rate across routes | 11.6% | 2.8% | 7.1% |
+| candidates reaching the manifest | 5 | 24 | 29 |
+
+`sort=updated` is a ranking by *churn*, and the repositories pushed most recently on a
+broad text query are the ones a robot pushes: auto-regenerated awesome lists, star-list
+mirrors, SEO landing repositories. Changing nothing but the ranking more than doubled the
+localization-asset rate and quadrupled the Japanese rate on the same queries. It is no
+longer the client's decision; `sort` is a strategy field, `null` means best match, and a
+route that wants churn ranking has to say so and then justify it in the yield table.
+
+Two query shapes were measured as dead and are gone. `language:JSON` looks structural and
+is not - linguist decides a repository's language and decides JSON for almost nothing, so
+that route had a population of one. Free text ANDed onto a topic (`indie game i18n
+topic:localization`) requires the words *and* the topic and matched nothing at all.
+
+The shipped set is still a starting guess rather than the right answer. It is a file so
+that replacing a route that yields nothing is an edit, and the yield report is there to say
+which route that is. Two things the same measurement says about *this* set, so the next
+person does not have to rediscover them:
+
+- **`renpy-translation` returns exactly the right parties and almost no assets.** 30
+  repositories, 1 with anything the inventory recognises. Ren'Py keeps its translations in
+  `game/tl/<locale>/*.rpy`, which is not a format this engine detects at all - the route is
+  working and the inventory is blind to it.
+- **Topic routes surface older repositories.** Ten of the 29 v3.1 candidates were dropped
+  as `DORMANT`, against two in the churn-ranked arm - `sort=updated` had been enforcing
+  recency as a side effect of ranking by it. A per-strategy recency qualifier is the
+  obvious next lever, and it is deliberately not in this set, because it would make the
+  strategies file time-dependent and the runs no longer comparable.
 
 ### Discovery budget
 
@@ -886,9 +959,9 @@ documented buckets`) so a future threshold change has to restate its effect on t
 ## Tests
 
 ```
-node --test internal/distribution-scanner/tests/scanner.test.mjs
-node --test internal/distribution-scanner/tests/prospect.test.mjs
-node --test internal/distribution-scanner/tests/discovery.test.mjs
+node --test internal/distribution-scanner/tests/scanner.test.mjs     # 20
+node --test internal/distribution-scanner/tests/prospect.test.mjs    # 20
+node --test internal/distribution-scanner/tests/discovery.test.mjs   # 34
 ```
 
 No dependencies, no install step, no network. Node 22 built-ins only. **No test here makes

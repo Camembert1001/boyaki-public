@@ -127,7 +127,8 @@ async function main(argv) {
   if (options.plan) {
    process.stdout.write('strategies (' + strategies.length + '):\n');
    for (const strategy of strategies) {
-    process.stdout.write('  ' + strategy.strategy_id.padEnd(26) + strategy.query + '\n');
+    process.stdout.write('  ' + strategy.strategy_id.padEnd(28) +
+     ('[' + (strategy.sort ?? 'best match') + ']').padEnd(14) + strategy.query + '\n');
    }
    process.stdout.write('budget: ' + JSON.stringify(budget.limits) + '\n');
    process.stdout.write('credential: ' + (hasCredential() ? 'present (from the environment)' : 'absent') + '\n');

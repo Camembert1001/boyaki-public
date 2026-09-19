@@ -76,9 +76,14 @@ export function createClient(options = {}) {
   // One page of repository search results, normalized to the few public fields the
   // explorer uses. Nothing about a *person* is read: no owner email, no profile, no
   // followers, no contributor list.
-  async searchRepositories(query, {page = 1, perPage = 30} = {}) {
+  //
+  // `sort` is the strategy's, not this module's. Omitting it is what GitHub documents as
+  // "best match", which is the ranking the query actually asked for; passing `updated`
+  // ranks by churn instead, and a client that decides that for every strategy is a client
+  // that quietly changes what every strategy means.
+  async searchRepositories(query, {page = 1, perPage = 30, sort = null, order = 'desc'} = {}) {
    const {body, remaining} = await request(ENDPOINTS.search, {
-    search: {q: query, per_page: perPage, page, sort: 'updated', order: 'desc'}
+    search: {q: query, per_page: perPage, page, ...(sort ? {sort, order} : {})}
    });
    return {
     total: body.total_count ?? 0,

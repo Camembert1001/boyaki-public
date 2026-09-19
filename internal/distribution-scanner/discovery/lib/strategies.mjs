@@ -19,6 +19,19 @@ export const SCHEMA = 'yn0-search-strategies-v1';
 // a client, not changing the model.
 export const SOURCES = ['github_search_repositories'];
 
+// How a strategy asks the search to rank what it returns. `null` is GitHub's own
+// relevance ranking ("best match") and is the default, because it is the only ranking that
+// has anything to do with the query.
+//
+// v3 hard-coded `updated` in the client, which is a ranking by *churn*: it promotes
+// whatever was pushed most recently, and the repositories pushed most recently on a broad
+// text query are the ones a robot pushes - auto-regenerated awesome lists, star-list
+// mirrors, SEO landing repositories. Calibration measured the difference and it is not
+// close, so the ranking is now a property of the strategy, declared where the query is,
+// and comparable like everything else here.
+export const SORTS = [null, 'updated', 'stars', 'forks', 'help-wanted-issues'];
+export const ORDERS = ['asc', 'desc'];
+
 export class StrategyError extends Error {}
 
 const fail = message => {
@@ -36,11 +49,20 @@ export function normalizeStrategy(raw, label) {
  if (!SOURCES.includes(source)) fail(label + '.source must be one of ' + SOURCES.join(', '));
  const perPage = raw.per_page ?? 30;
  if (!Number.isInteger(perPage) || perPage < 1 || perPage > 100) fail(label + '.per_page must be an integer in 1..100');
+ const sort = raw.sort === undefined ? null : raw.sort;
+ if (!SORTS.includes(sort)) {
+  fail(label + '.sort must be one of ' + SORTS.map(item => JSON.stringify(item)).join(', '));
+ }
+ const order = raw.order ?? 'desc';
+ if (!ORDERS.includes(order)) fail(label + '.order must be one of ' + ORDERS.join(', '));
  return {
   strategy_id: assertText(raw.strategy_id, label + '.strategy_id'),
   source,
   query: assertText(raw.query, label + '.query'),
   per_page: perPage,
+  // null means "let the search rank by relevance"; see SORTS.
+  sort,
+  order,
   // Free text for the human reading the yield table: why this route was thought worth
   // trying at all. It is documentation, not a filter.
   rationale: raw.rationale === undefined || raw.rationale === null ? null : String(raw.rationale),
@@ -78,6 +100,10 @@ export const emptyCounters = strategy => ({
  strategy_id: strategy.strategy_id,
  source: strategy.source,
  query: strategy.query,
+ // Carried into the manifest because a result set is not reproducible from its query
+ // alone: the same query ranked two ways is two different first pages.
+ sort: strategy.sort ?? null,
+ order: strategy.order ?? 'desc',
  discovered_count: 0,           // repositories the search returned
  inspected_count: 0,            // repositories whose file tree we listed
  localization_asset_count: 0,   // of those, ones with localization assets at all
