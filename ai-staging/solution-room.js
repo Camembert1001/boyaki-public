@@ -56,11 +56,14 @@ async function loadRoomMeta(){
   try{
     const result=await client.getSolutionRoom(room);
     const data=result.room,post=data?.post;
-    const raw=String(post?.content||'元のBOYAKIを取得できませんでした').trim();
-    $('#room-title').textContent=raw.length>54?`${raw.slice(0,54)}…`:raw;
+    const sourceActive=post?.status==='active'&&Boolean(post?.content);
+    const raw=sourceActive?String(post.content).trim():'元のBOYAKIは取り下げ済みです。Solution Roomの履歴は保持されています。';
+    $('#room-title').textContent=sourceActive?(raw.length>54?`${raw.slice(0,54)}…`:raw):'取り下げ済みBOYAKIのSolution Room';
     $('#room-problem').textContent=raw;
-    if(post?.id)$('#room-source-link').href=`./?problem=${encodeURIComponent(post.id)}`;
-    document.title=`${raw.slice(0,32)||'Solution Room'} — BOYAKI AI-STAGING`;
+    const sourceLink=$('#room-source-link');
+    if(sourceActive&&post?.id)sourceLink.href=`./?problem=${encodeURIComponent(post.id)}`;
+    else sourceLink.hidden=true;
+    document.title=`${sourceActive?raw.slice(0,32):'Solution Room'} — BOYAKI AI-STAGING`;
     return true;
   }catch(err){
     console.error('solution room metadata failed',err);
