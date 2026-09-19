@@ -1,0 +1,15 @@
+{
+ "menu": {
+  "save": "保存",
+  "load": "読み込み",
+  "quit": "終了"
+ },
+ "hud": {
+  "score": "スコア: {score}",
+  "greeting": "おかえりなさい！"
+ },
+ "dialog": {
+  "confirm": "よろしいですか？",
+  "cancel": "キャンセル "
+ }
+}

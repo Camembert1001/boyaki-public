@@ -2,3 +2,9 @@
 # The scanner and the prospect discovery layer both read local stores; neither is committed.
 *.local.json
 *.local.md
+
+# Materialized candidate workspaces. Exploration downloads real repositories' localization
+# files so the scanner can read them offline; those files are somebody else's, they are
+# large, and they are not this repository's to carry.
+*.local/
+workspace.local/
