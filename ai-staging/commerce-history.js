@@ -1,4 +1,4 @@
-import { client } from './canonical-api.js?v=20260920-consolidated-v1';
+import { client } from './canonical-api.js?v=20260920-consolidated-v2';
 
 const purchasesBox=document.querySelector('[data-commerce-purchases]');
 const purchasesStatus=document.querySelector('#commerce-purchases-status');
