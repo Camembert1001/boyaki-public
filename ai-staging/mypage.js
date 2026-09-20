@@ -32,11 +32,11 @@ $('#login-form').addEventListener('submit',async e=>{
     clearLogin();const target=$('#remember-login').checked?store.local:store.session;
     target.setItem('boyaki-account-sk',toHex(sk));target.setItem('boyaki-account-login-key',key);target.setItem('boyaki-account-pk',id.pk);cacheProfile(result.account.profile);$('#login-form').reset();location.reload();
   }catch(err){
-    console.error('AI-STAGING login failed',err);
+    console.error('BOYAKI login failed',err);
     const code=String(err?.message||err);
     $('#profile-state').textContent=code==='shared_account_not_found'||code==='ai_account_not_found'
-      ?'このアカウントはSTAGINGにもAI-STAGINGにも登録されていません。'
-      :'ログインできませんでした。STAGINGと同じログインキー・パスワードと通信状態を確認してください。';
+      ?'このアカウントは見つかりません。'
+      :'ログインできませんでした。ログインキー・パスワードと通信状態を確認してください。';
   }
   finally{button.disabled=false}
 });
@@ -61,15 +61,15 @@ function setupLoginKeyRecoveryUI(){
 
 async function main(){
   const id=currentIdentity();
-  if(!id){$('#profile-state').textContent='AI-STAGINGアカウントにログインしていません。';$('#profile-name').textContent='未ログイン';$('#device-id').textContent='not logged in';return}
+  if(!id){$('#profile-state').textContent='ログインしていません。';$('#profile-name').textContent='未ログイン';$('#device-id').textContent='not logged in';return}
   $('#login-form').hidden=true;document.querySelectorAll('[data-authenticated-only]').forEach(x=>x.hidden=false);$('#device-id').textContent=short(id.pk);
   $('#profile-actions').innerHTML='<a class="button-link" href="./profile-edit.html">プロフィールを編集</a><button id="logout-button" type="button">ログアウト</button>';
   $('#logout-button').addEventListener('click',()=>{clearLogin();location.reload()});
   setupLoginKeyRecoveryUI();
   try{
     const {account,links}=await client.getAccount();cacheProfile(account.profile);
-    $('#profile-name').textContent=account.profile.displayName||'プロフィール未登録';$('#profile-about').textContent=account.profile.about||'';$('#profile-state').textContent='AI-STAGINGアカウントにログイン中です。';
-    await linkDevice(id,links||[]);$('#legacy-identity-note').textContent='このAI-STAGINGブラウザ内の投稿だけを、このアカウントで管理します。';
+    $('#profile-name').textContent=account.profile.displayName||'プロフィール未登録';$('#profile-about').textContent=account.profile.about||'';$('#profile-state').textContent='ログイン中です。';
+    await linkDevice(id,links||[]);$('#legacy-identity-note').textContent='この端末で始めた匿名BOYAKIも、このアカウントに引き継げます。';
     await loadOwnedPosts();
   }catch(e){$('#profile-state').textContent='AI-STAGINGのアカウント情報を取得できませんでした。再読込してください。'}
 }
