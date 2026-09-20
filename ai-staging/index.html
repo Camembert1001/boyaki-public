@@ -45,7 +45,7 @@
         <div class="journey-step is-future"><strong>一緒に解決</strong><span>必要な人と作る</span></div>
         <div class="journey-step is-future"><strong>Product</strong><span>届ける</span></div>
       </div>
-      <p class="hint"><strong>まずこのブラウザ内で問題を整理します。</strong><br>解決候補として残したくなったら、その時点で公開して、似たことで困っている人や作れる人を集められます。</p>
+      <p class="hint"><strong>まずこのブラウザ内で問題を整理します。</strong><br>ほかの人とも話したくなったら、その時点で公開して、似たことで困っているVoiceや解決できるMakerを集められます。</p>
       <form id="raw-form">
         <label class="sr-only" for="raw">困りごと</label>
         <div class="submit-row">
@@ -87,18 +87,6 @@
   <script src="./onboarding.js?v=20260920-consolidated-v1"></script>
   <script type="module" src="./canonical-api.js?v=20260920-consolidated-v1"></script>
   <script type="module" src="./app.js?v=20260920-consolidated-v1"></script>
-  <script>
-  (()=>{
-    const campaigns={
-      'train-ticketing':{eyebrow:'電車・新幹線の地味な不便',title:'予約や受取、何がめんどい？',hint:'予約サイト、きっぷ、受取方法、乗換え。どこで引っかかったかを、仕様書にせず一言だけ話せます。',placeholder:'例：予約した切符をどこで受け取るか毎回迷う'},
-      'work-admin':{eyebrow:'仕事そのもの以外の面倒も原材料に',title:'報告や二重入力、何がめんどい？',hint:'転記、日報、同じ数字の再入力、承認のためだけの作業。今いちばん「これ要る？」と思うことを一言で。',placeholder:'例：同じ実績をExcelとシステムに二回入力してる'}
-    };
-    const key=new URLSearchParams(location.search).get('discover'),c=campaigns[key];if(!c)return;
-    const composer=document.querySelector('#composer'),eyebrow=composer?.querySelector('.eyebrow'),title=composer?.querySelector('h1'),hint=composer?.querySelector('.hint'),input=document.querySelector('#raw');
-    if(eyebrow)eyebrow.textContent=c.eyebrow;if(title)title.textContent=c.title;if(hint)hint.innerHTML=`<strong>あなた自身の困りごとを、そのまま。</strong><br>${c.hint}`;if(input)input.placeholder=c.placeholder;
-    const note=document.createElement('p');note.className='hint';note.dataset.acqNote='1';note.textContent='最初の一言はこのブラウザ内で整理され、あなたが明示的に「解決候補として公開する」を選んだときだけBOYAKIへ公開されます。外部で見つけた誰かの発言を転載する場所ではありません。';document.querySelector('#raw-form')?.after(note);document.title=`${c.title} — BOYAKI`;window.BOYAKI_DISCOVERY_OVERLAY_VERSION='chat-first-v53';
-  })();
-  </script>
   <script>
   (()=>{
     window.BOYAKI_CONTEXT_GATE_VERSION='context-v2-poster-bound';
