@@ -1,5 +1,5 @@
 import { getPublicKey } from 'https://esm.sh/nostr-tools@2.17.0';
-import { client, fromHex } from './canonical-api.js?v=20260920-consolidated-v1';
+import { client, fromHex } from './canonical-api.js?v=20260920-consolidated-v2';
 
 const $=s=>document.querySelector(s);
 const params=new URLSearchParams(location.search);
