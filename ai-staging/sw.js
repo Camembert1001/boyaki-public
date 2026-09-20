@@ -1,5 +1,5 @@
 const PREFIX='ai-staging:boyaki:shell:';
-const CACHE=PREFIX+'20260920-consolidated-v1';
+const CACHE=PREFIX+'20260920-consolidated-v2';
 const ROOT=new URL('./',self.location.href);
 const ASSETS=['index.html','styles.css','ai-environment.js'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS.map(p=>new URL(p,ROOT).href))).then(()=>self.skipWaiting())));
