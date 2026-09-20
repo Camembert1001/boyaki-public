@@ -119,7 +119,7 @@
     const publish=document.createElement('button');
     publish.type='button';
     publish.dataset.v53Publish='1';
-    publish.textContent='解決候補として公開する';
+    publish.textContent='このBOYAKIを公開する';
     if(!publishAllowed){
       publish.disabled=true;
       panel.append(addText('p','下書きをこのブラウザに保存できないため、この状態からは公開できません。','hint'));
@@ -133,17 +133,17 @@
       rawInput.value=draft.raw;
       publish.disabled=true;
       publish.textContent='公開処理中…';
-      setStatus('明示的な公開操作を受け付けました。既存のBOYAKI公開経路へ送信しています。');
+      setStatus('BOYAKIを公開しています。');
       try{
         form.requestSubmit();
       }catch{
         allowPublicOnce=false;
         publish.disabled=false;
-        publish.textContent='解決候補として公開する';
+        publish.textContent='このBOYAKIを公開する';
         setStatus('公開処理を開始できませんでした。内容は公開されていません。');
         return;
       }
-      setTimeout(()=>{publish.disabled=false;publish.textContent='解決候補として公開する'},2500);
+      setTimeout(()=>{publish.disabled=false;publish.textContent='このBOYAKIを公開する'},2500);
     });
 
     const keep=document.createElement('button');
