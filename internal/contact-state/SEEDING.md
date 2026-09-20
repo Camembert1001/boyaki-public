@@ -106,12 +106,9 @@ each real thread to the shape it has, copy that entry, and replace the placehold
 | `awaiting-first-reply-shape` | we wrote, nobody has answered yet | `AWAITING_REPLY`; the only correct action is to wait |
 | `automated-receipt-only-shape` | a ticket system acknowledged us and no person has written | still `AWAITING_REPLY`, and `human_reply` stays false |
 | `waived-then-closed-shape` | they did not know who we were; we explained, waived the questions and closed | `CLOSED`, reopen on inbound only |
-| `payer-question-outstanding-shape` | the price question is sent and unanswered | `VALIDATING` on the payer axis; holds every other candidate off that same question |
+| `payer-question-outstanding-shape` | the price question is sent and unanswered | `VALIDATING` on the payer axis; blocks re-asking that same prospect/contact |
 
-The last one has a reach beyond its own record: while any contact is waiting on an axis,
-the discovery engine holds every other candidate that would be asked the same question in
-`RESERVE` rather than queueing them. That is deliberate — a second stranger asked a
-question we are already about to get an answer to buys nothing and spends a first contact.
+Outstanding-axis protection is **prospect/contact-scoped**. If Prospect A is waiting on a payer answer, the engine must not ask Prospect A the payer question again. That outstanding answer does **not** block an independently identity-checked `NO_MATCH` Prospect B from proceeding through the normal gates. Store-wide outstanding-axis values may be reported for visibility, but they are not candidate gates.
 
 ## What the store does not do
 
