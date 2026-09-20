@@ -9,7 +9,7 @@
   <meta name="theme-color" content="#111827" />
   <meta name="robots" content="noindex,nofollow" />
   <link rel="stylesheet" href="./styles.css" />
-  <title>Solution Room — BOYAKI</title>
+  <title>一緒に解決 — BOYAKI</title>
   <style>
     .room-shell{padding-bottom:60px}.room-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.room-back{display:inline-flex;margin:10px 0 14px}.room-log{display:grid;gap:8px;margin:14px 0}.room-message{background:#f9fafb;border:1px solid #e5e7eb;border-radius:14px;padding:12px}.room-message.mine{border-left:4px solid #111827}.room-meta{font-size:12px;color:#6b7280;margin-bottom:6px}.room-message p{margin:0;white-space:pre-wrap;line-height:1.55}.room-compose{display:grid;gap:10px;margin-top:14px}.room-compose textarea{width:100%;border:1px solid #d1d5db;border-radius:12px;padding:12px;font:inherit;resize:vertical}.room-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.room-status{min-height:1.4em}.room-empty{padding:18px 0}
   </style>
@@ -26,33 +26,33 @@
   </header>
 
   <main class="shell room-shell">
-    <a class="button-link room-back" href="./makers.html">← Solution Roomsへ戻る</a>
+    <a class="button-link room-back" href="./makers.html">← Makerページへ戻る</a>
     <div class="journey-guide" aria-label="BOYAKIの流れ">
-      <div class="journey-step is-done"><strong>BOYAKI</strong><span>ボヤく</span></div>
-      <div class="journey-step is-done"><strong>Thread</strong><span>話し合う</span></div>
-      <div class="journey-step is-current"><strong>Solution</strong><span>一緒に解決</span></div>
+      <div class="journey-step is-done"><strong>ボヤく</strong><span>一言から</span></div>
+      <div class="journey-step is-done"><strong>話し合う</strong><span>困りごとを具体化</span></div>
+      <div class="journey-step is-current"><strong>一緒に解決</strong><span>必要な人と作る</span></div>
       <div class="journey-step is-future"><strong>Product</strong><span>届ける</span></div>
     </div>
 
     <section class="card hero">
       <div class="room-head">
         <div>
-          <p class="eyebrow">Solution Room</p>
-          <h1 id="room-title">Room</h1>
+          <p class="eyebrow">一緒に解決</p>
+          <h1 id="room-title">一緒に解決</h1>
         </div>
         <span class="chip" id="room-id"></span>
       </div>
       <p class="lead">ここは、公開Threadより一段深く「一緒に解決を作る」場所です。</p>
-      <div class="transition-note"><strong>今いる段階：一緒に解決</strong><span>Voiceは使う条件や痛みを具体化し、Makerは解決を形にします。まとまった成果はCaseとして残し、そこからProductへ進めます。</span></div>
+      <div class="transition-note"><strong>今いる段階：一緒に解決</strong><span>Voiceは使う条件や痛みを具体化し、Makerは解決を形にします。まとまったら解決メモに残し、必要ならProductへ進めます。</span></div>
       <p id="room-problem" class="raw">元のBOYAKIを読み込んでいます…</p>
       <div class="actions"><a id="room-source-link" class="button-link" href="./">元のBOYAKIを見る</a></div>
-      <div id="room-demand-evidence" class="participation-panel"><p class="hint">需要の証拠を読み込んでいます…</p></div>
-      <p class="hint">このRoomの会話とSolution CaseはAI-STAGING専用DBへ保存されます。STAGINGの投稿・活動履歴には反映されません。</p>
+      <div id="room-demand-evidence" class="participation-panel"><p class="hint">需要の反応を読み込んでいます…</p></div>
+      <p class="hint">ここでの話し合いと解決メモは、参加したAccount IDの履歴に残ります。</p>
     </section>
 
     <section class="card">
-      <p class="eyebrow">Solution Log</p>
-      <h2>Room chat</h2>
+      <p class="eyebrow">話し合いの記録</p>
+      <h2>話し合い</h2>
       <div id="room-log" class="room-log" aria-live="polite"></div>
       <form id="room-form" class="room-compose">
         <label for="room-message"><strong>メッセージ</strong></label>
@@ -60,17 +60,17 @@
         <div class="room-actions">
           <button type="submit">送信</button>
           <button type="button" id="room-refresh">更新</button>
-          <button type="button" id="room-report">ルーム/メッセージを通報する</button>
-          <button type="button" id="solution-case-create">解決をCaseとして残す</button>
+          <button type="button" id="room-report">この話し合いを通報する</button>
+          <button type="button" id="solution-case-create">解決をまとめる</button>
         </div>
         <div id="room-status" class="hint room-status" role="status" aria-live="polite"></div>
       </form>
     </section>
 
     <section class="card identity-card">
-      <p class="eyebrow">Room identity</p>
+      <p class="eyebrow">参加者</p>
       <h2>この活動を誰の履歴として残すか</h2>
-      <p class="hint">STAGINGと共通のBOYAKI Account IDを本人identityとして使います。Room内の活動データはAI-STAGING側だけに保存されます。閲覧はできますが、会話への参加はMakerとしての参加か、元スレッドで受けたVoice招待が必要です。</p>
+      <p class="hint">このAccount IDで参加します。閲覧はできますが、発言するにはMakerとして参加するか、Voiceとして招待を受ける必要があります。</p>
       <code id="room-identity">loading…</code>
     </section>
   </main>
