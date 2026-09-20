@@ -40,9 +40,9 @@
       <p class="eyebrow">まずは公開せず、一言から。</p>
       <h1>困ったこと、そのまま話して。</h1>
       <div class="journey-guide" aria-label="BOYAKIの流れ">
-        <div class="journey-step is-current"><strong>BOYAKI</strong><span>ボヤく</span></div>
-        <div class="journey-step is-future"><strong>Thread</strong><span>話し合う</span></div>
-        <div class="journey-step is-future"><strong>Solution</strong><span>一緒に解決</span></div>
+        <div class="journey-step is-current"><strong>ボヤく</strong><span>一言から</span></div>
+        <div class="journey-step is-future"><strong>話し合う</strong><span>困りごとを具体化</span></div>
+        <div class="journey-step is-future"><strong>一緒に解決</strong><span>必要な人と作る</span></div>
         <div class="journey-step is-future"><strong>Product</strong><span>届ける</span></div>
       </div>
       <p class="hint"><strong>まずこのブラウザ内で問題を整理します。</strong><br>解決候補として残したくなったら、その時点で公開して、似たことで困っている人や作れる人を集められます。</p>
@@ -54,7 +54,7 @@
         </div>
         <p class="hint">タイトル・カテゴリ・予算・仕様は不要。最初の一言だけでOK。ここではまだ公開されません。</p>
       </form>
-      <p class="hint">今は「ボヤく」段階。公開後にThreadで話し、必要なときだけ共同解決とProductへ進みます。</p>
+      <p class="hint">今は「ボヤく」段階。公開後に話し合い、必要なときだけ一緒に解決してProductへ進みます。</p>
       <div id="status" role="status" aria-live="polite"></div>
     </section>
 
@@ -68,15 +68,11 @@
       <div id="feed" class="stack"></div>
     </section>
 
-    <section id="maker-view" hidden>
-      <div class="section-head">
-        <div><p class="eyebrow">まだ解決されていない困りごと</p><h2>解決できる問題を探す</h2></div>
-        <input id="maker-search" placeholder="困りごとを検索" />
-      </div>
-      <p class="hint">BOYAKIでは、こうした問題を拾って解決策を作る人や企業を「Maker」と呼びます。共感だけでなく、質問・提案・試したいという反応を見ながら、解決する価値のある問題を探せます。</p>
-      <div id="maker-list" class="stack"></div>
-    </section>
   </main>
+  <footer class="shell site-footer">
+    <button type="button" class="footer-link" data-onboarding-open>BOYAKIとは？</button>
+    <a class="footer-link" href="./bug-report.html">バグ報告</a>
+  </footer>
 <div id="boyaki-alert" class="boyaki-alert" hidden role="alertdialog" aria-modal="true" aria-labelledby="boyaki-alert-title" style="position:fixed;inset:0;z-index:2147483647;display:grid;place-items:center;padding:24px;background:rgba(17,24,39,.32);backdrop-filter:blur(4px);">
   <div class="boyaki-alert-card" style="width:min(360px,calc(100vw - 48px));background:#fff;border-radius:24px;padding:24px;text-align:center;box-shadow:0 24px 80px rgba(17,24,39,.28);">
     <div class="boyaki-alert-icon">!</div>
@@ -86,29 +82,6 @@
   </div>
 </div>
 
-  <template id="problem-template">
-    <article class="card problem-card">
-      <div class="meta"></div>
-      <p class="raw"></p>
-      <div class="chips"></div>
-      <div class="thread-entry-list">
-        <div class="actions">
-          <button type="button" data-action="open-thread">このBOYAKIを開く</button>
-        </div>
-      </div>
-      <details class="clarify">
-        <summary>少しだけ詳しくする</summary>
-        <form data-form="clarify"><input maxlength="240" placeholder="いつ/どこで困る？ 今はどう回避してる？" /><button>送る</button></form>
-      </details>
-      <details class="proposal">
-        <summary>解決案を提案する</summary>
-        <form data-form="proposal"><input maxlength="300" placeholder="解決案を短く。勝手に要件を決めない。" /><button>提案</button></form>
-      </details>
-      <div class="demand-ladder"></div>
-      <div class="thread"></div>
-      <a class="permalink" rel="nofollow">この問題のURL</a>
-    </article>
-  </template>
 
   <script src="./chat-first-v53.js?v=20260918-ai-v1"></script>
   <script src="./onboarding.js?v=20260920-human-onboarding-v1"></script>
