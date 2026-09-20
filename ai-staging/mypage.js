@@ -71,6 +71,6 @@ async function main(){
     $('#profile-name').textContent=account.profile.displayName||'プロフィール未登録';$('#profile-about').textContent=account.profile.about||'';$('#profile-state').textContent='ログイン中です。';
     await linkDevice(id,links||[]);$('#legacy-identity-note').textContent='この端末で始めた匿名BOYAKIも、このアカウントに引き継げます。';
     await loadOwnedPosts();
-  }catch(e){$('#profile-state').textContent='AI-STAGINGのアカウント情報を取得できませんでした。再読込してください。'}
+  }catch(e){$('#profile-state').textContent='アカウント情報を取得できませんでした。再読込してください。'}
 }
 main();
