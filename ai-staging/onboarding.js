@@ -31,9 +31,9 @@
     ['1','ボヤく','最初は非公開。タイトル・仕様・予算はいりません。困ったことを一言だけ。'],
     ['2','公開する','自分で公開を選んだBOYAKIだけがみんなに見えるようになります。同じ痛みを持つVoiceや、解けるMakerが集まります。'],
     ['3','話し合う','Voiceは「自分も困る・試したい」を伝え、Makerは質問や解決案を出します。'],
-    ['4','一緒に解決する','Makerが必要なVoiceをSolution Roomへ招待。元Voiceが同意したときだけ、個人の投稿とは別のShared Problemへ進みます。'],
+    ['4','一緒に解決する','Makerが必要なVoiceを「一緒に解決」へ招待。元のVoiceが同意したときだけ、個人のBOYAKIとは別に「みんなで解く困りごと」として残ります。'],
     ['5','Productになる','Makerが解決をまとめてProductにします。完成したProductは、元の困りごとに掲載できます。'],
-    ['6','必要な人に届く','最初から困っていたVoiceも、後から同じProblemを見つけたVoiceもProductを購入できます。']
+    ['6','必要な人に届く','最初から困っていたVoiceも、後から同じ困りごとを見つけたVoiceもProductを購入できます。']
   ];
   for(const [no,title,body] of steps){
     const row=add('div','', 'onboarding-step');
@@ -45,7 +45,7 @@
   shell.append(flow);
 
   const roles=add('section','', 'onboarding-section');
-  roles.append(add('p','Voice / Maker','eyebrow'),add('h3','役割は「立場」ではなく、そのProblemで何をするか。'));
+  roles.append(add('p','Voice / Maker','eyebrow'),add('h3','役割は「立場」ではなく、その困りごとで何をするか。'));
   const roleGrid=add('div','', 'onboarding-role-grid');
   const voice=add('div','', 'onboarding-role');
   voice.append(add('strong','Voice'),add('span','困っている人、試す人、条件を伝える人。どんな解決が必要かを具体化します。'));
