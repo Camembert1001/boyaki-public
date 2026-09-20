@@ -59,7 +59,8 @@
     };
     const setBlockedStatus=(button,isThread=false)=>{
       const status=document.querySelector('#status');
-      if(status)status.textContent=`AI-STAGING保存経路がまだ有効化されていません。E2E診断: ${diagnostic()}（Nostr Relayへは送信していません）`;
+      console.warn('BOYAKI write path not ready',diagnostic());
+      if(status)status.textContent='保存の準備が完了していません。少し待ってからもう一度試してください。';
       if(button){button.disabled=false;if(isThread&&button.dataset.boyakiOriginalLabel)button.textContent=button.dataset.boyakiOriginalLabel;else if(!isThread)button.textContent='解決候補として公開する'}
     };
     document.addEventListener('click',e=>{
