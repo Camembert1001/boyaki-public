@@ -42,18 +42,6 @@
     const card=root.matches?.('.problem-card')?root:root.querySelector?.('.problem-card');
     if(card) apply(card);
   }
-  function suppressLegacyMakerSpaceNav(){
-    document.querySelectorAll('[data-maker-space-link]').forEach(el=>el.remove());
-    document.querySelectorAll('.topbar nav a,.topbar nav button').forEach(el=>{if(el.textContent?.trim()==='活動する')el.remove()});
-  }
-  function loadPublicSuppression(){
-    if(document.querySelector('script[data-public-suppression-loader]'))return;
-    const script=document.createElement('script');
-    script.src='./public-surface-suppression.js?v=20260918-ai-v1';
-    script.defer=true;
-    script.dataset.publicSuppressionLoader='1';
-    document.head.append(script);
-  }
   function installCanonicalStorageCutoverGuard(){
     window.BOYAKI_PLAINTEXT_NOSTR_PUBLICATION_DISABLED=true;
     const backendReady=()=>window.BOYAKI_CANONICAL_BACKEND_READY===true;
@@ -100,7 +88,6 @@
   }
   window.BOYAKI_PROBLEM_INDEX_GATE={version:VERSION,evaluate,apply};
   new MutationObserver(ms=>{for(const m of ms)for(const n of m.addedNodes)if(n.nodeType===1)scan(n)}).observe(document.documentElement,{childList:true,subtree:true});
-  if(!location.pathname.endsWith('/ui-dom-selftest.html'))loadPublicSuppression();
   installCanonicalStorageCutoverGuard();
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{installAiStagingSurface();scan();suppressLegacyMakerSpaceNav()});else{installAiStagingSurface();scan();suppressLegacyMakerSpaceNav()}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{installAiStagingSurface();scan()});else{installAiStagingSurface();scan()}
 })();
