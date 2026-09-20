@@ -1,4 +1,4 @@
-import { client } from './canonical-api.js?v=20260920-action-inbox-v10';
+import { client } from './canonical-api.js?v=20260920-consolidated-v1';
 const $=s=>document.querySelector(s);
 const caseId=String(new URLSearchParams(location.search).get('case')||'').trim();
 const uuid=/^[0-9a-f]{8}-[0-9a-f-]{27}$/i;
