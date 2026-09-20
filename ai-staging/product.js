@@ -1,4 +1,4 @@
-import { client } from './canonical-api.js?v=20260920-consolidated-v1';
+import { client } from './canonical-api.js?v=20260920-consolidated-v2';
 const $=s=>document.querySelector(s),id=String(new URLSearchParams(location.search).get('id')||'').trim();
 const uuid=/^[0-9a-f]{8}-[0-9a-f-]{27}$/i;
 const yen=v=>new Intl.NumberFormat('ja-JP',{style:'currency',currency:'JPY',maximumFractionDigits:0}).format(Number(v)||0);
