@@ -1,4 +1,4 @@
-import { client } from './canonical-api.js?v=20260919-problem-transition-v8';
+import { client } from './canonical-api.js?v=20260920-consolidated-v1';
 
 const $=s=>document.querySelector(s);
 const list=$('#solution-room-list');
@@ -21,17 +21,17 @@ function roomCard(room){
   const hasSource=Boolean(post?.content);
   const meta=document.createElement('p');
   meta.className='eyebrow';
-  meta.textContent=`Solution Room · ${fmt(room.updated_at||room.created_at)}`;
+  meta.textContent=`一緒に解決 · ${fmt(room.updated_at||room.created_at)}`;
 
   const title=document.createElement('h3');
-  const raw=hasSource?String(post.content).trim():'Problemを取得できませんでした';
+  const raw=hasSource?String(post.content).trim():'困りごとを取得できませんでした';
   title.textContent=raw.length>72?`${raw.slice(0,72)}…`:raw;
 
   const hint=document.createElement('p');
   hint.className='hint';
   hint.textContent=sourceWithdrawn
-    ?'元の個人的なBOYAKI本文は取り下げ済みです。一般化されたProblem・Solution Log・Caseは共同資産として続いています。'
-    :'このRoomのSolution LogとSolution CaseはAI-STAGINGだけに保存され、通常STAGINGの活動履歴とは分離されています。';
+    ?'元の個人的なBOYAKI本文は取り下げ済みです。残した困りごと・話し合い・解決メモは続いています。'
+    :'ここでの話し合いと解決メモは、このAccount IDのMaker履歴に残ります。';
 
   const actions=document.createElement('div');
   actions.className='actions';
@@ -39,14 +39,14 @@ function roomCard(room){
   const open=document.createElement('a');
   open.className='button-link';
   open.href=`./solution-room.html?room=${encodeURIComponent(room.id)}`;
-  open.textContent='Solution Roomを開く';
+  open.textContent='一緒に解決を開く';
   actions.append(open);
 
   if(post?.id){
     const source=document.createElement('a');
     source.className='button-link';
     source.href=`./?problem=${encodeURIComponent(post.id)}`;
-    source.textContent=sourceWithdrawn?'共有Problemを見る':'元のBOYAKIを見る';
+    source.textContent=sourceWithdrawn?'残った困りごとを見る':'元のBOYAKIを見る';
     actions.append(source);
   }
 
@@ -55,7 +55,7 @@ function roomCard(room){
 }
 
 async function load(){
-  status.textContent='Solution Roomsを読み込んでいます…';
+  status.textContent='進行中の解決を読み込んでいます…';
   try{
     const result=await client.listSolutionRooms();
     const rooms=result.rooms||[];
@@ -63,15 +63,15 @@ async function load(){
     if(!rooms.length){
       const empty=document.createElement('div');
       empty.className='participation-panel';
-      empty.innerHTML='<h3>まだSolution Roomはありません</h3><p class="hint">BOYAKIのスレッドで「解決を具体化する」→「Solution Roomを作る」から始められます。</p>';
+      empty.innerHTML='<h3>まだ「一緒に解決」はありません</h3><p class="hint">BOYAKIの話し合いでMakerとして参加し、必要なVoiceを「一緒に解決」へ招待すると始まります。</p>';
       const a=document.createElement('a');a.className='button-link';a.href='./';a.textContent='BOYAKIを探す';empty.append(a);list.append(empty);
     }else{
       for(const room of rooms)list.append(roomCard(room));
     }
-    status.textContent=`${rooms.length}件のSolution Room`;
+    status.textContent=`${rooms.length}件の進行中の解決`;
   }catch(err){
     console.error('solution room list failed',err);
-    status.textContent='Solution Roomsを読み込めませんでした。再読み込みしてください。';
+    status.textContent='進行中の解決を読み込めませんでした。再読み込みしてください。';
     list.innerHTML='<div class="participation-panel"><p class="hint">読み込みに失敗しました。</p></div>';
   }
 }
@@ -83,29 +83,29 @@ async function loadProducts(){
   const box=$('#maker-products-list'),state=$('#maker-products-status');
   if(!box)return;
   const id=accountIdentity();
-  if(!id){box.innerHTML='<p class="hint">ログインすると、このAccount IDのMaker Productsが表示されます。</p>';if(state)state.textContent='';return}
-  if(state)state.textContent='Maker Productsを読み込んでいます…';
+  if(!id){box.innerHTML='<p class="hint">ログインすると、このAccount IDで作ったProductが表示されます。</p>';if(state)state.textContent='';return}
+  if(state)state.textContent='Productを読み込んでいます…';
   try{
     const result=await client.listMyProducts(),products=result.products||[];
     box.replaceChildren();
-    if(!products.length)box.innerHTML='<p class="hint">まだProductはありません。Solution Caseから「プロダクトとして出す」で作成できます。</p>';
+    if(!products.length)box.innerHTML='<p class="hint">まだProductはありません。解決メモからProductを作れます。</p>';
     for(const product of products){
       const card=document.createElement('article');card.className='participation-panel';
       const h=document.createElement('h3');h.textContent=product.title;
       const meta=document.createElement('p');meta.className='hint';
-      meta.textContent=`${new Intl.NumberFormat('ja-JP',{style:'currency',currency:'JPY',maximumFractionDigits:0}).format(product.price_yen)} · ${product.thread_publication?.status==='active'?'元スレッド掲載済み':'Maker Spaceのみ'}`;
+      meta.textContent=`${new Intl.NumberFormat('ja-JP',{style:'currency',currency:'JPY',maximumFractionDigits:0}).format(product.price_yen)} · ${product.thread_publication?.status==='active'?'元の困りごとに掲載済み':'まだ元の困りごとに未掲載'}`;
       const actions=document.createElement('div');actions.className='actions';
-      const open=document.createElement('a');open.className='button-link';open.href=`./product.html?id=${encodeURIComponent(product.id)}`;open.textContent=product.thread_publication?.status==='active'?'商品を見る / 掲載先確認':'商品を見る / スレッドへ掲載';
+      const open=document.createElement('a');open.className='button-link';open.href=`./product.html?id=${encodeURIComponent(product.id)}`;open.textContent=product.thread_publication?.status==='active'?'Productを見る / 掲載先確認':'Productを見る / 元の困りごとへ掲載';
       actions.append(open);
       if(product.thread_publication?.status==='active'){
-        const thread=document.createElement('a');thread.className='button-link';thread.href=`./?problem=${encodeURIComponent(product.thread_publication.post_id)}`;thread.textContent='掲載先スレッド';
+        const thread=document.createElement('a');thread.className='button-link';thread.href=`./?problem=${encodeURIComponent(product.thread_publication.post_id)}`;thread.textContent='掲載先を見る';
         actions.append(thread);
       }
       card.append(h,meta,actions);box.append(card);
     }
-    if(state)state.textContent=`${products.length}件のMaker Product`;
+    if(state)state.textContent=`${products.length}件のProduct`;
   }catch(err){
-    console.error('maker products failed',err);box.innerHTML='<p class="hint">Maker Productsを読み込めませんでした。</p>';if(state)state.textContent='読み込みに失敗しました。';
+    console.error('maker products failed',err);box.innerHTML='<p class="hint">Productを読み込めませんでした。</p>';if(state)state.textContent='読み込みに失敗しました。';
   }
 }
 

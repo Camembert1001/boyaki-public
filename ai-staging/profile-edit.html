@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta http-equiv="Content-Security-Policy" content="connect-src https://camembert1001.github.io/boyaki-public/ai-staging/ https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/ai-staging-boyaki-api https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/ai-staging-boyaki-api/ https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/ai-staging-boyaki-thread-api https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/ai-staging-boyaki-thread-api/ https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/ai-staging-e2e-runner https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/ai-staging-e2e-runner/; base-uri 'none'; form-action 'none'; object-src 'none'">
-<script src="./ai-environment.js?v=20260918-ai-v1"></script>
+<script src="./ai-environment.js?v=20260920-consolidated-v1"></script>
 
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
 <meta name="theme-color" content="#111827" />
@@ -15,9 +15,11 @@
 <header class="shell topbar">
 <a class="brand" href="./">BOYAKI</a>
 <nav>
-<a class="nav-link" href="./">ホーム</a>
-<a class="nav-link" href="./mypage.html">マイページ</a>
-</nav>
+      <a class="nav-link" href="./">ホーム</a>
+      <a class="nav-link" href="./discover/">問題を探す</a>
+      <a class="nav-link" href="./products.html">Product</a>
+      <a class="nav-link active" href="./mypage.html">マイページ</a>
+    </nav>
 </header>
 <main class="shell maker-space">
 <section class="card hero maker-hero">
@@ -28,17 +30,17 @@
 </section>
 <section class="card participation-panel">
 <form id="profile-edit-form" class="maker-form">
-<label>表示名 / Display name
+<label>表示名
 <input id="edit-name" maxlength="40" autocomplete="nickname" required />
 </label>
-<label>主に興味があること / Main interest
+<label>主に興味があること
 <select id="edit-interest">
 <option value="both">Voice と Maker の両方</option>
-<option value="voice">Voice — 困りごと・検証側</option>
+<option value="voice">Voice — 困っている・試す側</option>
 <option value="maker">Maker — 解決を作る側</option>
 </select>
 </label>
-<label>ひとこと / About (optional)
+<label>ひとこと（任意）
 <textarea id="edit-about" maxlength="240" rows="4"></textarea>
 </label>
 <div class="actions">
@@ -48,6 +50,7 @@
 </form>
 </section>
 </main>
-<script type="module" src="./profile-edit.js?v=20260918-ai-v1"></script>
+<footer class="shell site-footer"><a class="footer-link" href="./?about=1">BOYAKIとは？</a><a class="footer-link" href="./bug-report.html">バグ報告</a></footer>
+<script type="module" src="./profile-edit.js?v=20260920-consolidated-v1"></script>
 </body>
 </html>

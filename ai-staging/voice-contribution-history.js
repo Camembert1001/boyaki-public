@@ -1,4 +1,4 @@
-import { client } from './canonical-api.js?v=20260920-action-inbox-v10';
+import { client } from './canonical-api.js?v=20260920-consolidated-v1';
 
 const box=document.querySelector('[data-contribution-role="voice"]');
 const status=document.querySelector('#voice-contribution-status');
@@ -6,7 +6,7 @@ const status=document.querySelector('#voice-contribution-status');
 function fmt(value){return value?new Date(value).toLocaleString('ja-JP'):''}
 function excerpt(post){
   const text=String(post?.content||'').trim();
-  if(!text)return post?.source_withdrawn?'共有Problem':'元のBOYAKIを取得できません';
+  if(!text)return post?.source_withdrawn?'残った困りごと':'元のBOYAKIを取得できません';
   return text.length>110?`${text.slice(0,110)}…`:text;
 }
 function eventLabel(type){
@@ -18,11 +18,11 @@ function demandLabel(signal){
 function cardBase(title,post,createdAt){
   const card=document.createElement('article');card.className='participation-panel';
   const h=document.createElement('h3');h.textContent=title;card.append(h);
-  const source=document.createElement('p');source.className='hint';source.textContent=`${post?.source_withdrawn?'共有Problem':'BOYAKI'}: ${excerpt(post)}`;card.append(source);
-  const meta=document.createElement('p');meta.className='hint';meta.textContent=`${fmt(createdAt)} · Voice · AI-STAGING`;card.append(meta);
+  const source=document.createElement('p');source.className='hint';source.textContent=`${post?.source_withdrawn?'残った困りごと':'BOYAKI'}: ${excerpt(post)}`;card.append(source);
+  const meta=document.createElement('p');meta.className='hint';meta.textContent=`${fmt(createdAt)} · Voice`;card.append(meta);
   if(post?.id&&(post?.status==='active'||post?.source_withdrawn)){
     const actions=document.createElement('div');actions.className='actions';
-    const link=document.createElement('a');link.className='button-link';link.href=`./?problem=${encodeURIComponent(post.id)}`;link.textContent=post?.source_withdrawn?'共有Problemを見る':'BOYAKIを見る';actions.append(link);card.append(actions);
+    const link=document.createElement('a');link.className='button-link';link.href=`./?problem=${encodeURIComponent(post.id)}`;link.textContent=post?.source_withdrawn?'残った困りごとを見る':'BOYAKIを見る';actions.append(link);card.append(actions);
   }
   return card;
 }
@@ -34,7 +34,7 @@ async function render(){
     box.innerHTML='<p class="hint">ログインすると、このAccount IDで残したVoice活動が表示されます。</p>';
     if(status)status.textContent='';return;
   }
-  if(status)status.textContent='Voice Contribution Historyを読み込んでいます…';
+  if(status)status.textContent='Voiceとしての履歴を読み込んでいます…';
   try{
     const result=await client.listMyVoiceHistory();
     const events=result.thread_contributions||[],demand=result.demand_signals||[];
@@ -44,7 +44,7 @@ async function render(){
     ].sort((a,b)=>String(b.at).localeCompare(String(a.at)));
     box.replaceChildren();
     if(!items.length){
-      box.innerHTML='<p class="hint">まだVoiceとして残った活動はありません。Voiceとしてスレッドに参加したり、需要シグナルを残すとここに積み上がります。</p>';
+      box.innerHTML='<p class="hint">まだVoiceとして残った活動はありません。話し合いに参加したり、需要の反応を残すとここに積み上がります。</p>';
     }else{
       for(const item of items){
         const row=item.row;
@@ -67,7 +67,7 @@ async function render(){
     if(status)status.textContent=`${items.length}件のVoice活動`;
   }catch(err){
     console.error('voice contribution history failed',err);
-    box.innerHTML='<p class="hint">Voice Contribution Historyを読み込めませんでした。</p>';
+    box.innerHTML='<p class="hint">Voiceとしての履歴を読み込めませんでした。</p>';
     if(status)status.textContent='読み込みに失敗しました。';
   }
 }

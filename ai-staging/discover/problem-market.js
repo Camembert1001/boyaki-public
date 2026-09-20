@@ -1,4 +1,4 @@
-import { client } from '../canonical-api.js?v=20260919-problem-market-v9';
+import { client } from '../canonical-api.js?v=20260920-consolidated-v1';
 
 const $=s=>document.querySelector(s);
 const yen=v=>new Intl.NumberFormat('ja-JP',{style:'currency',currency:'JPY',maximumFractionDigits:0}).format(Number(v)||0);
@@ -37,18 +37,18 @@ function demandChips(problem){
 function problemCard(problem,products){
   const card=document.createElement('article');card.className='card market-card';card.dataset.problemId=problem.id;
   const top=document.createElement('div');top.className='market-top';
-  const meta=document.createElement('p');meta.className='eyebrow';meta.textContent=problem.source_withdrawn?'Shared Problem · 元BOYAKI本文取り下げ済み':'Shared Problem · 元BOYAKI本文あり';
+  const meta=document.createElement('p');meta.className='eyebrow';meta.textContent=problem.source_withdrawn?'みんなで解く困りごと · 元BOYAKI本文取り下げ済み':'みんなで解く困りごと · 元BOYAKI本文あり';
   const badge=document.createElement('span');badge.className='market-product-badge';badge.textContent=products.length?`Product ${products.length}`:'Product なし';
   top.append(meta,badge);
 
   const h=document.createElement('h2');h.textContent=problem.statement;
   const sub=document.createElement('p');sub.className='hint';
-  sub.textContent=`Problem化 ${fmt(problem.created_at)} · 需要反応 ${problem.demand_total||0}件${problem.source_withdrawn?' · 元の個人的な本文は残っていません':''}`;
+  sub.textContent=`みんなで残した ${fmt(problem.created_at)} · 需要反応 ${problem.demand_total||0}件${problem.source_withdrawn?' · 元の個人的な本文は残っていません':''}`;
   card.append(top,h,sub,demandChips(problem));
 
   if(products.length){
     const shelf=document.createElement('div');shelf.className='market-products';
-    const title=document.createElement('strong');title.textContent='このProblemから生まれたProduct';shelf.append(title);
+    const title=document.createElement('strong');title.textContent='この困りごとから生まれたProduct';shelf.append(title);
     for(const p of products.slice(0,3)){
       const row=document.createElement('a');row.className='market-product';row.href=`../product.html?id=${encodeURIComponent(p.id)}`;
       const name=document.createElement('span');name.textContent=p.title;
@@ -59,12 +59,12 @@ function problemCard(problem,products){
     card.append(shelf);
   }else{
     const gap=document.createElement('div');gap.className='market-gap';
-    gap.innerHTML='<strong>まだProductがありません</strong><span>需要を見てMakerがSolutionを作れる余地があります。</span>';
+    gap.innerHTML='<strong>まだProductがありません</strong><span>需要の反応を見てMakerが解決を作れる余地があります。</span>';
     card.append(gap);
   }
 
   const actions=document.createElement('div');actions.className='actions';
-  const open=document.createElement('a');open.className='button-link';open.href=`../?problem=${encodeURIComponent(problem.post_id)}`;open.textContent='Problemを開く';actions.append(open);
+  const open=document.createElement('a');open.className='button-link';open.href=`../?problem=${encodeURIComponent(problem.post_id)}`;open.textContent='困りごとを開く';actions.append(open);
   if(!products.length){const maker=document.createElement('a');maker.className='button-link';maker.href=`../?problem=${encodeURIComponent(problem.post_id)}`;maker.textContent='Makerとして見る';actions.append(maker)}
   card.append(actions);
   return card;
@@ -79,24 +79,24 @@ function render(){
   list.replaceChildren();
   if(!rows.length){
     const empty=document.createElement('div');empty.className='card';
-    empty.innerHTML='<h2>該当するProblemはまだありません</h2><p class="hint">BOYAKIが共同解決フェーズへ進み、元Voiceが一般化Problemを承認するとここに並びます。</p>';
+    empty.innerHTML='<h2>該当する困りごとはまだありません</h2><p class="hint">BOYAKIから「一緒に解決」へ進み、元のVoiceが「みんなで解く困りごと」として残すことに同意するとここに並びます。</p>';
     list.append(empty);
   }else for(const row of rows)list.append(problemCard(row.problem,row.products));
 
   const totalDemand=state.problems.reduce((n,p)=>n+(p.demand_total||0),0);
   const productProblems=new Set(state.products.map(p=>p?.source_post?.id).filter(Boolean)).size;
-  $('#market-summary').textContent=`${state.problems.length} Problems · 需要反応 ${totalDemand}件 · Productあり ${productProblems} Problems`;
+  $('#market-summary').textContent=`${state.problems.length}件の困りごと · 需要の反応 ${totalDemand}件 · Productあり ${productProblems}件`;
   $('#market-visible').textContent=`${rows.length}件表示`;
 }
 async function load(){
-  const status=$('#market-status');status.textContent='Problem Marketを読み込んでいます…';
+  const status=$('#market-status');status.textContent='困りごとを読み込んでいます…';
   try{
     const [problemResult,productResult]=await Promise.all([client.listProblems(200),client.listProducts()]);
     state.problems=problemResult.problems||[];state.products=productResult.products||[];
-    render();status.textContent='Shared ProblemとProductを最新状態に更新しました。';
+    render();status.textContent='困りごととProductを最新状態に更新しました。';
   }catch(err){
     console.error('problem market load failed',err);
-    $('#problem-market-list').innerHTML='<div class="card"><p class="hint">Problem Marketを読み込めませんでした。</p></div>';
+    $('#problem-market-list').innerHTML='<div class="card"><p class="hint">困りごとを読み込めませんでした。</p></div>';
     status.textContent='読み込みに失敗しました。';
   }
 }

@@ -32,9 +32,9 @@ function eventRole(type){return type==='poster_response'?'original-poster':type=
 function journeyGuide(stage='thread'){
   const order=['boyaki','thread','solution','product'],index=Math.max(0,order.indexOf(stage));
   const labels=[
-    ['BOYAKI','ボヤく'],
-    ['Thread','話し合う'],
-    ['Solution','一緒に解決'],
+    ['ボヤく','一言から'],
+    ['話し合う','困りごとを具体化'],
+    ['一緒に解決','必要な人と作る'],
     ['Product','届ける']
   ];
   const guide=document.createElement('div');guide.className='journey-guide';guide.dataset.journeyGuide='1';
@@ -76,7 +76,7 @@ async function hydrateCanonicalThread(article,post){
   if(!mount)return;
   if(window.BOYAKI_CANONICAL_THREAD_WRITE_CUTOVER_ACTIVE!==true){
     mount.replaceChildren();
-    const p=document.createElement('p');p.className='hint';p.textContent='スレッド保存経路を確認中です。Nostr Relayには送信しません。';mount.append(p);return;
+    const p=document.createElement('p');p.className='hint';p.textContent='話し合いを準備しています。少し待ってからもう一度試してください。';mount.append(p);return;
   }
 
   let thread={events:[]};
@@ -88,7 +88,7 @@ async function hydrateCanonicalThread(article,post){
     }
   }catch(err){
     mount.replaceChildren();
-    const p=document.createElement('p');p.className='hint';p.textContent=`スレッドを読み込めませんでした: ${String(err?.message||err)}`;mount.append(p);return;
+    const p=document.createElement('p');p.className='hint';p.textContent=`話し合いを読み込めませんでした: ${String(err?.message||err)}`;mount.append(p);return;
   }
 
   const events=thread.events||[];
@@ -103,7 +103,7 @@ async function hydrateCanonicalThread(article,post){
   mount.replaceChildren();
   const journey=journeyGuide(access.problem_statement?'solution':'thread');mount.append(journey);
   const entry=document.createElement('div');entry.className='thread-role-tabs';entry.dataset.canonicalThreadControls='1';
-  const entryHint=document.createElement('p');entryHint.className='hint';entryHint.innerHTML='<strong>このBOYAKIに参加する</strong><br>役割はアカウントの属性ではなく、このProblemで何をするかです。';
+  const entryHint=document.createElement('p');entryHint.className='hint';entryHint.innerHTML='<strong>このBOYAKIに参加する</strong><br>この困りごとで、どちらの立場から関わるかを選びます。';
   const roleGuide=document.createElement('div');roleGuide.className='role-guide';
   const voiceGuide=document.createElement('div');voiceGuide.className='role-guide-card';
   const voiceTitle=document.createElement('strong');voiceTitle.textContent='Voice';
@@ -154,7 +154,7 @@ async function hydrateCanonicalThread(article,post){
     }
     if(deletable.has(ev.id)){
       const del=document.createElement('button');del.type='button';del.textContent='取り下げ';del.dataset.canonicalThreadDelete=ev.id;
-      del.addEventListener('click',async()=>{del.disabled=true;try{await client.deleteThread(ev.id);status('スレッド投稿を取り下げました。');await hydrateCanonicalThread(article,post)}catch(err){status(`取り下げできませんでした: ${String(err?.message||err)}`);del.disabled=false}});
+      del.addEventListener('click',async()=>{del.disabled=true;try{await client.deleteThread(ev.id);status('発言を取り下げました。');await hydrateCanonicalThread(article,post)}catch(err){status(`取り下げできませんでした: ${String(err?.message||err)}`);del.disabled=false}});
       item.append(del);
     }
     list.append(item);
@@ -167,7 +167,7 @@ async function hydrateCanonicalThread(article,post){
       setJourneyStage(journey,'product');
       const productSection=document.createElement('section');productSection.className='participation-panel thread-products';productSection.dataset.threadProducts='1';
       const heading=document.createElement('h3');heading.textContent='この話し合いから生まれたプロダクト';
-      const intro=document.createElement('p');intro.className='hint';intro.textContent='MakerがこのスレッドのSolution Roomで作り、元の会話へ掲載したプロダクトです。';
+      const intro=document.createElement('p');intro.className='hint';intro.textContent='Makerがこの困りごとから作り、元の話し合いへ掲載したProductです。';
       productSection.append(heading,intro);
       for(const product of products){
         const card=document.createElement('div');card.className='candidate-block';
@@ -189,11 +189,11 @@ async function hydrateCanonicalThread(article,post){
       if(!voiceMap.has(ev.owner_account_pubkey))voiceMap.set(ev.owner_account_pubkey,ev);
     }
     const invitePanel=document.createElement('div');invitePanel.className='participation-panel';invitePanel.dataset.roomInvitePanel='1';
-    const h=document.createElement('h3');h.textContent='VoiceをSolution Roomへ招待';
+    const h=document.createElement('h3');h.textContent='Voiceを「一緒に解決」へ招待';
     const hint=document.createElement('p');hint.className='hint';
     hint.textContent=access.problem_statement
-      ?'共有Problemができています。スレッドで話したVoiceの中から、一緒に解決を具体化したい人を招待できます。'
-      :'まず元のBOYAKI投稿者に招待を送り、共同解決フェーズへ進む同意を取ります。ここでは投稿者自身の原文と、残る共有Problemを分けます。';
+      ?'みんなで解く困りごととして残っています。話し合ったVoiceの中から、一緒に解決したい人を招待できます。'
+      :'まず元のBOYAKI投稿者に招待を送り、「一緒に解決」へ進む同意を取ります。ここで個人の原文と、みんなで残す困りごとを分けます。';
     invitePanel.append(h,hint);
     const inviteByVoice=new Map((access.room_invitations||[]).map(x=>[x.invitee_account_pubkey,x]));
     const sourceInvite=(access.room_invitations||[]).find(x=>x.invitee_context==='source_owner');
@@ -209,17 +209,17 @@ async function hydrateCanonicalThread(article,post){
       }else if(!access.source_owner_invitable){
         invite.disabled=true;invite.textContent='招待できません';
       }else{
-        invite.textContent=access.is_source_owner?'共同解決フェーズへ進む':'共同解決へ招待';
+        invite.textContent=access.is_source_owner?'一緒に解決へ進む':'一緒に解決へ招待';
         invite.addEventListener('click',async()=>{
           invite.disabled=true;invite.textContent=access.is_source_owner?'準備中…':'招待中…';
           try{
             await client.inviteSourceOwnerToSolutionRoom(post.id);
-            status('元のBOYAKI投稿者へSolution Room招待を送りました。');
+            status('元のBOYAKI投稿者へ「一緒に解決」の招待を送りました。');
             await hydrateCanonicalThread(article,post);
           }catch(err){
             console.error('source owner room invite failed',err);
             status(`招待できませんでした: ${String(err?.message||err)}`);
-            invite.disabled=false;invite.textContent=access.is_source_owner?'共同解決フェーズへ進む':'共同解決へ招待';
+            invite.disabled=false;invite.textContent=access.is_source_owner?'一緒に解決へ進む':'一緒に解決へ招待';
           }
         });
       }
@@ -241,17 +241,17 @@ async function hydrateCanonicalThread(article,post){
       }else if(!access.problem_statement){
         invite.disabled=true;invite.textContent='元投稿者の同意後に招待';
       }else{
-        invite.textContent='Solution Roomへ招待';
+        invite.textContent='一緒に解決へ招待';
         invite.addEventListener('click',async()=>{
           invite.disabled=true;invite.textContent='招待中…';
           try{
             await client.inviteVoiceToSolutionRoom(post.id,ev.id);
-            status('VoiceをSolution Roomへ招待しました。');
+            status('Voiceを「一緒に解決」へ招待しました。');
             await hydrateCanonicalThread(article,post);
           }catch(err){
             console.error('room invite failed',err);
             status(`招待できませんでした: ${String(err?.message||err)}`);
-            invite.disabled=false;invite.textContent='Solution Roomへ招待';
+            invite.disabled=false;invite.textContent='一緒に解決へ招待';
           }
         });
       }
@@ -262,17 +262,17 @@ async function hydrateCanonicalThread(article,post){
 
   if(access.problem_statement){
     const shared=document.createElement('div');shared.className='participation-panel';shared.dataset.sharedProblem='1';
-    const eyebrow=document.createElement('p');eyebrow.className='eyebrow';eyebrow.textContent='Shared Problem';
-    const title=document.createElement('h3');title.textContent='みんなで解くProblem';
+    const eyebrow=document.createElement('p');eyebrow.className='eyebrow';eyebrow.textContent='残る困りごと';
+    const title=document.createElement('h3');title.textContent='みんなで解く困りごと';
     const statement=document.createElement('p');statement.className='raw';statement.textContent=access.problem_statement.statement;
-    const note=document.createElement('p');note.className='hint';note.textContent='元のBOYAKI本文が取り下げられても、この一般化Problemを入口に同じ痛みを持つVoiceが後から参加できます。';
+    const note=document.createElement('p');note.className='hint';note.textContent='元のBOYAKI本文が取り下げられても、この困りごとは残り、同じ痛みを持つVoiceが後から参加できます。';
     shared.append(eyebrow,title,statement,note);mount.append(shared);
   }
 
   const solutionStep=document.createElement('div');
   solutionStep.className='participation-panel';
   solutionStep.dataset.solutionRoomTransition='1';
-  const solutionTitle=document.createElement('p');solutionTitle.className='hint';solutionTitle.innerHTML='<strong>Solution Room</strong>';
+  const solutionTitle=document.createElement('p');solutionTitle.className='hint';solutionTitle.innerHTML='<strong>一緒に解決</strong>';
   const solutionHint=document.createElement('p');solutionHint.className='hint';
   const solutionActions=document.createElement('div');solutionActions.className='actions';
 
@@ -282,20 +282,20 @@ async function hydrateCanonicalThread(article,post){
       solutionHint.textContent='ここが境界です。個人的にボヤく段階から、みんなで解決を作る段階へ進みます。';
       const consent=document.createElement('div');consent.className='candidate-block';consent.dataset.problemConsent='1';
       const explain=document.createElement('div');explain.className='transition-note';
-      const explainTitle=document.createElement('strong');explainTitle.textContent='あなたのBOYAKIと、残るProblemをここで分けます';
-      const explainText=document.createElement('span');explainText.textContent='元のBOYAKI本文は後から取り下げられます。ここで確認した一般化Problem、他の参加者の発言、Solution、Productは共同成果として残る場合があります。';
+      const explainTitle=document.createElement('strong');explainTitle.textContent='あなたのBOYAKIと、みんなで残す困りごとをここで分けます';
+      const explainText=document.createElement('span');explainText.textContent='元のBOYAKI本文は後から取り下げられます。ここで確認した困りごと、他の参加者の発言、そこで作った解決やProductは残る場合があります。';
       explain.append(explainTitle,explainText);consent.append(explain);
-      const label=document.createElement('label');label.textContent='同じ痛みを持つ人にも通じる形で、残してよいProblemを1文にしてください';
+      const label=document.createElement('label');label.textContent='同じ痛みを持つ人にも通じる形で、残してよい困りごとを1文にしてください';
       const textarea=document.createElement('textarea');textarea.rows=3;textarea.minLength=10;textarea.maxLength=300;textarea.placeholder='例: 複数システム間の定型的な手動転記に毎日時間を取られる';
       label.append(textarea);
       const checkLabel=document.createElement('label');checkLabel.className='hint';
       const check=document.createElement('input');check.type='checkbox';
-      checkLabel.append(check,document.createTextNode(' このProblemと共同成果が、元BOYAKI本文を取り下げた後も残る場合があることを確認した'));
-      const accept=document.createElement('button');accept.type='button';accept.disabled=true;accept.textContent='同意してSolution Roomへ入る';
+      checkLabel.append(check,document.createTextNode(' この困りごとと共同成果が、元BOYAKI本文を取り下げた後も残る場合があることを確認した'));
+      const accept=document.createElement('button');accept.type='button';accept.disabled=true;accept.textContent='同意して一緒に解決へ進む';
       const sync=()=>{accept.disabled=textarea.value.trim().length<10||!check.checked};
       textarea.addEventListener('input',sync);check.addEventListener('change',sync);
       accept.addEventListener('click',async()=>{
-        accept.disabled=true;accept.textContent='共同解決フェーズへ移行中…';
+        accept.disabled=true;accept.textContent='一緒に解決へ移行中…';
         try{
           const result=await client.acceptSolutionRoomInvitation(access.my_invitation.id,textarea.value.trim(),true);
           const roomId=result?.invitation?.room_id||access.solution_room_id;if(!roomId)throw Error('solution_room_id_missing');
@@ -303,15 +303,15 @@ async function hydrateCanonicalThread(article,post){
         }catch(err){
           console.error('accept source owner invite failed',err);
           status(`移行できませんでした: ${String(err?.message||err)}`);
-          accept.textContent='同意してSolution Roomへ入る';sync();
+          accept.textContent='同意して一緒に解決へ進む';sync();
         }
       });
       consent.append(label,checkLabel,accept);solutionActions.append(consent);
     }else if(!access.problem_statement){
-      solutionHint.textContent='Makerから招待されています。元のBOYAKI投稿者が共有Problemへの移行に同意すると参加できます。';
+      solutionHint.textContent='Makerから招待されています。元のBOYAKI投稿者が「みんなで解く困りごと」として残すことに同意すると参加できます。';
     }else{
-      solutionHint.textContent=`Makerから、この共有Problemの解決を一緒に詰めるSolution Roomへ招待されています。\nProblem: ${access.problem_statement.statement}`;
-      const accept=document.createElement('button');accept.type='button';accept.textContent='招待を受けてSolution Roomへ入る';
+      solutionHint.textContent=`Makerから、この困りごとを一緒に解決する場へ招待されています。\n困りごと: ${access.problem_statement.statement}`;
+      const accept=document.createElement('button');accept.type='button';accept.textContent='招待を受けて一緒に解決へ進む';
       accept.addEventListener('click',async()=>{
         accept.disabled=true;accept.textContent='参加中…';
         try{
@@ -321,33 +321,33 @@ async function hydrateCanonicalThread(article,post){
         }catch(err){
           console.error('accept room invite failed',err);
           status(`招待を受けられませんでした: ${String(err?.message||err)}`);
-          accept.disabled=false;accept.textContent='招待を受けてSolution Roomへ入る';
+          accept.disabled=false;accept.textContent='招待を受けて一緒に解決へ進む';
         }
       });
       solutionActions.append(accept);
     }
   }else if(access.my_invitation?.status==='accepted'&&access.solution_room_id){
-    solutionHint.textContent='このスレッドから招待されたSolution Roomに参加中です。';
-    const open=document.createElement('a');open.className='button-link';open.href=`./solution-room.html?room=${encodeURIComponent(access.solution_room_id)}`;open.textContent='Solution Roomへ戻る';solutionActions.append(open);
+    solutionHint.textContent='この困りごとの「一緒に解決」に参加中です。';
+    const open=document.createElement('a');open.className='button-link';open.href=`./solution-room.html?room=${encodeURIComponent(access.solution_room_id)}`;open.textContent='一緒に解決へ戻る';solutionActions.append(open);
   }else if(access.current_role==='maker'){
-    solutionHint.textContent='スレッドで話したVoiceを招待し、ここから具体的な解決づくりへ進めます。';
+    solutionHint.textContent='話し合ったVoiceを招待し、ここから具体的な解決づくりへ進めます。';
     if(access.solution_room_id){
-      const open=document.createElement('a');open.className='button-link';open.href=`./solution-room.html?room=${encodeURIComponent(access.solution_room_id)}`;open.textContent='Solution Roomを開く';solutionActions.append(open);
+      const open=document.createElement('a');open.className='button-link';open.href=`./solution-room.html?room=${encodeURIComponent(access.solution_room_id)}`;open.textContent='一緒に解決を開く';solutionActions.append(open);
     }else{
-      const create=document.createElement('button');create.type='button';create.textContent='Solution Roomを作る';
+      const create=document.createElement('button');create.type='button';create.textContent='一緒に解決を始める';
       create.addEventListener('click',async()=>{
         create.disabled=true;create.textContent='作成中…';
         try{
           const result=await client.ensureSolutionRoom(post.id),roomId=result?.room?.id;if(!roomId)throw Error('solution_room_id_missing');
           location.href=`./solution-room.html?room=${encodeURIComponent(roomId)}`;
-        }catch(err){console.error('solution room create failed',err);status(`Roomを作成できませんでした: ${String(err?.message||err)}`);create.disabled=false;create.textContent='Solution Roomを作る'}
+        }catch(err){console.error('solution room create failed',err);status(`一緒に解決を始められませんでした: ${String(err?.message||err)}`);create.disabled=false;create.textContent='一緒に解決を始める'}
       });
       solutionActions.append(create);
     }
   }else if(client.identity()){
-    solutionHint.textContent='Voiceとしてスレッドで話したあと、Makerから招待されるとSolution Roomへ参加できます。';
+    solutionHint.textContent='Voiceとして話し合ったあと、Makerから招待されると「一緒に解決」へ参加できます。';
   }else{
-    solutionHint.textContent='ログインしてVoice / Makerとしてスレッドに参加できます。';
+    solutionHint.textContent='ログインするとVoice / Makerとして話し合いに参加できます。';
     const login=document.createElement('a');login.className='button-link';login.href='./mypage.html';login.textContent='ログイン';solutionActions.append(login);
   }
   solutionStep.append(solutionTitle,solutionHint,solutionActions);
@@ -356,7 +356,7 @@ async function hydrateCanonicalThread(article,post){
   const roleKey=`boyaki-thread-role:${post.id}`;
   const applyRole=role=>{
     window.BOYAKI_STORAGE.local.setItem(roleKey,role);
-    roleStatus.textContent=role==='voice'?'Voiceとして参加中。自分の痛み・試したい条件・使った感想を伝えられます。':role==='maker'?'Makerとして参加中。質問し、解決案を出し、必要なら共同解決へ招待できます。':'このProblemでの役割を選んでください。';
+    roleStatus.textContent=role==='voice'?'Voiceとして参加中。自分の痛み・試したい条件・使った感想を伝えられます。':role==='maker'?'Makerとして参加中。質問し、解決案を出し、必要なら一緒に解決へ招待できます。':'この困りごとでの役割を選んでください。';
     clarifyDetails.hidden=!role;
     proposalDetails.hidden=role!=='maker';
   };
@@ -376,8 +376,8 @@ async function hydrateCanonicalThread(article,post){
         const selectedRole=window.BOYAKI_STORAGE.local.getItem(roleKey)||access.current_role||'';
         const extra=type==='poster_response'?{}:(['voice','maker'].includes(selectedRole)?{participant_role:selectedRole}:{});
         await client.createThread(post.id,type,text,parent,extra);
-        input.value='';status(`${eventLabel(type)}を管理DBへ保存しました。`);await hydrateCanonicalThread(article,post);
-      }catch(err){status(`スレッドへ保存できませんでした: ${String(err?.message||err)}（Nostr Relayへは送信していません）`);button.disabled=false}
+        input.value='';status(`${eventLabel(type)}を保存しました。`);await hydrateCanonicalThread(article,post);
+      }catch(err){status(`発言を保存できませんでした: ${String(err?.message||err)}`);button.disabled=false}
     });
   }
 }
@@ -510,7 +510,7 @@ function canonicalCard(post,{detail=false}={}){
   article.dataset.canonicalPostId=post.id;
   const meta=document.createElement('div');meta.className='meta';
   meta.textContent=post.source_withdrawn
-    ?`${fmt(post.created_at)} · 共有Problem · 元BOYAKIは取り下げ済み`
+    ?`${fmt(post.created_at)} · みんなで解く困りごと · 元BOYAKIは取り下げ済み`
     :`${fmt(post.created_at)} · ${short(post.author_pubkey)} · BOYAKI canonical`;
   article.append(meta);
 
@@ -518,30 +518,29 @@ function canonicalCard(post,{detail=false}={}){
 
   if(post.shared_problem&&!post.source_withdrawn&&post.problem_statement){
     const problem=document.createElement('div');problem.className='candidate-block';problem.dataset.sharedProblemSummary='1';
-    const heading=document.createElement('strong');heading.textContent='共同解決で残るProblem';
+    const heading=document.createElement('strong');heading.textContent='みんなで残す困りごと';
     const statement=document.createElement('p');statement.textContent=post.problem_statement;
-    const note=document.createElement('p');note.className='hint';note.textContent='元のBOYAKI本文は投稿者が取り下げられます。この一般化Problemは共同解決の入口として残ります。';
+    const note=document.createElement('p');note.className='hint';note.textContent='元のBOYAKI本文は投稿者が取り下げられます。この困りごとは、同じことで困る人が集まる入口として残ります。';
     problem.append(heading,statement,note);article.append(problem);
   }
 
   const chips=document.createElement('div');chips.className='chips';
-  const canonical=document.createElement('span');canonical.className='chip';canonical.textContent='AI-STAGING';chips.append(canonical);
-  if(post.shared_problem){const shared=document.createElement('span');shared.className='chip';shared.textContent='共同解決フェーズ';chips.append(shared)}
+  if(post.shared_problem){const shared=document.createElement('span');shared.className='chip';shared.textContent='一緒に解決中';chips.append(shared)}
   if(post.source_withdrawn){const withdrawn=document.createElement('span');withdrawn.className='chip';withdrawn.textContent='元文取り下げ済み';chips.append(withdrawn)}
   demandFeedChips(chips,post.demand_summary);article.append(chips);
 
   if(detail){
     const note=document.createElement('p');note.className='hint';
     note.textContent=post.source_withdrawn
-      ?'元の個人的なBOYAKI本文は取り下げ済みです。一般化されたProblemと共同の会話・Solution・Productは継続しています。'
-      :'このBOYAKIのスレッドで会話できます。';
+      ?'元の個人的なBOYAKI本文は取り下げ済みです。残した困りごとと、そこでの会話・解決・Productは続いています。'
+      :'このBOYAKIについて話し合えます。';
     article.append(note);
     const mount=document.createElement('div');mount.dataset.canonicalThreadMount='1';article.append(mount);
     queueMicrotask(()=>hydrateDemandEvidence(article,post).catch(err=>console.warn('demand evidence hydrate failed',err)));
     queueMicrotask(()=>hydrateCanonicalThread(article,post).catch(err=>console.warn('canonical thread hydrate failed',err)));
   }else{
     const actions=document.createElement('div');actions.className='actions';
-    const open=document.createElement('a');open.className='button-link';open.href=`?problem=${encodeURIComponent(post.id)}`;open.textContent=post.source_withdrawn?'このProblemを開く':'このBOYAKIを開く';actions.append(open);article.append(actions);
+    const open=document.createElement('a');open.className='button-link';open.href=`?problem=${encodeURIComponent(post.id)}`;open.textContent=post.source_withdrawn?'この困りごとを開く':'このBOYAKIを開く';actions.append(open);article.append(actions);
   }
 
   if(ownedIds.has(post.id)){
@@ -554,14 +553,14 @@ function canonicalCard(post,{detail=false}={}){
       try{
         const result=await(await api()).deletePost(post.id);
         status(result.thread_preserved
-          ?'元のBOYAKI本文を取り下げました。共有Problem・他の参加者の会話・Solution・Productは残ります。'
-          :'投稿とスレッドを削除しました。');
+          ?'元のBOYAKI本文を取り下げました。みんなで残した困りごと・他の参加者の会話・解決・Productは残ります。'
+          :'BOYAKIと話し合いを削除しました。');
         await renderHybrid();
       }catch(err){status(`削除できませんでした: ${String(err.message)}`);del.disabled=false}
     });
     actions.append(del);article.append(actions);
   }
-  const permalink=document.createElement('a');permalink.className='permalink';permalink.rel='nofollow';permalink.href=`?problem=${encodeURIComponent(post.id)}`;permalink.textContent=post.shared_problem?'このProblemのURL':'この問題のURL';article.append(permalink);
+  const permalink=document.createElement('a');permalink.className='permalink';permalink.rel='nofollow';permalink.href=`?problem=${encodeURIComponent(post.id)}`;permalink.textContent=post.shared_problem?'この困りごとのURL':'この問題のURL';article.append(permalink);
   return article;
 }
 
@@ -584,7 +583,6 @@ async function renderHybrid(){
     const [result,mine]=await Promise.all([client.listPosts(100),client.listMine()]);lastPosts=result.posts||[];ownedIds=new Set((mine.posts||[]).filter(p=>p.status==='active').map(p=>p.id));
     if(renderDetailIfNeeded())return;
     const feed=document.querySelector('#feed');if(feed){feed.replaceChildren();for(const post of lastPosts)feed.append(canonicalCard(post));if(!lastPosts.length)feed.textContent='まだBOYAKIがありません。'}
-    const makers=document.querySelector('#maker-list');if(makers){makers.replaceChildren();const q=document.querySelector('#maker-search')?.value?.trim().toLowerCase()||'';for(const p of lastPosts.filter(p=>p.content.toLowerCase().includes(q)))makers.append(canonicalCard(p))}
   }catch(err){console.warn('canonical feed unavailable',err)}finally{rendering=false}
 }
 function scheduleHybrid(delay=120){clearTimeout(refreshTimer);refreshTimer=setTimeout(()=>renderHybrid(),delay)}
@@ -602,7 +600,7 @@ async function activate(){
       e.preventDefault();e.stopImmediatePropagation();
       let draft=null;try{draft=JSON.parse(window.BOYAKI_STORAGE.local.getItem(DRAFT_KEY)||'null')}catch{}
       const text=(draft?.raw||document.querySelector('#raw')?.value||'').trim();if(!text)return;
-      button.disabled=true;button.textContent='公開処理中…';status('BOYAKIの管理DBへ公開しています…');
+      button.disabled=true;button.textContent='公開処理中…';status('BOYAKIを公開しています…');
       try{
         const result=await client.createPost(text);window.BOYAKI_STORAGE.local.removeItem(DRAFT_KEY);
         const panel=document.querySelector('#private-chat-v53');if(panel){panel.hidden=true;panel.replaceChildren()}

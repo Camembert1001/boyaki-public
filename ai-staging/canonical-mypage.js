@@ -1,8 +1,8 @@
-import { client } from './canonical-api.js?v=20260920-action-inbox-v10';
+import { client } from './canonical-api.js?v=20260920-consolidated-v1';
 export async function loadOwnedPosts(){
   const box=document.querySelector('#own-posts');if(!box)return;
   const result=await client.listMine(),posts=(result.posts||[]).filter(p=>p.status==='active');box.replaceChildren();
-  document.querySelector('#ownership-status').textContent='AI-STAGINGに保存した自分のBOYAKIを管理できます。';
+  document.querySelector('#ownership-status').textContent='自分が公開したBOYAKIを管理できます。';
   if(!posts.length){box.textContent='公開中のBOYAKIはありません。';return}
   for(const post of posts){
     const card=document.createElement('article');card.className='participation-panel';card.dataset.ownedPostId=post.id;

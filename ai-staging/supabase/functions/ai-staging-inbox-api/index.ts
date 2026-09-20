@@ -129,9 +129,9 @@ async function buildInbox(account:string){
     const post=postMap.get(inv.post_id),problem=problemMap.get(inv.post_id);
     items.push({
       key:`invite:${inv.id}`,role:'voice',kind:'room_invitation',priority:'action',
-      title:inv.invitee_context==='source_owner'?'共同解決フェーズへの招待':'Solution Roomへの招待',
+      title:'一緒に解決への招待',
       detail:inv.invitee_context==='source_owner'
-        ?`${problemLabel(post,problem)} — Makerから、個人的なBOYAKIを共有Problemへ進める招待が届いています。`
+        ?`${problemLabel(post,problem)} — Makerから、個人的なBOYAKIから「みんなで解く困りごと」へ進む招待が届いています。`
         :`${problemLabel(post,problem)} — Makerから一緒に解決を具体化する招待が届いています。`,
       action_label:'招待を確認',action_url:`./?problem=${encodeURIComponent(inv.post_id)}`,
       occurred_at:inv.updated_at||inv.created_at,meta:{post_id:inv.post_id,room_id:inv.room_id,invitation_id:inv.id}
@@ -163,7 +163,7 @@ async function buildInbox(account:string){
       const post=postMap.get(pub.post_id),problem=problemMap.get(pub.post_id);
       items.push({
         key:`product-ready:${product.id}`,role:'voice',kind:'product_ready',priority:'update',
-        title:'参加していたProblemにProductができました',
+        title:'参加していた困りごとにProductができました',
         detail:`${product.title} · ¥${Number(product.price_yen||0).toLocaleString('ja-JP')} — ${problemLabel(post,problem)}`,
         action_label:'Productを見る',action_url:`./product.html?id=${encodeURIComponent(product.id)}`,
         occurred_at:pub.published_at||product.published_at,meta:{product_id:product.id,post_id:pub.post_id}
@@ -207,9 +207,9 @@ async function buildInbox(account:string){
       if(!post||post.status!=='active'||problem||sourceInvitePosts.has(postId)||!post.owner_account_pubkey)continue;
       items.push({
         key:`invite-source:${postId}`,role:'maker',kind:'invite_source_owner',priority:'action',
-        title:'元Voiceを共同解決へ招待',
-        detail:`${problemLabel(post,null)} — Case/Product化する前に、元Voiceの同意でShared Problemへ移行します。`,
-        action_label:'Threadを開く',action_url:`./?problem=${encodeURIComponent(postId)}`,
+        title:'元Voiceを「一緒に解決」へ招待',
+        detail:`${problemLabel(post,null)} — Productを作る前に、元Voiceの同意で「みんなで解く困りごと」として残します。`,
+        action_label:'困りごとを開く',action_url:`./?problem=${encodeURIComponent(postId)}`,
         occurred_at:post.updated_at||post.created_at,meta:{post_id:postId}
       });
     }
@@ -230,8 +230,8 @@ async function buildInbox(account:string){
     const room=caseRoomMap.get(item.room_id);
     items.push({
       key:`productize-case:${item.id}`,role:'maker',kind:'productize_case',priority:'action',
-      title:'Solution CaseをProductにする',
-      detail:`${item.title} — Caseはできていますが、まだVoiceが買えるProductになっていません。`,
+      title:'解決メモをProductにする',
+      detail:`${item.title} — 解決メモはできていますが、まだVoiceが受け取れるProductになっていません。`,
       action_label:'Productを作る',action_url:`./product-create.html?case=${encodeURIComponent(item.id)}`,
       occurred_at:item.updated_at||item.created_at,meta:{case_id:item.id,room_id:item.room_id,post_id:room?.post_id||null}
     });
@@ -248,8 +248,8 @@ async function buildInbox(account:string){
       if(published.has(product.id))continue;
       items.push({
         key:`publish-product:${product.id}`,role:'maker',kind:'publish_product',priority:'action',
-        title:'Productを元のProblemへ戻す',
-        detail:`${product.title} — ProductはMaker Spaceにありますが、元のThreadにはまだ掲載されていません。`,
+        title:'Productを元の困りごとに掲載',
+        detail:`${product.title} — Productは作成済みですが、元の困りごとにはまだ掲載されていません。`,
         action_label:'掲載する',action_url:`./product.html?id=${encodeURIComponent(product.id)}`,
         occurred_at:product.updated_at||product.published_at||product.created_at,meta:{product_id:product.id}
       });
@@ -276,7 +276,7 @@ async function buildInbox(account:string){
     for(const [roomId,msg] of latestByRoom){
       items.push({
         key:`room-message:${roomId}:${msg.id}`,role:acceptedRoomIds.includes(roomId)?'voice':'maker',kind:'room_activity',priority:'update',
-        title:'Solution Roomに相手の発言があります',
+        title:'「一緒に解決」に新しい発言があります',
         detail:`${msg.display_name||'参加者'}: ${excerpt(msg.content,100)}`,
         action_label:'続きを見る',action_url:`./solution-room.html?room=${encodeURIComponent(roomId)}`,
         occurred_at:msg.created_at,meta:{room_id:roomId,message_id:msg.id}
@@ -314,9 +314,9 @@ async function buildInbox(account:string){
       for(const row of opportunities){
         items.push({
           key:`market-opportunity:${row.problem.id}`,role:'maker',kind:'market_opportunity',priority:'ready',
-          title:'需要シグナルのある未解決Problem',
+          title:'需要の反応がある未解決の困りごと',
           detail:`${excerpt(row.problem.statement,120)} — 同じ悩み ${row.signal.same} / 試したい ${row.signal.try} / 払ってもいい ${row.signal.pay}`,
-          action_label:'Problemを見る',action_url:`./?problem=${encodeURIComponent(row.problem.post_id)}`,
+          action_label:'困りごとを見る',action_url:`./?problem=${encodeURIComponent(row.problem.post_id)}`,
           occurred_at:row.problem.updated_at||row.problem.created_at,meta:{problem_id:row.problem.id,post_id:row.problem.post_id,demand_score:row.score}
         });
       }
@@ -334,7 +334,7 @@ async function buildInbox(account:string){
       items.push({
         key:`sale:${sale.id}`,role:'maker',kind:'sale',priority:'update',
         title:'Productが購入されました',
-        detail:`${product.title} · ¥${Number(sale.amount_yen||0).toLocaleString('ja-JP')} · AI-STAGINGテスト購入`,
+        detail:`${product.title} · ¥${Number(sale.amount_yen||0).toLocaleString('ja-JP')} · テスト購入`,
         action_label:'商品を見る',action_url:`./product.html?id=${encodeURIComponent(product.id)}`,
         occurred_at:sale.paid_at||sale.created_at,meta:{product_id:product.id,order_id:sale.id}
       });

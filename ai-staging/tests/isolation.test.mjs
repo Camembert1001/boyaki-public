@@ -88,19 +88,28 @@ assert(cutoverInviteSource.includes('元のBOYAKI本文は後から取り下げ�
 assert(cutoverInviteSource.includes('元のBOYAKI文を取り下げる'),'post-consent withdrawal UI missing');
 const onboardingSource=await read('onboarding.js');
 assert(onboardingSource.includes('困りごとから、解決とProductが生まれる場所。'),'full BOYAKI lifecycle onboarding missing');
-assert(onboardingSource.includes('Shared Problem'),'Shared Problem onboarding missing');
+assert(onboardingSource.includes('みんなで解く困りごと'),'human-facing shared-problem explanation missing');
 assert(onboardingSource.includes('消せるもの / 残るもの'),'withdrawal boundary onboarding missing');
 assert(onboardingSource.includes('全部覚える必要はありません'),'progressive onboarding principle missing');
 assert(cutoverInviteSource.includes("journeyGuide(access.problem_statement?'solution':'thread')"),'Thread journey guide missing');
 assert(cutoverInviteSource.includes('役割はアカウントの属性ではなく'),'Voice/Maker contextual role explanation missing');
-assert(cutoverInviteSource.includes('あなたのBOYAKIと、残るProblemをここで分けます'),'shared Problem transition micro-onboarding missing');
+assert(cutoverInviteSource.includes('あなたのBOYAKIと、みんなで残す困りごとをここで分けます'),'shared Problem transition micro-onboarding missing');
 const solutionRoomHtml=await read('solution-room.html');
 assert(solutionRoomHtml.includes('今いる段階：一緒に解決'),'Solution Room stage explanation missing');
 const productCreateHtml=await read('product-create.html');
-assert(productCreateHtml.includes('まだ元Problemには掲載されません'),'Product creation/publish-back distinction missing');
-assert(productCreateHtml.includes('Maker SpaceにProductを作成'),'Product creation CTA must not imply Thread publication');
+assert(productCreateHtml.includes('この時点では元の困りごとには掲載されません'),'Product creation/publish-back distinction missing');
+assert(productCreateHtml.includes('Productを作成'),'Product creation CTA missing');
 const productHtml=await read('product.html');
-assert(productHtml.includes('このProductを元のProblemに掲載する'),'Product publish-back Human UX missing');
+assert(productHtml.includes('このProductを元の困りごとに掲載する'),'Product publish-back Human UX missing');
+const humanUxGuide=await read('HUMAN_UX.md');
+assert(humanUxGuide.includes('ボヤく → 話し合う → 一緒に解決 → Product'),'Human UX vocabulary SSOT missing journey');
+for(const legacy of ['maker-space.js','solution-candidates.json','thread-room-v1.js','open-thread-nav-v1.js','public-surface-suppression.js','public-surface-suppressions.json','external-attestation.js','relays.js','discover/train-ticketing.html','discover/work-admin.html','discover/discovery-post.js']){
+  await assert.rejects(()=>read(legacy),/ENOENT/,legacy+' should be removed from active AI-STAGING');
+}
+const visibleSurfaceText=[await read('index.html'),await read('mypage.html'),await read('makers.html'),await read('solution-room.html'),await read('solution-case-create.html'),await read('product.html'),await read('product-create.html'),await read('products.html'),await read('discover/index.html'),await read('onboarding.js'),await read('action-inbox.js')].join('\n');
+for(const jargon of ['Problem Market','Action Inbox','Shared Problem','Solution Room','Solution Case','Solution Log','Maker Space']){
+  assert(!visibleSurfaceText.includes(jargon),'human-facing jargon leaked: '+jargon);
+}
 const commerceSource=await read('supabase/functions/ai-staging-commerce-api/index.ts');
 assert(commerceSource.includes("T('boyaki_products')"),'AI-STAGING Product table missing');
 assert(commerceSource.includes("T('boyaki_orders')"),'AI-STAGING Order table missing');
@@ -159,7 +168,7 @@ assert(marketUi.includes('client.listProducts()'),'Problem Market Product shelf 
 assert(marketUi.includes("state.filter==='pay'"),'Problem Market demand filter missing');
 assert(marketUi.includes("state.sort==='demand'"),'Problem Market demand sorting missing');
 const marketHtml=await read('discover/index.html');
-assert(marketHtml.includes('BOYAKI Problem Market'),'Problem Market surface missing');
-assert(marketHtml.includes('Shared Problemだけ'),'Problem Market boundary explanation missing');
+assert(marketHtml.includes('解決する問題を探す'),'problem discovery surface missing');
+assert(marketHtml.includes('みんなで解く困りごと'),'shared-problem boundary explanation missing');
 assert(commerceSource.includes("T('boyaki_problem_statements')"),'commerce shared Problem source lookup missing');
-console.log(JSON.stringify({ok:true,checks:['local/session sentinel preserved including clear','normal APIs blocked except exact read-only shared identity resolver','Production API and path traversal denied before transport','public WebSockets blocked','worker cleanup limited to AI prefix','worker ignores API and other environments','all live HTML has early boundary and CSP','all application storage scoped','AI backend may read shared identity but cannot mutate it','AI activity remains explicitly scoped to AI-STAGING','Solution Room uses isolated API rather than public relays','Solution Room storage stays under ai_staging_*','Thread -> Room transition is canonical','Solution Cases are account-scoped and not browser-only','Demand Evidence stays under ai_staging_* and is not framed as purchase','Voice role is persisted and Voice history is account-scoped','Solution Cases freeze demand evidence while Rooms show live evidence','Product -> Order -> Entitlement commerce stays AI-STAGING-only with test payment','Thread -> invite -> Room -> Product publish-back is source-bound','Casual BOYAKI stays deletable until original Voice explicitly creates a shared Problem','After consent original text can withdraw while Problem/Demand/Solution/Product remain','Shared Problems have a dedicated demand/Product discovery market','Voice/Maker Action Inbox derives next work from current domain state','Inbox persists only lightweight seen markers, not notification copies','Human onboarding explains the complete BOYAKI lifecycle without blocking casual posting','Thread/Room/Product surfaces show contextual journey stage and transition meaning','relative assets exist'],files:files.length},null,2));
+console.log(JSON.stringify({ok:true,checks:['local/session sentinel preserved including clear','normal APIs blocked except exact read-only shared identity resolver','Production API and path traversal denied before transport','public WebSockets blocked','worker cleanup limited to AI prefix','worker ignores API and other environments','all live HTML has early boundary and CSP','all application storage scoped','AI backend may read shared identity but cannot mutate it','AI activity remains explicitly scoped to AI-STAGING','Solution Room uses isolated API rather than public relays','Solution Room storage stays under ai_staging_*','Thread -> Room transition is canonical','Solution Cases are account-scoped and not browser-only','Demand Evidence stays under ai_staging_* and is not framed as purchase','Voice role is persisted and Voice history is account-scoped','Solution Cases freeze demand evidence while Rooms show live evidence','Product -> Order -> Entitlement commerce stays AI-STAGING-only with test payment','Thread -> invite -> Room -> Product publish-back is source-bound','Casual BOYAKI stays deletable until original Voice explicitly creates a shared Problem','After consent original text can withdraw while Problem/Demand/Solution/Product remain','Shared Problems have a dedicated demand/Product discovery market','Voice/Maker Action Inbox derives next work from current domain state','Inbox persists only lightweight seen markers, not notification copies','Human onboarding explains the complete BOYAKI lifecycle without blocking casual posting','Thread/Room/Product surfaces show contextual journey stage and transition meaning','Human UX vocabulary is constrained by HUMAN_UX.md','inactive legacy surfaces are removed from active AI-STAGING','relative assets exist'],files:files.length},null,2));

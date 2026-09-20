@@ -1,4 +1,4 @@
-import { client } from './canonical-api.js?v=20260920-action-inbox-v10';
+import { client } from './canonical-api.js?v=20260920-consolidated-v1';
 
 const purchasesBox=document.querySelector('[data-commerce-purchases]');
 const purchasesStatus=document.querySelector('#commerce-purchases-status');
@@ -15,12 +15,12 @@ function empty(box,text){if(box)box.innerHTML=`<p class="hint">${text}</p>`}
 
 async function renderPurchases(){
   if(!purchasesBox)return;
-  if(!account()){empty(purchasesBox,'ログインすると購入済みプロダクトが表示されます。');return}
+  if(!account()){empty(purchasesBox,'ログインすると購入したProductが表示されます。');return}
   if(purchasesStatus)purchasesStatus.textContent='購入履歴を読み込んでいます…';
   try{
     const result=await client.listMyPurchases(),rows=result.purchases||[];
     purchasesBox.replaceChildren();
-    if(!rows.length)empty(purchasesBox,'まだ購入したプロダクトはありません。');
+    if(!rows.length)empty(purchasesBox,'まだ購入したProductはありません。');
     for(const row of rows){
       const card=document.createElement('article');card.className='participation-panel';
       const h=document.createElement('h3');h.textContent=row.product?.title||'Product';
@@ -35,24 +35,24 @@ async function renderPurchases(){
 
 async function renderMakerCommerce(){
   if(!salesBox&&!productsBox)return;
-  if(!account()){empty(salesBox,'ログインすると売上履歴が表示されます。');empty(productsBox,'ログインすると出品中プロダクトが表示されます。');return}
+  if(!account()){empty(salesBox,'ログインすると売上履歴が表示されます。');empty(productsBox,'ログインすると作ったProductが表示されます。');return}
   if(salesStatus)salesStatus.textContent='売上履歴を読み込んでいます…';
-  if(productsStatus)productsStatus.textContent='出品中プロダクトを読み込んでいます…';
+  if(productsStatus)productsStatus.textContent='作ったProductを読み込んでいます…';
   try{
     const [salesResult,productResult]=await Promise.all([client.listMySales(),client.listMyProducts()]);
     const sales=salesResult.sales||[],products=productResult.products||[];
     if(productsBox){
       productsBox.replaceChildren();
-      if(!products.length)empty(productsBox,'まだ出品プロダクトはありません。Solution Caseから商品化できます。');
+      if(!products.length)empty(productsBox,'まだProductはありません。解決メモからProductを作れます。');
       for(const product of products){
         const card=document.createElement('article');card.className='participation-panel';
         const h=document.createElement('h3');h.textContent=product.title;
         const meta=document.createElement('p');meta.className='hint';meta.textContent=`${yen(product.price_yen)} · ${product.status}`;
         const actions=document.createElement('div');actions.className='actions';
-        const open=document.createElement('a');open.className='button-link';open.href=`./product.html?id=${encodeURIComponent(product.id)}`;open.textContent='商品ページ';
+        const open=document.createElement('a');open.className='button-link';open.href=`./product.html?id=${encodeURIComponent(product.id)}`;open.textContent='Productを見る';
         actions.append(open);card.append(h,meta,actions);productsBox.append(card);
       }
-      if(productsStatus)productsStatus.textContent=`${products.length}件のプロダクト`;
+      if(productsStatus)productsStatus.textContent=`${products.length}件のProduct`;
     }
     if(salesBox){
       salesBox.replaceChildren();
