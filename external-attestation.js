@@ -78,10 +78,16 @@ async function renderOwnedCards(){
     if(await isOwnRaw(rawId))card.append(control(rawId));
   }
 }
+function removeImmediateWithdrawalControls(){
+  for(const button of document.querySelectorAll('.problem-card button')){
+    if(button.textContent?.trim()==='自分の投稿を取り下げ')button.remove();
+  }
+}
 let scheduled=false;
 function scheduleRender(){
+  removeImmediateWithdrawalControls();
   if(scheduled)return;scheduled=true;
-  setTimeout(async()=>{scheduled=false;await renderStatus().catch(()=>{});await renderOwnedCards().catch(()=>{})},50);
+  setTimeout(async()=>{scheduled=false;removeImmediateWithdrawalControls();await renderStatus().catch(()=>{});await renderOwnedCards().catch(()=>{});removeImmediateWithdrawalControls()},50);
 }
 new MutationObserver(scheduleRender).observe(document.documentElement,{childList:true,subtree:true});
 scheduleRender();
