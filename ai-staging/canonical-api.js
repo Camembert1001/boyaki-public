@@ -6,7 +6,7 @@ const INBOX='https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/ai-staging-in
 const store=window.BOYAKI_STORAGE;
 export const fromHex=h=>new Uint8Array((h.match(/.{1,2}/g)||[]).map(b=>parseInt(b,16)));
 export const toHex=bytes=>[...bytes].map(b=>b.toString(16).padStart(2,'0')).join('');
-window.BOYAKI_AI_STAGING_CLIENT_VERSION='20260920-consolidated-v1';
+window.BOYAKI_AI_STAGING_CLIENT_VERSION='20260920-consolidated-v2';
 function identity(){
   const h=store.local.getItem('boyaki-account-sk')||store.session.getItem('boyaki-account-sk');
   if(h){const sk=fromHex(h);return{sk,pk:getPublicKey(sk),kind:'account'}}
@@ -78,4 +78,4 @@ export const client={
   markInboxSeen:keys=>inbox('/me/inbox/seen',{method:'POST',signed:true,body:{keys}})
 };
 window.BOYAKI_CANONICAL=client;
-if(document.querySelector('#feed'))initialize().then(async ok=>{if(ok)await import('./canonical-cutover.js?v=20260920-consolidated-v1')}).catch(e=>console.error('AI-STAGING initialization failed',e));
+if(document.querySelector('#feed'))initialize().then(async ok=>{if(ok)await import('./canonical-cutover.js?v=20260920-consolidated-v2')}).catch(e=>console.error('AI-STAGING initialization failed',e));
