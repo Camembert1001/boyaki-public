@@ -4,7 +4,7 @@
 <script src="./ai-environment.js?v=20260919-commerce-v1"></script>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow"><link rel="stylesheet" href="./styles.css">
-<title>プロダクトを出す — BOYAKI</title></head><body>
+<title>Productを作る — BOYAKI</title></head><body>
 <header class="shell topbar"><a class="brand" href="./">BOYAKI</a><nav>
       <a class="nav-link" href="./">ホーム</a>
       <a class="nav-link" href="./discover/">問題を探す</a>
@@ -13,20 +13,20 @@
     </nav></header>
 <main class="shell maker-space">
 <div class="journey-guide" aria-label="BOYAKIの流れ">
-  <div class="journey-step is-done"><strong>BOYAKI</strong><span>ボヤく</span></div>
-  <div class="journey-step is-done"><strong>Thread</strong><span>話し合う</span></div>
-  <div class="journey-step is-done"><strong>Solution</strong><span>一緒に解決</span></div>
+  <div class="journey-step is-done"><strong>ボヤく</strong><span>一言から</span></div>
+  <div class="journey-step is-done"><strong>話し合う</strong><span>困りごとを具体化</span></div>
+  <div class="journey-step is-done"><strong>一緒に解決</strong><span>解決をまとめる</span></div>
   <div class="journey-step is-current"><strong>Product</strong><span>届ける</span></div>
 </div>
-<section class="card hero"><p class="eyebrow">Case → Product</p><h1>Productを作る</h1><p class="lead">一緒に作った解決を、Voiceが受け取れるProductとしてMaker Spaceに保存します。</p><div class="transition-note"><strong>まだ元Problemには掲載されません</strong><span>ここではProduct本体を作ります。作成後の商品ページで、元のProblemへ掲載するかをMakerが選べます。</span></div><p class="hint">AI-STAGINGでは購入フローをテストモードで回します。ここで価格は記録されますが、実際の決済・送金は発生しません。</p></section>
-<section class="card" id="product-case"><p class="hint">Solution Caseを読み込んでいます…</p></section>
+<section class="card hero"><p class="eyebrow">解決メモ → Product</p><h1>Productを作る</h1><p class="lead">一緒に作った解決を、Voiceが受け取れるProductとして保存します。</p><div class="transition-note"><strong>この時点では元の困りごとには掲載されません</strong><span>ここではProduct本体を作ります。作成後に、元の困りごとへ掲載するかをMakerが選べます。</span></div><p class="hint">価格はテスト用に記録されますが、実際の決済・送金は発生しません。</p></section>
+<section class="card" id="product-case"><p class="hint">解決メモを読み込んでいます…</p></section>
 <section class="card">
 <form id="product-form" class="maker-form">
 <label>商品名<input id="product-title" maxlength="120" required placeholder="例: Excel転記を自動化するテンプレート"></label>
 <label>Voiceに見せる説明<textarea id="product-description" maxlength="1200" rows="5" required placeholder="何が解決され、誰向けか"></textarea></label>
 <label>価格（円）<input id="product-price" type="number" min="1" max="1000000" step="1" inputmode="numeric" required placeholder="500"></label>
 <label>購入後に渡す内容<textarea id="product-delivery" maxlength="20000" rows="9" required placeholder="ダウンロード先、使い方、コード、テンプレートURLなど。購入前には表示されません。"></textarea></label>
-<div class="actions"><button id="product-submit" type="submit">Maker SpaceにProductを作成</button><a class="button-link" href="./mypage.html#maker">戻る</a></div>
+<div class="actions"><button id="product-submit" type="submit">Productを作成</button><a class="button-link" href="./mypage.html#maker">戻る</a></div>
 <div id="product-status" class="hint" role="status" aria-live="polite"></div>
 </form>
 </section>
