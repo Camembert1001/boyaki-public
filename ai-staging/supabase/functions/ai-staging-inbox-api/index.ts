@@ -335,7 +335,7 @@ async function buildInbox(account:string){
         key:`sale:${sale.id}`,role:'maker',kind:'sale',priority:'update',
         title:'Productが購入されました',
         detail:`${product.title} · ¥${Number(sale.amount_yen||0).toLocaleString('ja-JP')} · テスト購入`,
-        action_label:'商品を見る',action_url:`./product.html?id=${encodeURIComponent(product.id)}`,
+        action_label:'Productを見る',action_url:`./product.html?id=${encodeURIComponent(product.id)}`,
         occurred_at:sale.paid_at||sale.created_at,meta:{product_id:product.id,order_id:sale.id}
       });
     }
