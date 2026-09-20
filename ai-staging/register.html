@@ -25,33 +25,33 @@
 
   <main class="shell maker-space">
     <section class="card hero maker-hero">
-      <p class="eyebrow">BOYAKI Account — Phase 1</p>
+      <p class="eyebrow">BOYAKI Account</p>
       <h1>アカウントを作る</h1>
-      <p class="lead">匿名のままでもBOYAKIは使えます。複数端末でも同じMy Pageを使いたい人は、ここで持続的なBOYAKIアカウントを作れます。</p>
+      <p class="lead">匿名のままでもBOYAKIは使えます。複数端末でも同じマイページを使いたい人は、ここで持続的なBOYAKIアカウントを作れます。</p>
       <p class="hint"><strong>メール・電話番号・本名は不要です。</strong><br>アカウント鍵を作成し、パスワードで暗号化したログインキーを発行します。そのログインキーとパスワードがあれば、別端末から同じアカウントへログインできます。</p>
     </section>
 
     <section class="card participation-panel">
-      <p class="eyebrow">Create account</p>
+      <p class="eyebrow">Account</p>
       <h2>アカウント登録</h2>
       <form id="register-form" class="maker-form">
-        <label>表示名 / Display name
+        <label>表示名
           <input id="register-name" maxlength="40" autocomplete="nickname" placeholder="例: @username / Nicolas" required />
         </label>
-        <label>主に興味があること / Main interest
+        <label>主に興味があること
           <select id="register-interest">
             <option value="both">Voice と Maker の両方</option>
-            <option value="voice">Voice — 困りごと・検証側</option>
+            <option value="voice">Voice — 困っている・試す側</option>
             <option value="maker">Maker — 解決を作る側</option>
           </select>
         </label>
-        <label>パスワード / Password
+        <label>パスワード
           <input id="register-password" type="password" minlength="10" autocomplete="new-password" placeholder="10文字以上" required />
         </label>
         <label>パスワード確認
           <input id="register-password-confirm" type="password" minlength="10" autocomplete="new-password" required />
         </label>
-        <label>ひとこと / About (optional)
+        <label>ひとこと（任意）
           <textarea id="register-about" maxlength="240" rows="4" placeholder="何に困っているか、何を作れるかなど。個人情報や秘密は書かないでください。"></textarea>
         </label>
         <div class="actions">
@@ -62,7 +62,7 @@
     </section>
 
     <section class="card identity-card" id="account-result" hidden>
-      <p class="eyebrow">Login key</p>
+      <p class="eyebrow">ログインキー</p>
       <h2>ログインキーを保存</h2>
       <p class="hint">この文字列は別端末でログインするときに必要です。パスワードとは別に安全な場所へ保存してください。BOYAKIはこのキーを復元できません。</p>
       <textarea id="account-login-key" rows="4" readonly></textarea>
@@ -70,26 +70,24 @@
     </section>
 
     <section class="card identity-card">
-      <p class="eyebrow">Current credential</p>
-      <h2>このAI-STAGINGブラウザのBOYAKI ID</h2>
-      <p class="hint">このAI-STAGING内の匿名投稿は、マイページで新しいアカウントに引き継ぎます。本番・STAGINGの投稿やIDを取り込みません。</p>
+      <p class="eyebrow">この端末</p>
+      <h2>この端末の匿名BOYAKI ID</h2>
+      <p class="hint">この端末で匿名のまま使っていたBOYAKIは、マイページから新しいアカウントに引き継げます。</p>
       <code id="device-id">loading…</code>
       <div class="actions"><a class="button-link" href="./mypage.html">ログイン / マイページを開く</a></div>
     </section>
 
     <section class="card">
-      <p class="eyebrow">No lock-in</p>
+      <p class="eyebrow">登録は任意</p>
       <h2>登録しなくても使える。</h2>
-      <p class="hint">BOYAKIは、ぼやく・見る・参加する入口を登録必須にはしません。プロフィール登録は「活動を自分の実績として残していきたい」と思った人向けの入口です。</p>
+      <p class="hint">BOYAKIは、ぼやく・見る・参加する入口を登録必須にはしません。アカウントは、活動や購入したProductを自分の履歴として残したい人向けです。</p>
       <div class="actions">
         <a class="button-link" href="./">ホームを見る</a>
       </div>
     </section>
   </main>
+  <footer class="shell site-footer"><a class="footer-link" href="./?about=1">BOYAKIとは？</a><a class="footer-link" href="./bug-report.html">バグ報告</a></footer>
 
   <script type="module" src="./register.js?v=20260918-ai-v1"></script>
-<script>
-(()=>{window.BOYAKI_AUTH_NAV_V1='1';const loggedIn=!!(window.BOYAKI_STORAGE.local.getItem('boyaki-account-sk')||window.BOYAKI_STORAGE.session.getItem('boyaki-account-sk'));if(loggedIn)document.querySelectorAll('[data-auth-register-link]').forEach(x=>x.style.display='none')})();
-</script>
 </body>
 </html>
