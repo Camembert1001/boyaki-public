@@ -1,0 +1,83 @@
+{
+ "_comment": [
+  "TEST SCENARIOS ONLY. Every contact below is invented, every id names a conversation",
+  "SHAPE rather than a person, and every identifier is a placeholder chosen to line up",
+  "with the invented owners in v3-manifest.json. Nothing here is, or reflects, the state",
+  "of any real contact - that lives only in the untracked contacts.local.json.",
+  "",
+  "The point of this store is that EVERY contact carries identity evidence. A store with",
+  "one opaque contact cannot answer 'this party is not in here' about anybody, so a",
+  "fully-indexed one is what the automatic lookup has to be exercised against."
+ ],
+ "schema": "yn0-contact-state-v1",
+ "contacts": [
+  {
+   "id": "opted-out-shape",
+   "name": "Prospect A",
+   "organization": "Example indie game project",
+   "channel": "GITHUB_ISSUE",
+   "identity": {
+    "github_logins": ["example-optout-project"],
+    "repositories": ["example-optout-project/opted-out-repo"]
+   },
+   "events": [
+    {"type": "OUTREACH_SENT", "at": "2026-09-01T09:00:00Z", "waiting_for": "FIRST_REPLY"},
+    {"type": "OPT_OUT", "at": "2026-09-02T10:00:00Z"}
+   ]
+  },
+  {
+   "id": "closed-inbound-only-shape",
+   "name": "Prospect B",
+   "organization": "Example indie game studio",
+   "channel": "GMAIL",
+   "identity": {
+    "github_logins": ["example-studio-alpha"],
+    "aliases": ["Alpha Harbour Chronicle"]
+   },
+   "events": [
+    {"type": "OUTREACH_SENT", "at": "2026-09-01T09:00:00Z", "waiting_for": "FIRST_REPLY"},
+    {"type": "INBOUND_REPLY", "at": "2026-09-02T11:00:00Z"},
+    {"type": "CONVERSATION_ENDED", "at": "2026-09-04T09:00:00Z", "direction": "outbound"}
+   ]
+  },
+  {
+   "id": "awaiting-first-reply-shape",
+   "name": "Prospect C",
+   "organization": "Example indie game project",
+   "channel": "GITHUB_ISSUE",
+   "identity": {
+    "github_logins": ["north-harbor-games"],
+    "repositories": ["north-harbor-games/kagerou-north-port"]
+   },
+   "events": [
+    {"type": "OUTREACH_SENT", "at": "2026-09-03T09:00:00Z", "waiting_for": "FIRST_REPLY"}
+   ]
+  },
+  {
+   "id": "auto-ack-only-shape",
+   "name": "Prospect D",
+   "organization": "Example issue tracker",
+   "channel": "OTHER",
+   "identity": {
+    "github_logins": ["south-harbor-games"]
+   },
+   "events": [
+    {"type": "OUTREACH_SENT", "at": "2026-09-03T09:00:00Z", "waiting_for": "FIRST_REPLY"},
+    {"type": "INBOUND_REPLY", "at": "2026-09-03T09:00:30Z", "human": false}
+   ]
+  },
+  {
+   "id": "volunteer-circle-replied-shape",
+   "name": "Prospect E",
+   "organization": "Example volunteer circle",
+   "channel": "GITHUB_ISSUE",
+   "identity": {
+    "github_logins": ["example-volunteer-circle"]
+   },
+   "events": [
+    {"type": "OUTREACH_SENT", "at": "2026-09-03T09:00:00Z", "waiting_for": "FIRST_REPLY"},
+    {"type": "INBOUND_REPLY", "at": "2026-09-04T09:00:00Z"}
+   ]
+  }
+ ]
+}

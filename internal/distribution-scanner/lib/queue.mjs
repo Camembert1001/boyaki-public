@@ -14,19 +14,25 @@
 //                     held is recorded, and so is what would release it.
 //   IGNORE            v2 dropped it, with a rule number.
 //
-// RESERVE is the lane this layer exists for. The Prospect Burn rule says that while one
-// contact owes us an answer on an axis, a second stranger asked the same question buys
-// nothing - but the *candidate* is still good, and throwing it away means finding it
-// again later. So exploration continues, evaluation continues, candidates accumulate, and
-// the gate in front of contact stays shut. No lane is an instruction to contact anyone;
-// the most positive of them means "read this next".
+// RESERVE is the lane this layer exists for. A candidate can be good and still not be the
+// one to read next - it duplicates a party already in the queue, no axis is open, the
+// public evidence argues against it - and throwing it away means finding it again later.
+// So exploration continues, evaluation continues, candidates accumulate, and the gate in
+// front of contact stays shut. No lane is an instruction to contact anyone; the most
+// positive of them means "read this next".
+//
+// What RESERVE is *not* is a global hold. An answer outstanding from one party holds that
+// party (lane 6, scoped to its own contacts); it does not hold a different party that the
+// contact store was asked about on its own identifiers and did not recognize. Those are
+// independent samples of the same hypothesis, and independence is the thing that makes
+// them worth anything.
 import {VALUE_RANK} from './value.mjs';
 
 export const LANES = ['READY_FOR_REVIEW', 'HUMAN_REVIEW', 'RESERVE', 'IGNORE'];
 
 const LANE_RANK = Object.fromEntries(LANES.map((lane, index) => [lane, index]));
 
-// v2's rule 16 - "the same validation question is already outstanding elsewhere". v2 can
+// v2's rule 16 - "this party already owes us the answer we would be asking for". v2 can
 // only say HUMAN_REVIEW there; this layer has a lane that says it properly.
 const OUTSTANDING_RULE = 16;
 
@@ -35,17 +41,17 @@ const OUTSTANDING_RULE = 16;
 //  #  condition                                                        lane
 //  1  v2 dropped it                                                    IGNORE
 //  2  contact history is not "consulted, and nothing there"            HUMAN_REVIEW
-//  3  v2 held it because this exact question is outstanding elsewhere  RESERVE
+//  3  v2 held it because this party already owes us that same answer   RESERVE
 //  4  v2 held it for a human for any other reason                      HUMAN_REVIEW
 //  5  the candidate may be the same party as another candidate         HUMAN_REVIEW
-//  6  the axis this round asks about is outstanding elsewhere          RESERVE
+//  6  this party already owes us the answer we would be asking for     RESERVE
 //  7  a better-evidenced candidate is definitely the same party        RESERVE
 //  8  no validation axis is open at all                                RESERVE
 //  9  no public evidence bears on the axis we are asking about         HUMAN_REVIEW
 // 10  the public evidence argues against asking this one               RESERVE
 // 11  otherwise                                                        READY_FOR_REVIEW
 export function decideLane(facts) {
- const {prospect, value, identity, focus, outstandingAxes, duplicateOf} = facts;
+ const {prospect, value, identity, focus, duplicateOf} = facts;
  const lane = (number, name, reason, release = null) => ({lane: number, name, reason, release});
 
  if (prospect.verdict === 'IGNORE') {
@@ -66,9 +72,14 @@ export function decideLane(facts) {
   return lane(5, 'HUMAN_REVIEW', 'identity is ambiguous: ' + identity.reason,
    'a human confirms whether these are the same party');
  }
- if (focus && outstandingAxes.includes(focus)) {
-  return lane(6, 'RESERVE', 'an answer on the ' + focus + ' axis is already outstanding from another contact; ' +
-   'a second one buys no information we are not already about to get',
+ // Scoped to this candidate's own contacts, never to the store. A different party the
+ // store was searched for and did not recognize is an independent sample of the same
+ // question, and holding it would be holding its information hostage to somebody else's
+ // silence. A party that does owe us an answer is not NEVER_CONTACTED and has already
+ // stopped at lane 1 or 2; this is the backstop behind that.
+ if (focus && (prospect.contact.outstandingAxes ?? []).includes(focus)) {
+  return lane(6, 'RESERVE', 'this party already owes us an answer on the ' + focus + ' axis; ' +
+   'asking the same contact the same question again is a duplicate',
    'that answer arrives, or this round asks about a different axis');
  }
  if (duplicateOf) {

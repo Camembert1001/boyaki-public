@@ -1,0 +1,140 @@
+{
+  "_comment": [
+    "TEMPLATE, NOT DATA. Copy this file to contacts.local.json (gitignored) and replace",
+    "every placeholder with what actually happened. Nothing here is a real contact: every",
+    "id names a conversation SHAPE, every name is 'Prospect <letter>', every organization",
+    "starts with 'Example', and every identifier is invented.",
+    "",
+    "The six shapes below are the ones the YN0 validation threads have actually taken so",
+    "far. Read SEEDING.md for which is which and what each event means. Fill in the",
+    "`identity` block for EVERY contact you record: a contact with no identity evidence",
+    "cannot be recognized in public, and one such contact is enough to stop the discovery",
+    "engine from showing ANY candidate as never contacted.",
+    "",
+    "Never commit the filled-in copy, and never move real values back into this file."
+  ],
+  "schema": "yn0-contact-state-v1",
+  "contacts": [
+    {
+      "id": "validated-then-closed-shape",
+      "name": "Prospect A",
+      "organization": "Example indie game project",
+      "channel": "GITHUB_ISSUE",
+      "identity": {
+        "github_logins": ["example-handle-a"],
+        "repositories": ["example-handle-a/prospect-a-project"],
+        "aliases": ["Prospect A Harbour Adventure"]
+      },
+      "events": [
+        {"type": "OUTREACH_SENT", "at": "2026-09-01T09:00:00Z", "waiting_for": "FIRST_REPLY"},
+        {"type": "INBOUND_REPLY", "at": "2026-09-02T09:00:00Z"},
+        {
+          "type": "VALIDATION_RECORDED",
+          "axis": "problem",
+          "status": "POSITIVE",
+          "evidence": [{"source": "github_issue", "message_id": "template-a-1", "quote_or_summary": "Replace with what they actually wrote about the problem."}]
+        },
+        {
+          "type": "VALIDATION_RECORDED",
+          "axis": "usefulness",
+          "status": "POSITIVE",
+          "evidence": [{"source": "github_issue", "message_id": "template-a-2", "quote_or_summary": "Replace with what they actually wrote about the report being useful."}]
+        },
+        {
+          "type": "VALIDATION_RECORDED",
+          "axis": "workflow",
+          "status": "POSITIVE",
+          "evidence": [{"source": "github_issue", "message_id": "template-a-3", "quote_or_summary": "Replace with what they actually wrote about how it would fit their workflow."}]
+        },
+        {
+          "type": "VALIDATION_RECORDED",
+          "axis": "payer",
+          "status": "AMBIGUOUS",
+          "evidence": [{"source": "github_issue", "message_id": "template-a-4", "quote_or_summary": "Replace with what they actually wrote about price. AMBIGUOUS is the right status for anything that is not an explicit yes."}]
+        },
+        {"type": "CONVERSATION_ENDED", "at": "2026-09-04T09:00:00Z", "direction": "inbound", "reason": "they ended the thread"}
+      ]
+    },
+    {
+      "id": "one-axis-answered-nothing-outstanding-shape",
+      "name": "Prospect B",
+      "organization": "Example open-source project",
+      "channel": "GITHUB_ISSUE",
+      "identity": {
+        "github_logins": ["example-handle-b"],
+        "repositories": ["example-handle-b/prospect-b-project"]
+      },
+      "events": [
+        {"type": "OUTREACH_SENT", "at": "2026-09-01T09:00:00Z", "waiting_for": "FIRST_REPLY"},
+        {"type": "INBOUND_REPLY", "at": "2026-09-02T09:00:00Z"},
+        {
+          "type": "VALIDATION_RECORDED",
+          "axis": "workflow",
+          "status": "POSITIVE",
+          "evidence": [{"source": "github_issue", "message_id": "template-b-1", "quote_or_summary": "Replace with what they actually wrote about how the work is done today."}]
+        },
+        {"type": "REPLY_WAIVED", "at": "2026-09-03T09:00:00Z"}
+      ]
+    },
+    {
+      "id": "awaiting-first-reply-shape",
+      "name": "Prospect C",
+      "organization": "Example indie game studio",
+      "channel": "GMAIL",
+      "identity": {
+        "github_logins": ["example-handle-c"],
+        "domains": ["prospect-c.example"]
+      },
+      "events": [
+        {"type": "OUTREACH_SENT", "at": "2026-09-05T09:00:00Z", "waiting_for": "FIRST_REPLY"}
+      ]
+    },
+    {
+      "id": "automated-receipt-only-shape",
+      "name": "Prospect D",
+      "organization": "Example issue tracker",
+      "channel": "OTHER",
+      "identity": {
+        "github_logins": ["example-handle-d"],
+        "repositories": ["example-handle-d/prospect-d-editor"]
+      },
+      "events": [
+        {"type": "OUTREACH_SENT", "at": "2026-09-05T09:00:00Z", "waiting_for": "FIRST_REPLY"},
+        {"type": "INBOUND_REPLY", "at": "2026-09-05T09:00:30Z", "human": false}
+      ]
+    },
+    {
+      "id": "waived-then-closed-shape",
+      "name": "Prospect E",
+      "organization": "Example localization vendor",
+      "channel": "GMAIL",
+      "identity": {
+        "aliases": ["Prospect E Translation Works"],
+        "domains": ["prospect-e.example"]
+      },
+      "events": [
+        {"type": "OUTREACH_SENT", "at": "2026-09-06T09:00:00Z", "waiting_for": "FIRST_REPLY"},
+        {"type": "INBOUND_REPLY", "at": "2026-09-07T01:00:00Z"},
+        {"type": "FOLLOW_UP_SENT", "at": "2026-09-07T09:00:00Z", "waiting_for": "FIRST_REPLY"},
+        {"type": "REPLY_WAIVED", "at": "2026-09-07T09:05:00Z"},
+        {"type": "CONVERSATION_ENDED", "at": "2026-09-08T09:00:00Z", "direction": "outbound", "reason": "we closed it after explaining ourselves"}
+      ]
+    },
+    {
+      "id": "payer-question-outstanding-shape",
+      "name": "Prospect F",
+      "organization": "Example indie game project",
+      "channel": "GMAIL",
+      "channel_ref": null,
+      "identity": {
+        "github_logins": ["example-handle-f"],
+        "aliases": ["Prospect F Game"]
+      },
+      "events": [
+        {"type": "OUTREACH_SENT", "at": "2026-09-08T09:00:00Z", "waiting_for": "FIRST_REPLY"},
+        {"type": "INBOUND_REPLY", "at": "2026-09-09T01:00:00Z"},
+        {"type": "QUESTION_SENT", "at": "2026-09-09T09:00:00Z", "waiting_for": "PAYER_ANSWER"}
+      ]
+    }
+  ]
+}

@@ -75,6 +75,7 @@ export function aggregate(scanReport) {
 //  2  conversation closed (reopens on inbound or not at all)          IGNORE
 //  3  a thread already exists / an answer is outstanding             IGNORE
 //  4  contact identity unresolved, ambiguous, or flagged by the model HUMAN_REVIEW
+//     (and, as a backstop before rule 17, any posture but NEVER_CONTACTED)
 //  5  repository is dormant                                          IGNORE
 //  6  no public contact route                                        IGNORE
 //  7  no localization assets at all                                  IGNORE
@@ -86,10 +87,10 @@ export function aggregate(scanReport) {
 // 13  a defensible finding drowned in ones that are not              IGNORE
 // 14  contact history never checked                                  HUMAN_REVIEW
 // 15  repository activity unknown                                    HUMAN_REVIEW
-// 16  the same validation question is already outstanding elsewhere  HUMAN_REVIEW
+// 16  this party already owes us the answer we would be asking for    HUMAN_REVIEW
 // 17  otherwise                                                      READY_FOR_REVIEW
 export function decide(facts, thresholds) {
- const {contact, metadata, assets, evidence, asking, outstandingAxes} = facts;
+ const {contact, metadata, assets, evidence, asking} = facts;
  const rule = (number, verdict, reason) => ({rule: number, verdict, reason});
 
  if (contact.posture === 'DO_NOT_CONTACT') return rule(1, 'IGNORE', 'contact-state: ' + contact.reason);
@@ -139,9 +140,30 @@ export function decide(facts, thresholds) {
  if (metadata.activity === 'UNKNOWN') {
   return rule(15, 'HUMAN_REVIEW', 'repository activity is unknown; a dead repository is a contact spent for nothing');
  }
- if (asking && outstandingAxes.includes(asking)) {
-  return rule(16, 'HUMAN_REVIEW', 'an answer on the ' + asking + ' axis is already outstanding from another contact; ' +
-   'a second one buys no information we are not already about to get');
+ // The same-axis duplicate guard, scoped to this party and nobody else.
+ //
+ // `contact.outstandingAxes` holds the axes *this prospect's own* contacts owe us an
+ // answer on - never the store's. Asking the same party the same question twice is a
+ // duplicate; asking a second, independently checked party is an independent sample of
+ // the hypothesis, which is the thing a validation axis is short of. One contact's
+ // silence does not put every stranger on hold.
+ //
+ // In practice a party that owes us anything has already stopped at rule 3
+ // (AWAITING_REPLY) or rule 1/2/4, so this is the backstop for that rather than the
+ // common path - it holds if the posture fold ever lets such a contact through.
+ if (asking && (contact.outstandingAxes ?? []).includes(asking)) {
+  return rule(16, 'HUMAN_REVIEW', 'this party already owes us an answer on the ' + asking + ' axis (' +
+   contact.contactIds.join(', ') + '); asking the same contact the same question again is a duplicate');
+ }
+
+ // The backstop. Rules 1-4 and 14 name every posture that exists today, but this table is
+ // the last thing between a contact posture and a human being asked to write to somebody -
+ // so a posture nobody here has heard of must stop here rather than fall through into
+ // READY_FOR_REVIEW. Adding a posture to contact-link.mjs can make this engine more
+ // cautious by accident; it can never make it bolder by accident.
+ if (contact.posture !== 'NEVER_CONTACTED') {
+  return rule(4, 'HUMAN_REVIEW', 'contact posture ' + contact.posture +
+   ' is not "store checked, nothing there" - ' + contact.reason);
  }
 
  return rule(17, 'READY_FOR_REVIEW', evidence.highConfidenceFindings + ' high-confidence finding(s) on a ' +

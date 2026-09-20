@@ -12,6 +12,10 @@
       "name": "Prospect A",
       "organization": "Example indie game project",
       "channel": "GITHUB_ISSUE",
+      "identity": {
+        "github_logins": ["example-handle-a"],
+        "repositories": ["example-handle-a/prospect-a-project"]
+      },
       "events": [
         {"type": "OUTREACH_SENT", "at": "2026-09-05T09:00:00Z", "waiting_for": "FIRST_REPLY"}
       ]
@@ -21,6 +25,10 @@
       "name": "Prospect B",
       "organization": "Example indie game project",
       "channel": "GMAIL",
+      "identity": {
+        "github_logins": ["example-handle-b"],
+        "aliases": ["Prospect B Harbour Adventure"]
+      },
       "events": [
         {"type": "OUTREACH_SENT", "at": "2026-09-05T09:00:00Z", "waiting_for": "FIRST_REPLY"},
         {"type": "INBOUND_REPLY", "at": "2026-09-06T01:12:00Z"},
@@ -146,6 +154,11 @@
       "name": "Prospect F",
       "organization": "Example localization vendor",
       "channel": "GMAIL",
+      "identity": {
+        "github_logins": ["example-handle-f"],
+        "repositories": ["example-handle-f/prospect-f-toolkit"],
+        "domains": ["prospect-f.example"]
+      },
       "events": [
         {"type": "OUTREACH_SENT", "at": "2026-09-08T09:00:00Z", "waiting_for": "FIRST_REPLY"},
         {"type": "INBOUND_REPLY", "at": "2026-09-09T00:41:00Z"},
@@ -319,6 +332,10 @@
       "name": "Prospect K",
       "organization": "Example issue tracker",
       "channel": "OTHER",
+      "identity": {
+        "github_logins": ["example-handle-k"],
+        "manual_links": ["prospect-k-candidate"]
+      },
       "events": [
         {"type": "OUTREACH_SENT", "at": "2026-09-05T09:00:00Z", "waiting_for": "FIRST_REPLY"},
         {"type": "INBOUND_REPLY", "at": "2026-09-05T09:00:30Z", "human": false}

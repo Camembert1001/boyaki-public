@@ -23,6 +23,7 @@ import {scan} from './scanner.mjs';
 import {inventory} from './assets.mjs';
 import {RULE_CONFIDENCE, isHighConfidence} from './confidence.mjs';
 import {emptyEntry} from './metadata.mjs';
+import {identityCoverage} from '../../contact-state/lib/store.mjs';
 import {outstandingAxes, resolvePosture} from './contact-link.mjs';
 import {DEFAULT_PROSPECT_THRESHOLDS, VERDICTS, aggregate, decide} from './candidates.mjs';
 
@@ -54,15 +55,26 @@ export async function evaluate(root, id, relPath, options) {
  const scanReport = await scan(root, {thresholds: options.scanThresholds, samples: SCAN_SAMPLE_DEPTH});
  const assets = await inventory(root);
  const metadata = options.metadata?.prospects.get(id) ?? emptyEntry();
- const contact = resolvePosture(options.contacts ?? null, metadata.contact_ids, [id, ...metadata.aliases]);
+ // What this party can be recognized by in public. Without at least one of these the
+ // contact store cannot be asked about them, and "never contacted" stays unproven.
+ const identity = {
+  id,
+  owner: metadata.owner,
+  repository: metadata.repository,
+  url: metadata.url,
+  aliases: metadata.aliases,
+  emails: metadata.emails
+ };
+ const contact = resolvePosture(options.contacts ?? null, metadata.contact_ids, [id, ...metadata.aliases], identity);
  const evidence = aggregate(scanReport);
+ // `contact` carries this party's own outstanding axes; the store-wide figure is a
+ // reporting line and is deliberately not handed to the rule table.
  const {rule, verdict, reason} = decide({
   contact,
   metadata,
   assets,
   evidence,
-  asking: options.asking ?? null,
-  outstandingAxes: options.outstandingAxes
+  asking: options.asking ?? null
  }, options.thresholds);
 
  return {
@@ -79,6 +91,9 @@ export async function evaluate(root, id, relPath, options) {
    contact_route_evidence: metadata.contact_route_evidence,
    aliases: metadata.aliases,
    contact_link_declared: metadata.contact_ids !== undefined,
+   owner: metadata.owner,
+   repository: metadata.repository,
+   url: metadata.url,
    notes: metadata.notes
   },
   assets,
@@ -106,6 +121,7 @@ export async function discover(rootPath, options = {}) {
   metadata: options.metadata ?? null,
   contacts: options.contacts ?? null,
   asking: options.asking ?? null,
+  // Reported, not gated on. See contact-link.mjs: the gate is per-party.
   outstandingAxes: options.contacts ? outstandingAxes(options.contacts) : []
  };
 
@@ -130,6 +146,12 @@ export async function discover(rootPath, options = {}) {
   contactStore: {
    provided: Boolean(options.contacts),
    contactCount: options.contacts ? options.contacts.contacts.length : 0,
+   // Whether the store can answer "not this party" at all. One contact with no identity
+   // evidence is enough to make that answer unavailable for everybody, so the figure is
+   // reported next to the count rather than left to be inferred from the verdicts.
+   identityCoverage: options.contacts
+    ? identityCoverage(options.contacts)
+    : {contactCount: 0, indexedCount: 0, opaqueCount: 0, opaqueIds: [], complete: false},
    outstandingAxes: shared.outstandingAxes
   },
   prospectCount: prospects.length,
@@ -145,10 +167,18 @@ export function renderText(report) {
  lines.push('YN0 Prospect Discovery - ' + report.root + ' (' + report.mode + ')');
  lines.push(report.prospectCount + ' prospect' + (report.prospectCount === 1 ? '' : 's') + ' - ' +
   VERDICTS.map(verdict => verdict + ' ' + report.summary[verdict]).join(' - '));
+ const coverage = report.contactStore.identityCoverage;
  lines.push('contact store: ' + (report.contactStore.provided
-  ? report.contactStore.contactCount + ' contact(s), outstanding axes: ' +
-    (report.contactStore.outstandingAxes.join(', ') || 'none')
+  ? report.contactStore.contactCount + ' contact(s), ' + coverage.indexedCount + ' with identity evidence, ' +
+    'those contacts owe us an answer on: ' + (report.contactStore.outstandingAxes.join(', ') || 'nothing') +
+    ' (context for the reader; it holds nobody but them)'
   : 'not provided - no prospect can be shown as never contacted'));
+ if (report.contactStore.provided && !coverage.complete) {
+  lines.push('  ! the store cannot answer "not this party": ' + (coverage.contactCount === 0
+   ? 'it holds no contacts at all'
+   : coverage.opaqueCount + ' contact(s) carry no identity evidence (' + coverage.opaqueIds.join(', ') + ')') +
+   ' - every automatic lookup stays UNCHECKED until that is fixed');
+ }
  if (report.asking) lines.push('asking about: ' + report.asking);
 
  for (const prospect of report.prospects) {
@@ -158,6 +188,7 @@ export function renderText(report) {
   lines.push('  reason: ' + prospect.reason);
   lines.push('  contact: ' + prospect.contact.posture +
    (prospect.contact.contactIds.length ? ' - ' + prospect.contact.contactIds.join(', ') : '') +
+   ' [' + prospect.contact.conclusion + (prospect.contact.matchState ? '/' + prospect.contact.matchState : '') + ']' +
    ' - activity ' + prospect.metadata.activity + ' - route ' + prospect.metadata.public_contact_route);
   const formats = prospect.assets.formats.map(item =>
    item.format + ' x' + item.fileCount + (item.support === 'SUPPORTED' ? '' : ' [DETECTED_BUT_UNSUPPORTED]') +

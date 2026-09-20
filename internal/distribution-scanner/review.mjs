@@ -11,7 +11,7 @@
 // scanned tree. The pipeline ends at HUMAN REVIEW and there is no step after it.
 import {readFile, writeFile} from 'node:fs/promises';
 import {VALIDATION_AXES} from '../contact-state/lib/model.mjs';
-import {readContactStore} from './lib/contact-link.mjs';
+import {loadContactStoreFile} from './lib/contact-link.mjs';
 import {loadManifest} from './lib/manifest.mjs';
 import {loadHypothesis} from './lib/hypothesis.mjs';
 import {DEFAULT_PROSPECT_THRESHOLDS} from './lib/candidates.mjs';
@@ -120,7 +120,9 @@ async function main(argv) {
 
  let report;
  try {
-  const contacts = options.contacts ? readContactStore(await readFile(options.contacts, 'utf8'), options.contacts) : null;
+  // A store that was asked for and could not be read is a hard failure, never a
+  // silent fall back to "no store" or to an empty one.
+  const contacts = options.contacts ? await loadContactStoreFile(options.contacts) : null;
   const manifest = options.manifest ? loadManifest(await readFile(options.manifest, 'utf8'), options.manifest) : null;
   const hypothesis = options.hypothesis ? loadHypothesis(await readFile(options.hypothesis, 'utf8'), options.hypothesis) : null;
   report = await review(target, {...options, contacts, manifest, hypothesis});

@@ -51,6 +51,54 @@ export const VALIDATION_STATUSES = ['UNKNOWN', 'POSITIVE', 'NEGATIVE', 'AMBIGUOU
 // they actually wrote. See requireEvidence below.
 export const EVIDENCE_SOURCES = ['gmail', 'github_issue', 'github_comment', 'other'];
 
+// Identity evidence: the exact public handles by which this contact can be recognized
+// again. It exists for one question only - "is this discovered party somebody we have
+// already written to?" - and it answers that question the only way that is safe to
+// automate: by exact equality on an identifier the contact actually owns.
+//
+// Every field is a list of *identifiers*, never a description. Nothing here is a
+// similarity score, and nothing downstream may turn it into one: a shared first name, a
+// shared organization, an overlapping username fragment or a similar project are not
+// evidence that two parties are the same, and a matcher that treated them as such would
+// merge two strangers into one record. The opposite mistake - failing to recognize a
+// contact we have already burned - is worse still, which is why a contact that carries
+// no identity at all is *opaque*: a store holding one cannot truthfully answer "no
+// match" about anybody. See identityKeys() and the coverage rule in the prospect layer.
+export const IDENTITY_FIELDS = ['github_logins', 'repositories', 'aliases', 'emails', 'domains', 'manual_links'];
+
+// The singular kind each field contributes to a match key. `kind:value` is what a
+// matcher compares, so the vocabulary is fixed here rather than at the comparison site.
+export const IDENTITY_KINDS = {
+ github_logins: 'github_login',
+ repositories: 'repository',
+ aliases: 'alias',
+ emails: 'email',
+ domains: 'domain',
+ manual_links: 'manual_link'
+};
+
+const GITHUB_LOGIN = /^[a-z0-9](?:[a-z0-9]|-(?=[a-z0-9])){0,38}$/;
+const REPOSITORY = /^[a-z0-9](?:[a-z0-9]|-(?=[a-z0-9])){0,38}\/[a-z0-9._-]{1,100}$/;
+const DOMAIN = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+$/;
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const CANDIDATE_ID = /^[a-z0-9]+(?:[._-][a-z0-9]+)*$/;
+
+// Free-text identity (a project title, a handle as it is written on a store page) folded
+// to the form two spellings of the same name share. NFKC first so full-width and
+// half-width Japanese compare equal; letters and digits of every script survive.
+export const normalizeAlias = value =>
+ String(value ?? '').normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+
+const normalizeLogin = value => String(value ?? '').trim().toLowerCase().replace(/^@/, '');
+
+// A repository is only an identity in `owner/name` form. A bare repository name is not:
+// two unrelated parties both having a repository called `game` says nothing about either.
+export function normalizeRepository(value) {
+ let text = String(value ?? '').trim().toLowerCase();
+ text = text.replace(/^\/+/, '').replace(/\/+$/, '');
+ return text.endsWith('.git') ? text.slice(0, -4) : text;
+}
+
 const ISO_INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/;
 
 export class ContactStateError extends Error {}
@@ -109,6 +157,67 @@ export function requireEvidence(status, evidence, axis) {
  }
 }
 
+export function emptyIdentity() {
+ return Object.fromEntries(IDENTITY_FIELDS.map(field => [field, []]));
+}
+
+// Each field is validated for *shape*, because a malformed identifier is worse than an
+// absent one: it silently never matches, and a contact that never matches is a contact
+// the discovery layer will happily report as a stranger.
+const IDENTITY_RULES = {
+ github_logins: {normalize: normalizeLogin, pattern: GITHUB_LOGIN, hint: 'a GitHub login like octocat (no @, no slash)'},
+ repositories: {normalize: normalizeRepository, pattern: REPOSITORY, hint: 'a repository in owner/name form'},
+ aliases: {normalize: normalizeAlias, pattern: null, hint: 'a non-empty name'},
+ // The hints avoid spelling out an example address or host: a test asserts that no
+ // tracked file in this directory carries anything shaped like contact data, and it is
+ // right to refuse even an invented one.
+ emails: {normalize: value => String(value ?? '').trim().toLowerCase(), pattern: EMAIL, hint: 'an address in local-part, at-sign, host form'},
+ domains: {normalize: value => String(value ?? '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, ''), pattern: DOMAIN, hint: 'a bare host, with no scheme and no path'},
+ manual_links: {normalize: value => String(value ?? '').trim().toLowerCase(), pattern: CANDIDATE_ID, hint: 'a candidate id as a manifest spells it'}
+};
+
+export function normalizeIdentity(raw, label = 'identity') {
+ if (raw === undefined || raw === null) return emptyIdentity();
+ if (typeof raw !== 'object' || Array.isArray(raw)) fail(label + ' must be an object');
+ for (const key of Object.keys(raw)) {
+  if (!IDENTITY_FIELDS.includes(key)) {
+   fail(label + ' has unknown field ' + JSON.stringify(key) + '; known fields are ' + IDENTITY_FIELDS.join(', '));
+  }
+ }
+ const identity = emptyIdentity();
+ for (const field of IDENTITY_FIELDS) {
+  const values = raw[field];
+  if (values === undefined || values === null) continue;
+  if (!Array.isArray(values)) fail(label + '.' + field + ' must be an array of strings');
+  const rule = IDENTITY_RULES[field];
+  const seen = new Set();
+  for (const [index, value] of values.entries()) {
+   const where = label + '.' + field + '[' + index + ']';
+   if (typeof value !== 'string') fail(where + ' must be a string');
+   const normalized = rule.normalize(value);
+   if (normalized === '') fail(where + ' must not be empty');
+   if (rule.pattern && !rule.pattern.test(normalized)) {
+    fail(where + ' must be ' + rule.hint + ' (got ' + JSON.stringify(value) + ')');
+   }
+   seen.add(normalized);
+  }
+  identity[field] = [...seen].sort();
+ }
+ return identity;
+}
+
+// Every identifier this contact claims, as `kind:value`. An empty list means the contact
+// is *opaque*: nothing about it can be recognized in public, so no automatic lookup may
+// report "this party is not in the store" without excluding it by hand first.
+export function identityKeys(contact) {
+ const identity = contact.identity ?? emptyIdentity();
+ const keys = [];
+ for (const field of IDENTITY_FIELDS) {
+  for (const value of identity[field] ?? []) keys.push(IDENTITY_KINDS[field] + ':' + value);
+ }
+ return keys.sort();
+}
+
 export function emptyValidation() {
  return Object.fromEntries(VALIDATION_AXES.map(axis => [axis, {status: 'UNKNOWN', evidence: []}]));
 }
@@ -132,14 +241,17 @@ export function emptyConversation() {
  };
 }
 
-export function createContact(identity) {
- if (!identity || typeof identity !== 'object') fail('identity must be an object');
+// `who` is the identity half of a contact record: who they are and where the thread is,
+// including the optional `identity` block of public identifiers they can be recognized by.
+export function createContact(who) {
+ if (!who || typeof who !== 'object') fail('identity must be an object');
  return {
-  id: assertString(identity.id, 'id'),
-  name: identity.name === undefined || identity.name === null ? null : assertString(identity.name, 'name'),
-  organization: identity.organization === undefined || identity.organization === null ? null : assertString(identity.organization, 'organization'),
-  channel: assertEnum(identity.channel ?? 'OTHER', CHANNELS, 'channel'),
-  channel_ref: identity.channel_ref === undefined || identity.channel_ref === null ? null : assertString(identity.channel_ref, 'channel_ref'),
+  id: assertString(who.id, 'id'),
+  name: who.name === undefined || who.name === null ? null : assertString(who.name, 'name'),
+  organization: who.organization === undefined || who.organization === null ? null : assertString(who.organization, 'organization'),
+  channel: assertEnum(who.channel ?? 'OTHER', CHANNELS, 'channel'),
+  channel_ref: who.channel_ref === undefined || who.channel_ref === null ? null : assertString(who.channel_ref, 'channel_ref'),
+  identity: normalizeIdentity(who.identity, 'identity'),
   conversation: emptyConversation(),
   validation: emptyValidation()
  };

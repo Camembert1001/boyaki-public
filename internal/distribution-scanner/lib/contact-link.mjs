@@ -13,8 +13,26 @@
 // Nothing in this module sends anything, and no posture means "contact them". The most
 // positive answer available is NEVER_CONTACTED, which means only that the store was
 // consulted and had nothing - a human still decides whether anyone is written to.
+//
+// Two claims are routed through here and they are not the same claim:
+//
+//   contact_ids: []          a *human* read the store and found nothing.
+//   contact_ids: undefined   nobody declared anything - which, since this file learned to
+//                            look the party up itself, no longer means nobody looked. It
+//                            means the machine looks, and says which of the five answers
+//                            in contact-match.mjs it got. Only NO_MATCH becomes
+//                            NEVER_CONTACTED; everything else fails closed to UNCHECKED
+//                            or AMBIGUOUS_MATCH.
+//
+// A declared link is still authoritative over the lookup for *which* contact this is -
+// but it is not authoritative against it. When a human declared "never contacted" or
+// "contact X" and the store's own identifiers say otherwise, that disagreement is the
+// most dangerous thing this module can see, and it is reported as AMBIGUOUS_MATCH rather
+// than resolved in either direction.
+import {readFile} from 'node:fs/promises';
 import {loadStore} from '../../contact-state/lib/store.mjs';
 import {derive} from '../../contact-state/lib/derive.mjs';
+import {buildIndex, distinctiveTokens, matchProspect, prospectIdentity, weakMatches} from './contact-match.mjs';
 
 // Ordered most restrictive first. When a prospect resolves to several contacts, the
 // most restrictive posture wins - two threads, one of them opted out, is opted out.
@@ -33,14 +51,16 @@ export const POSTURES = [
 
 const RANK = Object.fromEntries(POSTURES.map((posture, index) => [posture, index]));
 
-// Tokens too common to be evidence that two names are the same party.
-const STOPWORDS = new Set([
- 'example', 'prospect', 'project', 'projects', 'game', 'games', 'studio', 'studios',
- 'app', 'apps', 'repo', 'repository', 'github', 'gitlab', 'http', 'https', 'www',
- 'com', 'net', 'org', 'main', 'master', 'test', 'demo', 'open', 'source', 'tool', 'tools'
-]);
-
-const tokens = text => String(text ?? '').toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+// How the store answered, independently of what the posture then is. This is the
+// distinction the whole exercise turns on: "checked, and this party is new" is a
+// different fact from "nobody checked", and a report that cannot tell them apart cannot
+// be trusted to say anybody is new.
+export const CONCLUSIONS = [
+ 'MATCHED',       // the store recognized this party
+ 'NO_MATCH',      // the store was checked and could exclude every contact in it
+ 'INCONCLUSIVE',  // the store was checked and could not settle the question
+ 'NOT_CONSULTED'  // no store, or nothing to check it against
+];
 
 // One contact's posture, folded from its own derived state. Ordered: the first match
 // wins, exactly like contact-state's own next_action table.
@@ -59,83 +79,196 @@ export function postureOf(contact) {
  return {posture: 'ALREADY_CONTACTED', reason: 'a thread already exists (' + d.next_action + ': ' + d.next_action_reason + ')'};
 }
 
-// Validation axes with an answer genuinely outstanding somewhere in the store.
+// Validation axes with an answer outstanding from *these particular contacts*.
 //
-// This is the Prospect Burn rule that has nothing to do with any one prospect: while
-// one contact owes us an answer on the workflow question, opening the same question
-// with a second stranger buys no information we are not already about to get.
-export function outstandingAxes(store) {
+// This is the same-axis duplicate-question guard, and its scope is one party. While a
+// contact owes us an answer on the payer axis, asking *that contact* the payer question
+// again is a duplicate: it annoys somebody who is already thinking about it and it buys
+// nothing. That is the whole of the rule.
+//
+// It is deliberately not a statement about anybody else. A different party, checked
+// against the store on its own identifiers and found not to be in it, is an independent
+// sample of the same hypothesis - and an independent sample is exactly what a validation
+// axis is short of. Blocking it would be holding B's information hostage to A's silence.
+export function outstandingAxesOf(contacts) {
  const axes = new Set();
- for (const {contact} of store.contacts) {
+ for (const contact of contacts) {
   const d = derive(contact);
   if (d.is_waiting && contact.conversation.waiting_for_axis) axes.add(contact.conversation.waiting_for_axis);
  }
  return [...axes].sort();
 }
 
+// The same question asked of the whole store: which axes have an answer outstanding
+// anywhere.
+//
+// This is a *reporting* figure and nothing else. It tells a reader of the report what the
+// pipeline is already waiting on, and it is shown next to the contact count for that
+// reason. No verdict, lane or gate may be derived from it: the gate reads
+// `outstandingAxesOf` for the contacts one prospect actually resolved to, because "we are
+// waiting on somebody" is not a fact about a stranger.
+export function outstandingAxes(store) {
+ return outstandingAxesOf(store.contacts.map(({contact}) => contact));
+}
+
 // Contacts whose identity shares an uncommon token with the prospect's. Deliberately
 // crude: this exists to raise a hand, not to decide anything. Any hit forces a human
 // to confirm the prospect is not somebody we have already written to under another name.
+//
+// The token rule lives in contact-match.mjs now, so the crude net and the exact matcher
+// cannot drift apart into two different opinions about what a distinctive name is.
 export function nearMatches(names, store) {
- const wanted = new Set(names.flatMap(tokens).filter(token => token.length >= 4 && !STOPWORDS.has(token)));
- if (wanted.size === 0) return [];
- const hits = [];
- for (const {contact} of store.contacts) {
-  const theirs = [contact.id, contact.name, contact.organization, contact.channel_ref].flatMap(tokens);
-  const shared = [...new Set(theirs.filter(token => wanted.has(token)))].sort();
-  if (shared.length) hits.push({id: contact.id, shared});
- }
- return hits.sort((a, b) => (a.id < b.id ? -1 : 1));
+ if (distinctiveTokens(names).size === 0) return [];
+ return weakMatches(buildIndex(store), {names, logins: [], repositories: []})
+  .filter(hit => hit.shared.length)
+  .map(hit => ({id: hit.id, shared: hit.shared, kinds: ['shared_token']}));
 }
 
 // Load a contact store from raw text. The prospect layer never writes one.
 export const readContactStore = (text, label) => loadStore(text, label);
 
+// Load a contact store from a file, and fail if it cannot be loaded.
+//
+// This exists so that "the store could not be read" has exactly one behaviour everywhere:
+// it throws. A caller that swallowed the error and carried on with `null` would turn a
+// read failure into "no store provided", and a caller that defaulted to an empty store
+// would turn it into "checked, nobody is in there" - the silent false negative this whole
+// layer exists to prevent. There is no option flag to make either of those happen.
+export async function loadContactStoreFile(file) {
+ let text;
+ try {
+  text = await readFile(file, 'utf8');
+ } catch (error) {
+  throw new Error('contact store ' + file + ' could not be read: ' + error.message);
+ }
+ return loadStore(text, file);
+}
+
+// A result in the shape the rest of the pipeline reads. `conclusion` is deliberately
+// separate from `posture`: a reader that only wants "is this safe to propose?" reads the
+// posture, and a reader that wants "did anybody actually look?" reads the conclusion.
+const result = (posture, reason, extra = {}) => ({
+ posture,
+ reason,
+ contactIds: [],
+ nearMatches: [],
+ conclusion: 'NOT_CONSULTED',
+ matchState: null,
+ matchEvidence: [],
+ linkSource: 'NONE',
+ // Axes this prospect's *own* contacts owe us an answer on. Empty whenever the prospect
+ // resolved to no contact at all, which is the ordinary case and is not a gap: a party
+ // the store does not hold cannot owe us anything.
+ outstandingAxes: [],
+ ...extra
+});
+
+// Weak hits, reduced to what a report may carry: which contact, and what kind of
+// similarity. The shape is the same one `nearMatches` has always returned, plus the kinds.
+const weakToNear = weak => weak.map(hit => ({id: hit.id, shared: hit.shared, kinds: hit.reasons.map(reason => reason.kind)}));
+
+// Fold several contacts' postures into one. Most restrictive wins: two threads, one of
+// them opted out, is opted out.
+function foldPostures(ids, byId) {
+ const resolved = ids.map(id => ({id, ...postureOf(byId.get(id))}));
+ return resolved.reduce((a, b) => (RANK[a.posture] <= RANK[b.posture] ? a : b));
+}
+
+// The axes this prospect's own contacts owe us an answer on, for a prospect that resolved
+// to contacts at all.
+const outstandingFor = (ids, byId) => outstandingAxesOf(ids.map(id => byId.get(id)).filter(Boolean));
+
 // Resolve one prospect's contact posture.
 //
 //   store       a loaded contact store, or null when none was provided
-//   contactIds  the prospect's declared links. `[]` is a *positive* claim - "the store
-//               was checked and holds nothing for this party" - and is the only way to
-//               reach NEVER_CONTACTED. `undefined` means nobody checked.
+//   contactIds  the prospect's declared links. `[]` is a *positive* claim by a human -
+//               "I read the store and it holds nothing for this party". `undefined` means
+//               nobody declared anything, and the store is now searched automatically.
 //   names       identity strings to look for near-matches against (directory name,
-//               declared aliases).
-export function resolvePosture(store, contactIds, names = []) {
- if (!store) return {posture: 'UNCHECKED', reason: 'no contact store was provided; contact history is unknown', contactIds: [], nearMatches: []};
- if (contactIds === undefined || contactIds === null) {
-  return {posture: 'UNCHECKED', reason: 'prospect declares no contact link, so "never contacted" is unproven', contactIds: [], nearMatches: []};
+//               declared aliases). Kept for callers that have nothing better.
+//   candidate   the candidate's public identity - {id, owner, repository, url, aliases,
+//               emails} - which is what makes the automatic lookup possible at all.
+export function resolvePosture(store, contactIds, names = [], candidate = null) {
+ if (!store) {
+  return result('UNCHECKED', 'no contact store was provided; contact history is unknown');
  }
 
+ const identity = prospectIdentity(candidate ?? {});
+ // Whatever the caller knows to call this party, on top of whatever the candidate
+ // declares. These only ever feed the weak net: a name somebody typed into a report is
+ // not an identifier the party owns.
+ identity.names = [...new Set([...identity.names, ...names.map(String)])];
+ const index = buildIndex(store);
+ const match = matchProspect(index, identity);
  const byId = new Map(store.contacts.map(({contact}) => [contact.id, contact]));
+
+ const base = {
+  matchState: match.state,
+  matchEvidence: match.evidence,
+  nearMatches: weakToNear(match.weak)
+ };
+
+ // ---- Nobody declared a link: the store answers for itself. ---------------------------
+ if (contactIds === undefined || contactIds === null) {
+  if (match.state === 'MATCHED') {
+   const worst = foldPostures(match.contactIds, byId);
+   return result(worst.posture, 'matched by ' + match.reason + ' - ' + worst.id + ': ' + worst.reason, {
+    ...base, contactIds: match.contactIds, conclusion: 'MATCHED', linkSource: 'MATCHED', nearMatches: [],
+    outstandingAxes: outstandingFor(match.contactIds, byId)
+   });
+  }
+  if (match.state === 'AMBIGUOUS') {
+   return result('AMBIGUOUS_MATCH', 'no declared contact link and ' + match.reason, {...base, conclusion: 'INCONCLUSIVE'});
+  }
+  if (match.state === 'NO_MATCH') {
+   return result('NEVER_CONTACTED', 'contact store searched by identity; ' + match.reason, {
+    ...base, conclusion: 'NO_MATCH'
+   });
+  }
+  // UNIDENTIFIABLE and STORE_NOT_INDEXED are both "the question was not actually
+  // answered". They are reported apart because the fix is different - identify the
+  // candidate, or index the store - but neither may become "never contacted".
+  return result('UNCHECKED', 'contact history is unproven: ' + match.reason, {...base, conclusion: 'NOT_CONSULTED'});
+ }
+
+ // ---- A human declared something: honour it, and check it against the store. ----------
  const ids = [...contactIds].sort();
  const missing = ids.filter(id => !byId.has(id));
  if (missing.length) {
-  return {
-   posture: 'UNRESOLVED',
-   reason: 'declared contact id not in the store: ' + missing.join(', '),
-   contactIds: ids,
-   nearMatches: []
-  };
+  return result('UNRESOLVED', 'declared contact id not in the store: ' + missing.join(', '), {
+   ...base, contactIds: ids, conclusion: 'INCONCLUSIVE', linkSource: 'DECLARED', nearMatches: []
+  });
+ }
+
+ // The disagreement that matters most. The declaration says one thing, the party's own
+ // identifiers say another; nothing here is entitled to decide which is right, and
+ // guessing in the direction of "never contacted" is the accident we are guarding against.
+ const unexplained = match.state === 'MATCHED' ? match.contactIds.filter(id => !ids.includes(id)) : [];
+ if (unexplained.length) {
+  return result('AMBIGUOUS_MATCH',
+   (ids.length === 0
+    ? 'declared as never contacted, but '
+    : 'declared as ' + ids.join(', ') + ', but ') +
+   'the store\'s own identifiers match ' + unexplained.join(', ') + ' (' + match.reason + ')', {
+    ...base, contactIds: ids, conclusion: 'INCONCLUSIVE', linkSource: 'DECLARED', nearMatches: []
+   });
  }
 
  if (ids.length === 0) {
   const close = nearMatches(names, store);
   if (close.length) {
-   return {
-    posture: 'AMBIGUOUS_MATCH',
-    reason: 'declared as never contacted, but ' + close.map(hit => hit.id + ' (' + hit.shared.join(', ') + ')').join('; ') + ' looks like the same party',
-    contactIds: [],
-    nearMatches: close
-   };
+   return result('AMBIGUOUS_MATCH',
+    'declared as never contacted, but ' + close.map(hit => hit.id + ' (' + hit.shared.join(', ') + ')').join('; ') +
+    ' looks like the same party', {...base, conclusion: 'INCONCLUSIVE', linkSource: 'DECLARED', nearMatches: close});
   }
-  return {posture: 'NEVER_CONTACTED', reason: 'contact store consulted; no record and no near match', contactIds: [], nearMatches: []};
+  return result('NEVER_CONTACTED', 'contact store consulted; no record and no near match', {
+   ...base, conclusion: 'NO_MATCH', linkSource: 'DECLARED', nearMatches: []
+  });
  }
 
- const resolved = ids.map(id => ({id, ...postureOf(byId.get(id))}));
- const worst = resolved.reduce((a, b) => (RANK[a.posture] <= RANK[b.posture] ? a : b));
- return {
-  posture: worst.posture,
-  reason: worst.id + ': ' + worst.reason,
-  contactIds: ids,
-  nearMatches: []
- };
+ const worst = foldPostures(ids, byId);
+ return result(worst.posture, worst.id + ': ' + worst.reason, {
+  ...base, contactIds: ids, conclusion: 'MATCHED', linkSource: 'DECLARED', nearMatches: [],
+  outstandingAxes: outstandingFor(ids, byId)
+ });
 }

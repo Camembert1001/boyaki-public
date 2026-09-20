@@ -62,13 +62,16 @@ There is exactly one canonical store of real contacts, and it is not in this rep
 | --- | --- | --- |
 | `contacts.local.json` | the real contacts, and the only current answer to "what state is X in?" | **no** — gitignored |
 | `CHECKPOINT.local.md` | the human-readable position on individual contacts | **no** — gitignored |
+| `contacts.template.json` | the six conversation shapes, as placeholders to copy and fill in | yes |
+| [`SEEDING.md`](SEEDING.md) | how to build the local store, and the identity rules | yes |
 | `fixtures/contacts.json` | invented scenarios that exercise the model | yes |
 | [`CHECKPOINT.md`](CHECKPOINT.md) | objective, rules and restore procedure — no contact data | yes |
 
 **Real contact records do not belong in this public repository.** `*.local.json` and
 `*.local.md` in this directory are gitignored, and a test asserts both rules are in
 `.gitignore` and that no tracked file here carries an email address or an individual
-contact's status. Keep the live store untracked and point the CLI at it:
+contact's status. Start from [`SEEDING.md`](SEEDING.md) and `contacts.template.json`, keep
+the live store untracked, and point the CLI at it:
 
 ```
 node internal/contact-state/state.mjs internal/contact-state/contacts.local.json
@@ -123,6 +126,34 @@ human records, not a clock deciding that silence has gone on long enough.
 | `name`, `organization` | free text or `null` |
 | `channel` | `GMAIL`, `GITHUB_ISSUE`, `GITHUB_COMMENT`, `OTHER` |
 | `channel_ref` | thread/issue reference, or `null` |
+| `identity` | the public identifiers this contact can be recognized by (below) |
+
+#### identity — how this contact is recognized again
+
+```json
+"identity": {
+  "github_logins": ["a-login"],
+  "repositories": ["a-login/a-repository"],
+  "aliases": ["A Project Name"],
+  "domains": ["a-host.example"],
+  "emails": ["an address, local store only"],
+  "manual_links": ["a-candidate-id-a-human-linked-by-hand"]
+}
+```
+
+This block exists for one question, asked by
+[`internal/distribution-scanner/`](../distribution-scanner/): *is this newly discovered
+party somebody we have already written to?* It answers it the only way that is safe to
+automate — exact equality on an identifier the contact actually owns. Values are
+normalized on load (lower case, `@` stripped, NFKC-folded aliases, `.git` and stray
+slashes removed from repositories) and malformed identifiers are refused, because an
+identifier that silently never matches is worse than an absent one.
+
+**A contact with no identity block is opaque.** Nothing can recognize it, so nothing can
+exclude it, so a store holding one cannot truthfully tell anyone that a discovered party
+is a stranger — and the discovery engine then reports every candidate as `UNCHECKED`
+rather than guessing. That is the intended failure direction: [`SEEDING.md`](SEEDING.md)
+explains how to fill the block in and what the matcher will and will not conclude from it.
 
 ### conversation — what happened on the wire
 
