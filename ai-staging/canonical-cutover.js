@@ -511,7 +511,7 @@ function canonicalCard(post,{detail=false}={}){
   const meta=document.createElement('div');meta.className='meta';
   meta.textContent=post.source_withdrawn
     ?`${fmt(post.created_at)} · みんなで解く困りごと · 元BOYAKIは取り下げ済み`
-    :`${fmt(post.created_at)} · ${short(post.author_pubkey)} · BOYAKI canonical`;
+    :`${fmt(post.created_at)} · ${short(post.author_pubkey)}`;
   article.append(meta);
 
   const raw=document.createElement('p');raw.className='raw';raw.textContent=post.content||'';article.append(raw);
@@ -605,7 +605,7 @@ async function activate(){
         const result=await client.createPost(text);window.BOYAKI_STORAGE.local.removeItem(DRAFT_KEY);
         const panel=document.querySelector('#private-chat-v53');if(panel){panel.hidden=true;panel.replaceChildren()}
         const input=document.querySelector('#raw');if(input)input.value='';window.BOYAKI_AI_STAGING_LAST_PUBLISH_ERROR='';status('公開しました。自分の投稿は画面から削除できます。');await renderHybrid();if(result?.post?.id)history.replaceState(null,'',location.pathname);
-      }catch(err){const code=String(err?.message||err||'unknown_error');window.BOYAKI_AI_STAGING_LAST_PUBLISH_ERROR=code;console.error('canonical publish failed',err);status(`公開できませんでした。E2E診断: ${code}（下書きはこの端末に残っています）`);button.disabled=false;button.textContent='解決候補として公開する'}
+      }catch(err){const code=String(err?.message||err||'unknown_error');window.BOYAKI_AI_STAGING_LAST_PUBLISH_ERROR=code;console.error('canonical publish failed',err);status('公開できませんでした。下書きはこの端末に残っています。');button.disabled=false;button.textContent='このBOYAKIを公開する'}
     },true);
     const feed=document.querySelector('#feed');if(feed)new MutationObserver(()=>{if(!rendering&&lastPosts.length&&!feed.querySelector('[data-canonical-post-card]'))scheduleHybrid(200)}).observe(feed,{childList:true});
     window.addEventListener('boyaki-feed-refresh',()=>scheduleHybrid(0));
