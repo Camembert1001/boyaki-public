@@ -310,7 +310,7 @@ async function hydrateCanonicalThread(article,post){
     }else if(!access.problem_statement){
       solutionHint.textContent='Makerから招待されています。元のBOYAKI投稿者が「みんなで解く困りごと」として残すことに同意すると参加できます。';
     }else{
-      solutionHint.textContent=`Makerから、この共有Problemの解決を一緒に詰める一緒に解決へ招待されています。\nProblem: ${access.problem_statement.statement}`;
+      solutionHint.textContent=`Makerから、この困りごとを一緒に解決する場へ招待されています。\n困りごと: ${access.problem_statement.statement}`;
       const accept=document.createElement('button');accept.type='button';accept.textContent='招待を受けて一緒に解決へ進む';
       accept.addEventListener('click',async()=>{
         accept.disabled=true;accept.textContent='参加中…';
@@ -583,7 +583,6 @@ async function renderHybrid(){
     const [result,mine]=await Promise.all([client.listPosts(100),client.listMine()]);lastPosts=result.posts||[];ownedIds=new Set((mine.posts||[]).filter(p=>p.status==='active').map(p=>p.id));
     if(renderDetailIfNeeded())return;
     const feed=document.querySelector('#feed');if(feed){feed.replaceChildren();for(const post of lastPosts)feed.append(canonicalCard(post));if(!lastPosts.length)feed.textContent='まだBOYAKIがありません。'}
-    const makers=document.querySelector('#maker-list');if(makers){makers.replaceChildren();const q=document.querySelector('#maker-search')?.value?.trim().toLowerCase()||'';for(const p of lastPosts.filter(p=>p.content.toLowerCase().includes(q)))makers.append(canonicalCard(p))}
   }catch(err){console.warn('canonical feed unavailable',err)}finally{rendering=false}
 }
 function scheduleHybrid(delay=120){clearTimeout(refreshTimer);refreshTimer=setTimeout(()=>renderHybrid(),delay)}
