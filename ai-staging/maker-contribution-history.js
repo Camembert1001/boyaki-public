@@ -18,7 +18,7 @@ function postExcerpt(item){
 function yen(value){const n=Number(value);return Number.isFinite(n)&&n>0?new Intl.NumberFormat('ja-JP',{style:'currency',currency:'JPY',maximumFractionDigits:0}).format(n):''}
 function evidenceBlock(snapshot){
   const evidence=snapshot||{},wrap=document.createElement('div');wrap.className='candidate-block';
-  const title=document.createElement('strong');title.textContent='Case作成時の需要証拠';wrap.append(title);
+  const title=document.createElement('strong');title.textContent='解決をまとめた時点の需要の反応';wrap.append(title);
   const ladder=document.createElement('div');ladder.className='demand-ladder';
   for(const [label,count] of [
     ['同じ悩み',evidence.same_problem?.count||0],
@@ -37,18 +37,18 @@ function evidenceBlock(snapshot){
 async function render(){
   if(!box)return;
   if(!accountIdentity()){
-    box.innerHTML='<p class="hint">ログインすると、このAccount IDで作成したSolution Caseが表示されます。</p>';
+    box.innerHTML='<p class="hint">ログインすると、このAccount IDで残した解決メモが表示されます。</p>';
     if(status)status.textContent='';
     return;
   }
-  if(status)status.textContent='Contribution Historyを読み込んでいます…';
+  if(status)status.textContent='Makerとしての履歴を読み込んでいます…';
   try{
     const [result,productResult]=await Promise.all([client.listMySolutionCases(),client.listMyProducts()]);
     const cases=result.cases||[],products=productResult.products||[];
     const productByCase=new Map(products.map(x=>[x.solution_case_id,x]));
     box.replaceChildren();
     if(!cases.length){
-      box.innerHTML='<p class="hint">まだSolution Caseはありません。Solution RoomからCaseを作ると、ここにAccount ID単位で残ります。</p>';
+      box.innerHTML='<p class="hint">まだ解決メモはありません。「一緒に解決」で内容をまとめると、ここに残ります。</p>';
     }else{
       for(const item of cases){
         const card=document.createElement('article');
@@ -56,7 +56,7 @@ async function render(){
         card.dataset.solutionCaseId=item.id;
 
         const title=document.createElement('h3');
-        title.textContent=item.title||'Solution Case';
+        title.textContent=item.title||'解決メモ';
 
         const contribution=document.createElement('p');
         contribution.textContent=item.contribution||'';
@@ -65,14 +65,14 @@ async function render(){
         if(source){
           const sourceBox=document.createElement('p');
           sourceBox.className='hint';
-          sourceBox.textContent=`${item.room?.post?.source_withdrawn?'共有Problem（元BOYAKI本文は取り下げ済み）':'元のBOYAKI'}: ${source}`;
+          sourceBox.textContent=`${item.room?.post?.source_withdrawn?'みんなで残した困りごと（元BOYAKI本文は取り下げ済み）':'元のBOYAKI'}: ${source}`;
           card.append(title,contribution,sourceBox);
         }else card.append(title,contribution);
 
         card.append(evidenceBlock(item.evidence_snapshot));
         const meta=document.createElement('p');
         meta.className='hint';
-        meta.textContent=`${fmt(item.created_at)} · Solution Case · AI-STAGING`;
+        meta.textContent=`${fmt(item.created_at)} · 解決メモ`;
         card.append(meta);
 
         const actions=document.createElement('div');
@@ -81,37 +81,37 @@ async function render(){
           const room=document.createElement('a');
           room.className='button-link';
           room.href=`./solution-room.html?room=${encodeURIComponent(item.room_id)}&mode=view`;
-          room.textContent='Solution Logを見る';
+          room.textContent='話し合いの記録を見る';
           actions.append(room);
         }
         if(item.room?.post?.id){
           const post=document.createElement('a');
           post.className='button-link';
           post.href=`./?problem=${encodeURIComponent(item.room.post.id)}`;
-          post.textContent=item.room.post.source_withdrawn?'共有Problemを見る':'元のBOYAKIを見る';
+          post.textContent=item.room.post.source_withdrawn?'残った困りごとを見る':'元のBOYAKIを見る';
           actions.append(post);
         }
         const product=productByCase.get(item.id);
         const productLink=document.createElement('a');
         productLink.className='button-link';
         productLink.href=product?`./product.html?id=${encodeURIComponent(product.id)}`:`./product-create.html?case=${encodeURIComponent(item.id)}`;
-        productLink.textContent=product?'商品を見る':'プロダクトとして出す';
+        productLink.textContent=product?'商品を見る':'Productを作る';
         actions.append(productLink);
         const del=document.createElement('button');
         del.type='button';
-        del.textContent='Caseを削除';
+        del.textContent='解決メモを削除';
         del.addEventListener('click',async()=>{
           if(del.disabled)return;
           del.disabled=true;
-          if(status)status.textContent='Solution Caseを削除しています…';
+          if(status)status.textContent='Solution 解決メモを削除しています…';
           try{
             await client.deleteSolutionCase(item.id);
-            if(status)status.textContent='Solution Caseを削除しました。';
+            if(status)status.textContent='Solution 解決メモを削除しました。';
             await render();
           }catch(err){
             console.error('solution case delete failed',err);
             del.disabled=false;
-            if(status)status.textContent='Solution Caseを削除できませんでした。再試行してください。';
+            if(status)status.textContent='Solution 解決メモを削除できませんでした。再試行してください。';
           }
         });
         actions.append(del);
@@ -119,10 +119,10 @@ async function render(){
         box.append(card);
       }
     }
-    if(status)status.textContent=`${cases.length}件のSolution Case`;
+    if(status)status.textContent=`${cases.length}件の解決メモ`;
   }catch(err){
     console.error('maker contribution history failed',err);
-    box.innerHTML='<p class="hint">Contribution Historyを読み込めませんでした。</p>';
+    box.innerHTML='<p class="hint">Makerとしての履歴を読み込めませんでした。</p>';
     if(status)status.textContent='読み込みに失敗しました。';
   }
 }
