@@ -10,17 +10,17 @@ const filterButtons=[...document.querySelectorAll('[data-inbox-filter]')];
 let state={items:[],summary:{},filter:'all',loading:false};
 
 const fmt=value=>value?new Date(value).toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'';
-const priorityLabel=value=>value==='action'?'Action required':value==='update'?'Update':'Ready';
+const priorityLabel=value=>value==='action'?'要対応':value==='update'?'更新':'できること';
 const kindLabel=value=>({
-  room_invitation:'Invitation',
+  room_invitation:'招待',
   product_ready:'Product',
-  purchase_ready:'Purchased',
-  invite_source_owner:'Transition',
-  productize_case:'Case → Product',
-  publish_product:'Publish back',
-  room_activity:'Solution Room',
-  sale:'Sale',
-  market_opportunity:'Opportunity'
+  purchase_ready:'購入済み',
+  invite_source_owner:'次の段階',
+  productize_case:'Product作成',
+  publish_product:'掲載',
+  room_activity:'話し合い',
+  sale:'売上',
+  market_opportunity:'新しい困りごと'
 }[value]||'Inbox');
 
 function account(){
@@ -98,7 +98,7 @@ function render(){
     const empty=document.createElement('div');empty.className='inbox-empty';
     const h=document.createElement('h3');h.textContent='今ここで動くものはありません';
     const p=document.createElement('p');p.className='hint';
-    p.textContent=state.items.length?'表示条件に合う項目がありません。':'招待、Roomの発言、Product化、元Problemへの掲載、購入などが動くとここに集まります。';
+    p.textContent=state.items.length?'表示条件に合う項目がありません。':'招待、話し合いの続き、Product作成、元の困りごとへの掲載、購入などが動くとここに集まります。';
     empty.append(h,p);list.append(empty);
   }else for(const item of rows)list.append(card(item));
 
@@ -106,26 +106,26 @@ function render(){
   const actions=state.items.filter(x=>x.priority==='action').length;
   const voice=state.items.filter(x=>x.role==='voice').length;
   const maker=state.items.filter(x=>x.role==='maker').length;
-  if(summary)summary.textContent=`未確認 ${unseen} · Action ${actions} · Voice ${voice} · Maker ${maker}`;
+  if(summary)summary.textContent=`未確認 ${unseen} · 要対応 ${actions} · Voice ${voice} · Maker ${maker}`;
   if(tabBadge){tabBadge.textContent=unseen?String(unseen):'';tabBadge.hidden=!unseen}
   if(markButton)markButton.disabled=!rows.some(x=>!x.seen);
 }
 async function load(){
   if(!list)return;
   if(!account()){
-    list.innerHTML='<div class="inbox-empty"><h3>ログインするとAction Inboxを使えます</h3><p class="hint">自分に届いた招待と、次にやることをAccount ID単位で集約します。</p></div>';
+    list.innerHTML='<div class="inbox-empty"><h3>ログインすると「やること」を使えます</h3><p class="hint">自分に届いた招待と、次にやることをAccount ID単位で集約します。</p></div>';
     if(status)status.textContent='';return;
   }
   if(state.loading)return;
-  state.loading=true;if(status)status.textContent='Action Inboxを組み立てています…';
+  state.loading=true;if(status)status.textContent='やることを整理しています…';
   try{
     const result=await client.listMyInbox();
     state.items=result.items||[];state.summary=result.summary||{};
     render();
-    if(status)status.textContent='現在のBOYAKI状態から次の行動を導出しました。通知イベントのコピーは保存していません。';
+    if(status)status.textContent='今の状態から、次にできることを更新しました。';
   }catch(err){
     console.error('action inbox load failed',err);
-    list.innerHTML='<div class="inbox-empty"><h3>Action Inboxを読み込めませんでした</h3><p class="hint">再読込しても直らない場合はバグ報告から知らせてください。</p></div>';
+    list.innerHTML='<div class="inbox-empty"><h3>やることを読み込めませんでした</h3><p class="hint">再読込しても直らない場合はバグ報告から知らせてください。</p></div>';
     if(status)status.textContent='読み込みに失敗しました。';
   }finally{state.loading=false}
 }
@@ -145,7 +145,7 @@ markButton?.addEventListener('click',async()=>{
     await client.markInboxSeen(keys);
     for(const item of state.items)if(keys.includes(item.key))item.seen=true;
     render();
-    if(status)status.textContent=`${keys.length}件を確認済みにしました。Action requiredは解決するまで表示に残ります。`;
+    if(status)status.textContent=`${keys.length}件を確認済みにしました。要対応の項目は、実際に完了するまで表示に残ります。`;
   }catch(err){
     console.error('mark visible inbox seen failed',err);
     if(status)status.textContent='確認済みにできませんでした。';
