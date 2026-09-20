@@ -6,9 +6,9 @@
 <script src="../ai-environment.js?v=20260919-commerce-v1"></script>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
-<meta name="description" content="BOYAKI Problem Market — 共同解決へ進んだ困りごとを、需要反応とProductの有無から探す。">
+<meta name="description" content="BOYAKI — みんなで解く困りごとを、需要の反応やProductの有無から探す。">
 <link rel="stylesheet" href="../styles.css">
-<title>Problem Market — BOYAKI</title>
+<title>問題を探す — BOYAKI</title>
 <style>
 .market-controls{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;gap:8px;margin:14px 0 8px}
 .market-controls input,.market-controls select{border:1px solid #d1d5db;border-radius:12px;padding:10px 12px;background:#fff;font:inherit;min-width:0}
@@ -37,32 +37,32 @@
 
 <main class="shell maker-space">
   <section class="card hero">
-    <p class="eyebrow">BOYAKI Problem Market</p>
+    <p class="eyebrow">BOYAKI</p>
     <h1>「困ってる」が、解決する価値に変わる場所。</h1>
-    <p class="lead">ここに並ぶのは単なる投稿一覧ではありません。元Voiceが共同解決への移行に同意し、個人的なBOYAKIから切り分けたShared Problemだけです。</p>
-    <p class="hint">同じ悩み・試したい・払ってもいい、という需要反応と、そこから生まれたProductを同じ場所で見られます。元の個人的なBOYAKI本文が後から取り下げられても、一般化されたProblemは共同資産として残ります。</p>
+    <p class="lead">ここに並ぶのは、元のVoiceが「一緒に解決」へ進むことに同意し、個人的なBOYAKIとは別に「みんなで解く困りごと」として残したものです。</p>
+    <p class="hint">「同じ悩み」「試したい」「この条件なら払える」という反応と、そこから生まれたProductを同じ場所で見られます。元のBOYAKI本文が取り下げられても、本人が残すことに同意した困りごとは続きます。</p>
     <div class="market-explainer">
-      <div><strong>Problem</strong><span>個人事情を外し、同じ痛みを持つ人が見つけられる形にする。</span></div>
-      <div><strong>Demand</strong><span>共感ではなく「自分も困る」「試す」「払う」を積む。</span></div>
-      <div><strong>Product</strong><span>Makerが解決を作り、Problemへ戻して必要なVoiceに届ける。</span></div>
+      <div><strong>困りごと</strong><span>個人事情を外し、同じ痛みを持つ人が見つけられる形にする。</span></div>
+      <div><strong>需要の反応</strong><span>「自分も困る」「試したい」「この条件なら払える」を積む。</span></div>
+      <div><strong>Product</strong><span>Makerが解決を作り、元の困りごとへ戻して必要なVoiceに届ける。</span></div>
     </div>
   </section>
 
   <section>
     <div class="section-head">
-      <div><p class="eyebrow">Shared Problems</p><h2>解決する問題を探す</h2></div>
+      <div><p class="eyebrow">みんなで解く困りごと</p><h2>解決する問題を探す</h2></div>
       <span id="market-visible" class="hint"></span>
     </div>
     <div class="market-controls">
-      <input id="market-search" type="search" placeholder="ProblemやProduct名で検索" aria-label="Problem検索">
-      <select id="market-filter" aria-label="Problem絞り込み">
+      <input id="market-search" type="search" placeholder="困りごとやProduct名で検索" aria-label="困りごとの検索">
+      <select id="market-filter" aria-label="困りごとの絞り込み">
         <option value="all">すべて</option>
         <option value="products">Productあり</option>
         <option value="open">まだProductなし</option>
         <option value="pay">支払い意向あり</option>
       </select>
-      <select id="market-sort" aria-label="Problem並び順">
-        <option value="demand">需要シグナルが強い順</option>
+      <select id="market-sort" aria-label="困りごとの並び順">
+        <option value="demand">需要の反応が強い順</option>
         <option value="products">Productが多い順</option>
         <option value="new">新着順</option>
       </select>
