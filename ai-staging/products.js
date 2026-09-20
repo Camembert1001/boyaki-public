@@ -13,8 +13,8 @@ function card(product){
   if(evidence.would_pay?.median_yen){const chip=document.createElement('span');chip.className='step on';chip.textContent=`支払中央値 ${yen(evidence.would_pay.median_yen)}`;ladder.append(chip)}
   article.append(ladder);
   const sourcePost=product.source_post,source=String(sourcePost?.content||'').trim();
-  if(source){const p=document.createElement('p');p.className='hint';const label=sourcePost?.shared_problem?'共有Problem':'元のBOYAKI';p.textContent=`${label}: ${source.length>120?source.slice(0,120)+'…':source}`;article.append(p)}
-  const actions=document.createElement('div');actions.className='actions';const open=document.createElement('a');open.className='button-link';open.href=`./product.html?id=${encodeURIComponent(product.id)}`;open.textContent='商品を見る';actions.append(open);article.append(actions);
+  if(source){const p=document.createElement('p');p.className='hint';const label=sourcePost?.shared_problem?'残った困りごと':'元のBOYAKI';p.textContent=`${label}: ${source.length>120?source.slice(0,120)+'…':source}`;article.append(p)}
+  const actions=document.createElement('div');actions.className='actions';const open=document.createElement('a');open.className='button-link';open.href=`./product.html?id=${encodeURIComponent(product.id)}`;open.textContent='Productを見る';actions.append(open);article.append(actions);
   return article;
 }
 async function load(){
@@ -22,9 +22,9 @@ async function load(){
   try{
     const result=await client.listProducts();list.replaceChildren();
     const products=result.products||[];
-    if(!products.length){list.innerHTML='<div class="card"><p class="hint">まだ公開プロダクトはありません。MakerのSolution Caseから最初の商品を出せます。</p></div>'}
+    if(!products.length){list.innerHTML='<div class="card"><p class="hint">まだProductはありません。Makerが解決メモから最初のProductを作れます。</p></div>'}
     else for(const p of products)list.append(card(p));
-    $('#products-status').textContent=`${products.length}件のプロダクト · AI-STAGINGテスト購入`;
-  }catch(err){console.error(err);list.innerHTML='<div class="card"><p class="hint">プロダクトを読み込めませんでした。</p></div>';$('#products-status').textContent='読み込みに失敗しました。'}
+    $('#products-status').textContent=`${products.length}件のProduct · テスト購入`;
+  }catch(err){console.error(err);list.innerHTML='<div class="card"><p class="hint">Productを読み込めませんでした。</p></div>';$('#products-status').textContent='読み込みに失敗しました。'}
 }
 $('#products-refresh').addEventListener('click',load);await load();
