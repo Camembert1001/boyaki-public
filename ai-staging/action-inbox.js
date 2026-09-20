@@ -1,4 +1,4 @@
-import { client } from './canonical-api.js?v=20260920-action-inbox-v10';
+import { client } from './canonical-api.js?v=20260920-consolidated-v1';
 
 const list=document.querySelector('[data-action-inbox]');
 const status=document.querySelector('#action-inbox-status');
