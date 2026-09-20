@@ -106,7 +106,10 @@ export async function review(workspacePath, options = {}) {
    value: entry.value,
    identity: entry.identity,
    focus,
-   outstandingAxes: hypothesis.outstandingAxes,
+   // No store-wide outstanding set is handed to the lane table on purpose. The hypothesis
+   // still reports which axes somebody owes us an answer on, because that is worth a
+   // reader's attention, but the hold it produces is per-party and comes off
+   // `prospect.contact.outstandingAxes`.
    duplicateOf: entry.duplicateOf
   });
  }
@@ -164,6 +167,10 @@ export async function review(workspacePath, options = {}) {
     contactMatchState: entry.prospect.contact.matchState,
     contactMatchEvidence: entry.prospect.contact.matchEvidence,
     contactLinkSource: entry.prospect.contact.linkSource,
+    // What *this party* owes us an answer on, which is the only outstanding figure any
+    // gate reads. The store-wide one under `contactStore.outstandingAxes` is context for
+    // the reader and nothing else; printing them apart is how the two stay apart.
+    contactOutstandingAxes: entry.prospect.contact.outstandingAxes,
     assets: entry.prospect.assets,
     evidence: entry.prospect.evidence,
     samples: entry.prospect.samples,
@@ -200,7 +207,8 @@ export function renderText(report) {
  const coverage = report.contactStore.identityCoverage;
  lines.push('contact store: ' + (report.contactStore.provided
   ? report.contactStore.contactCount + ' contact(s), ' + coverage.indexedCount + ' with identity evidence, ' +
-    'outstanding axes: ' + (report.contactStore.outstandingAxes.join(', ') || 'none')
+    'those contacts owe us an answer on: ' + (report.contactStore.outstandingAxes.join(', ') || 'nothing') +
+    ' (context for the reader; it holds nobody but them)'
   : 'not provided - no candidate can be shown as never contacted'));
  if (report.contactStore.provided && !coverage.complete) {
   lines.push('  ! the store cannot answer "not this party": ' + (coverage.contactCount === 0
@@ -243,7 +251,10 @@ export function renderText(report) {
    lines.push('  contact: ' + candidate.v2.contactPosture +
     ' [' + candidate.v2.contactConclusion + (candidate.v2.contactMatchState ? '/' + candidate.v2.contactMatchState : '') +
     (candidate.v2.contactLinkSource === 'NONE' ? '' : ' via ' + candidate.v2.contactLinkSource) + ']' +
-    ' - activity ' + candidate.v2.metadata.activity + ' - route ' + candidate.v2.metadata.public_contact_route);
+    ' - activity ' + candidate.v2.metadata.activity + ' - route ' + candidate.v2.metadata.public_contact_route +
+    (candidate.v2.contactOutstandingAxes.length
+     ? ' - owes us an answer on: ' + candidate.v2.contactOutstandingAxes.join(', ')
+     : ''));
    lines.push('  identity: ' + candidate.identity.state + ' - ' + candidate.identity.reason);
    if (candidate.strategyIds.length) lines.push('  found by: ' + candidate.strategyIds.join(', '));
    const e = candidate.v2.evidence;

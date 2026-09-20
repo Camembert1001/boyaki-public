@@ -557,10 +557,19 @@ A store named with `--contacts` that cannot be read or does not validate is a **
 failure**: both CLIs exit 1. Nothing anywhere degrades a failed load into "no store" or
 into an empty one, because an empty store reads as "checked, nobody is in there".
 
-One Prospect Burn rule belongs to no single prospect: while somebody already owes us an
-answer on a validation axis, opening the same question with a second stranger buys no
-information we are not already about to get. `--asking <axis>` turns that into rule 16 —
-candidates are held while the same question is outstanding anywhere in the store.
+One Prospect Burn rule is about repeating yourself: while a party already owes us an
+answer on a validation axis, asking *that party* the same question again is a duplicate.
+`--asking <axis>` turns that into rule 16, and its scope is one party — the axes read are
+the ones this prospect's own matched contacts are waiting on, never the store's.
+
+That scope is the rule, not an accident of it. A different party, searched for in the
+store on its own identifiers and not found, is an **independent sample** of the same
+hypothesis, and an independent sample is the one thing a validation axis is short of.
+Holding it would be holding its information hostage to somebody else's silence — and
+since only one contact has to go quiet for an axis to stay outstanding, a store-wide
+version of this rule stops the whole queue on one unanswered message. The report still
+prints which axes the store as a whole is waiting on, because a reader wants to know; no
+verdict or lane is derived from that figure.
 
 ### Candidate classification
 
@@ -586,7 +595,7 @@ or `IGNORE`, never `READY_FOR_REVIEW`.
 | 13 | a defensible finding drowned in ones that are not | `IGNORE` |
 | 14 | contact history never checked | `HUMAN_REVIEW` |
 | 15 | repository activity unknown | `HUMAN_REVIEW` |
-| 16 | the same validation question is already outstanding elsewhere | `HUMAN_REVIEW` |
+| 16 | this same party already owes us an answer on the axis we are asking about | `HUMAN_REVIEW` |
 | 17 | otherwise | `READY_FOR_REVIEW` |
 
 Read as prose: `READY_FOR_REVIEW` needs a readable EN/JA pair, a locale complete enough to
@@ -904,21 +913,22 @@ Ordered, first match wins:
 | --- | --- | --- |
 | 1 | v2 dropped it | `IGNORE` |
 | 2 | contact history is not "consulted, and nothing there" | `HUMAN_REVIEW` |
-| 3 | v2 held it because this exact question is outstanding elsewhere | `RESERVE` |
+| 3 | v2 held it because this same party already owes us that answer | `RESERVE` |
 | 4 | v2 held it for a human for any other reason | `HUMAN_REVIEW` |
 | 5 | the candidate may be the same party as another candidate | `HUMAN_REVIEW` |
-| 6 | the axis this round asks about is outstanding elsewhere | `RESERVE` |
+| 6 | this same party already owes us an answer on the axis we are asking about | `RESERVE` |
 | 7 | a better-evidenced candidate is definitely the same party | `RESERVE` |
 | 8 | no validation axis is open at all | `RESERVE` |
 | 9 | no public evidence bears on the axis we are asking about | `HUMAN_REVIEW` |
 | 10 | the public evidence argues against asking this one | `RESERVE` |
 | 11 | otherwise | `READY_FOR_REVIEW` |
 
-`RESERVE` is the lane the layer exists for. While one contact owes us an answer on an
-axis, opening the same question with a second stranger buys no information we are not
-already about to get - but the candidate is still good, and discarding it means finding it
-again later. So exploration continues, evaluation continues, candidates accumulate with
-their evidence intact, and the gate in front of contact stays shut:
+`RESERVE` is the lane the layer exists for. A candidate can be good and still not be the
+one to read next - it duplicates a party already in the queue, no axis is open, the public
+evidence argues against it, or the party itself already owes us the answer we would be
+asking for - and discarding it means finding it again later. So exploration continues,
+evaluation continues, candidates accumulate with their evidence intact, and the gate in
+front of contact stays shut:
 
 ```
 discover continuously - evaluate continuously - preserve candidates - contact gate closed
@@ -962,8 +972,11 @@ a strategy off - the point is to let a person compare routes and decide.
 `prospect-fixtures/v3-workspace` holds ten invented candidates, one per shape the queue has
 to get right, with `v3-manifest.json`, `v3-contacts.json`, `v3-contacts-payer-open.json`
 and `v3-hypothesis.json` beside it. Ten candidates in, one proposed. Run the same fixtures
-against the store where a payer question is already outstanding and it becomes **zero**
-proposed and six in `RESERVE` - the Prospect Burn gate, visible as a number.
+against the store where a payer question is already outstanding and the count does not
+move: that question belongs to a party none of these candidates is, and a party's silence
+is a fact about that party. Point the open question at a candidate's *own* identifiers and
+that candidate drops to `IGNORE` on rule 3 - the Prospect Burn gate, visible as a number,
+at the width it is supposed to have.
 
 Every fixture is invented, every candidate id names a shape, every contact id ends in
 `-shape`, every cited source is on `example.invalid`, and every observation says
@@ -1030,8 +1043,11 @@ The discovery suite pins the v3 queue the same way, and adds the properties v3 i
 - a candidate nobody has checked against the contact store can never be proposed, and with
   no store at all nothing can;
 - `DO_NOT_CONTACT` lands in `IGNORE` against the strongest evidence the rule table allows;
-- while an answer is outstanding on an axis, nothing is proposed on it, and the candidates
-  are held in `RESERVE` with their evidence rather than dropped;
+- a party that owes us an answer on the axis being asked about is held, and a different
+  party that the store was searched for and did not recognize is not - one contact's
+  silence never freezes the queue;
+- a candidate held for any reason is held in `RESERVE` with its evidence and a recorded
+  release condition, rather than dropped;
 - free and volunteer evidence never reaches payer `HIGH`, contested evidence is capped, and
   no combination in the whole vocabulary can exceed those ceilings;
 - `UNKNOWN` is never read as evidence in either direction;

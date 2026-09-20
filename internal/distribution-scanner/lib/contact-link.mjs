@@ -79,18 +79,36 @@ export function postureOf(contact) {
  return {posture: 'ALREADY_CONTACTED', reason: 'a thread already exists (' + d.next_action + ': ' + d.next_action_reason + ')'};
 }
 
-// Validation axes with an answer genuinely outstanding somewhere in the store.
+// Validation axes with an answer outstanding from *these particular contacts*.
 //
-// This is the Prospect Burn rule that has nothing to do with any one prospect: while
-// one contact owes us an answer on the workflow question, opening the same question
-// with a second stranger buys no information we are not already about to get.
-export function outstandingAxes(store) {
+// This is the same-axis duplicate-question guard, and its scope is one party. While a
+// contact owes us an answer on the payer axis, asking *that contact* the payer question
+// again is a duplicate: it annoys somebody who is already thinking about it and it buys
+// nothing. That is the whole of the rule.
+//
+// It is deliberately not a statement about anybody else. A different party, checked
+// against the store on its own identifiers and found not to be in it, is an independent
+// sample of the same hypothesis - and an independent sample is exactly what a validation
+// axis is short of. Blocking it would be holding B's information hostage to A's silence.
+export function outstandingAxesOf(contacts) {
  const axes = new Set();
- for (const {contact} of store.contacts) {
+ for (const contact of contacts) {
   const d = derive(contact);
   if (d.is_waiting && contact.conversation.waiting_for_axis) axes.add(contact.conversation.waiting_for_axis);
  }
  return [...axes].sort();
+}
+
+// The same question asked of the whole store: which axes have an answer outstanding
+// anywhere.
+//
+// This is a *reporting* figure and nothing else. It tells a reader of the report what the
+// pipeline is already waiting on, and it is shown next to the contact count for that
+// reason. No verdict, lane or gate may be derived from it: the gate reads
+// `outstandingAxesOf` for the contacts one prospect actually resolved to, because "we are
+// waiting on somebody" is not a fact about a stranger.
+export function outstandingAxes(store) {
+ return outstandingAxesOf(store.contacts.map(({contact}) => contact));
 }
 
 // Contacts whose identity shares an uncommon token with the prospect's. Deliberately
@@ -138,6 +156,10 @@ const result = (posture, reason, extra = {}) => ({
  matchState: null,
  matchEvidence: [],
  linkSource: 'NONE',
+ // Axes this prospect's *own* contacts owe us an answer on. Empty whenever the prospect
+ // resolved to no contact at all, which is the ordinary case and is not a gap: a party
+ // the store does not hold cannot owe us anything.
+ outstandingAxes: [],
  ...extra
 });
 
@@ -151,6 +173,10 @@ function foldPostures(ids, byId) {
  const resolved = ids.map(id => ({id, ...postureOf(byId.get(id))}));
  return resolved.reduce((a, b) => (RANK[a.posture] <= RANK[b.posture] ? a : b));
 }
+
+// The axes this prospect's own contacts owe us an answer on, for a prospect that resolved
+// to contacts at all.
+const outstandingFor = (ids, byId) => outstandingAxesOf(ids.map(id => byId.get(id)).filter(Boolean));
 
 // Resolve one prospect's contact posture.
 //
@@ -187,7 +213,8 @@ export function resolvePosture(store, contactIds, names = [], candidate = null) 
   if (match.state === 'MATCHED') {
    const worst = foldPostures(match.contactIds, byId);
    return result(worst.posture, 'matched by ' + match.reason + ' - ' + worst.id + ': ' + worst.reason, {
-    ...base, contactIds: match.contactIds, conclusion: 'MATCHED', linkSource: 'MATCHED', nearMatches: []
+    ...base, contactIds: match.contactIds, conclusion: 'MATCHED', linkSource: 'MATCHED', nearMatches: [],
+    outstandingAxes: outstandingFor(match.contactIds, byId)
    });
   }
   if (match.state === 'AMBIGUOUS') {
@@ -241,6 +268,7 @@ export function resolvePosture(store, contactIds, names = [], candidate = null) 
 
  const worst = foldPostures(ids, byId);
  return result(worst.posture, worst.id + ': ' + worst.reason, {
-  ...base, contactIds: ids, conclusion: 'MATCHED', linkSource: 'DECLARED', nearMatches: []
+  ...base, contactIds: ids, conclusion: 'MATCHED', linkSource: 'DECLARED', nearMatches: [],
+  outstandingAxes: outstandingFor(ids, byId)
  });
 }

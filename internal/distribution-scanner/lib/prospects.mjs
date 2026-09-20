@@ -67,13 +67,14 @@ export async function evaluate(root, id, relPath, options) {
  };
  const contact = resolvePosture(options.contacts ?? null, metadata.contact_ids, [id, ...metadata.aliases], identity);
  const evidence = aggregate(scanReport);
+ // `contact` carries this party's own outstanding axes; the store-wide figure is a
+ // reporting line and is deliberately not handed to the rule table.
  const {rule, verdict, reason} = decide({
   contact,
   metadata,
   assets,
   evidence,
-  asking: options.asking ?? null,
-  outstandingAxes: options.outstandingAxes
+  asking: options.asking ?? null
  }, options.thresholds);
 
  return {
@@ -120,6 +121,7 @@ export async function discover(rootPath, options = {}) {
   metadata: options.metadata ?? null,
   contacts: options.contacts ?? null,
   asking: options.asking ?? null,
+  // Reported, not gated on. See contact-link.mjs: the gate is per-party.
   outstandingAxes: options.contacts ? outstandingAxes(options.contacts) : []
  };
 
@@ -168,7 +170,8 @@ export function renderText(report) {
  const coverage = report.contactStore.identityCoverage;
  lines.push('contact store: ' + (report.contactStore.provided
   ? report.contactStore.contactCount + ' contact(s), ' + coverage.indexedCount + ' with identity evidence, ' +
-    'outstanding axes: ' + (report.contactStore.outstandingAxes.join(', ') || 'none')
+    'those contacts owe us an answer on: ' + (report.contactStore.outstandingAxes.join(', ') || 'nothing') +
+    ' (context for the reader; it holds nobody but them)'
   : 'not provided - no prospect can be shown as never contacted'));
  if (report.contactStore.provided && !coverage.complete) {
   lines.push('  ! the store cannot answer "not this party": ' + (coverage.contactCount === 0

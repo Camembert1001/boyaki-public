@@ -31,7 +31,9 @@ import {
 import {
  MATCH_STATES, buildIndex, isIdentifiable, matchProspect, prospectIdentity
 } from '../lib/contact-match.mjs';
-import {loadMetadata} from '../lib/metadata.mjs';
+import {DEFAULT_PROSPECT_THRESHOLDS, decide} from '../lib/candidates.mjs';
+import {decideLane} from '../lib/queue.mjs';
+import {emptyEntry, loadMetadata} from '../lib/metadata.mjs';
 import {loadManifest, toMetadata} from '../lib/manifest.mjs';
 import {discover} from '../lib/prospects.mjs';
 import {review} from '../lib/review.mjs';
@@ -66,6 +68,14 @@ const contact = (id, identity, events) => ({
 });
 
 const sent = {type: 'OUTREACH_SENT', at: '2026-09-01T09:00:00Z', waiting_for: 'FIRST_REPLY'};
+
+// Written to, answered by a person, then asked the price question - which is still open.
+// The one conversation shape that puts an axis on the wire.
+const payerQuestionOpen = [
+ sent,
+ {type: 'INBOUND_REPLY', at: '2026-09-02T11:00:00Z'},
+ {type: 'QUESTION_SENT', at: '2026-09-03T09:00:00Z', waiting_for: 'PAYER_ANSWER'}
+];
 
 const resolve = async (contacts, candidate) => resolvePosture(await store(contacts), undefined, [candidate.id], candidate);
 
@@ -222,19 +232,111 @@ test('an AWAITING_REPLY contact is recognized and blocked', async () => {
  assert.equal(report['kagerou-north-port'].rule, 3);
 });
 
-// 7. The Prospect Burn rule that is not about any one party: while the payer question is
-// outstanding somewhere, a second stranger asked the same question buys nothing. The
-// candidate is held, not dropped.
-test('a matched party on an outstanding axis holds other candidates in RESERVE', async () => {
- const contacts = readContactStore(await load('v3-contacts-payer-open.json'), 'payer-open fixture store');
- const report = await review(workspace, {manifest: await manifest(), contacts});
- assert.deepEqual(report.contactStore.outstandingAxes, ['payer']);
- assert.equal(report.hypothesis.focusAxis, 'payer');
- assert.ok(report.summary.RESERVE > 0, 'candidates are held rather than dropped');
- assert.equal(report.summary.READY_FOR_REVIEW, 0, 'nobody is queued for a question already outstanding');
- for (const candidate of report.candidates.filter(item => item.lane === 'RESERVE')) {
-  assert.ok(candidate.release, 'a held candidate records what would release it');
- }
+// 7. The same-axis duplicate guard, and the exact width of it.
+//
+// Prospect A owes us the payer answer. Asking A the payer question again is a duplicate
+// and is refused. Prospect B is a different party, searched for in the store on its own
+// identifiers and not found - and B's answer to the same question is an *independent*
+// sample of the hypothesis, which is the only kind of sample a validation axis is short
+// of. A's silence is a fact about A. It is not a reason to hold B.
+//
+// This is a regression test. The engine used to fold every contact's outstanding axes
+// into one store-wide set and stop every candidate that shared an axis with any of them,
+// which meant one unanswered question anywhere froze the whole queue.
+test('an outstanding answer holds the party that owes it, never an independent party', async () => {
+ // A: indexed by its own login, with the payer question open. It owns `unevidenced-candidate`.
+ const withA = {
+  ...JSON.parse(await load('v3-contacts-indexed.json')),
+  contacts: [
+   ...JSON.parse(await load('v3-contacts-indexed.json')).contacts,
+   contact('payer-question-open-shape', {github_logins: ['example-unevidenced-org']}, payerQuestionOpen)
+  ]
+ };
+ const contacts = readContactStore(JSON.stringify(withA), 'store with an open payer question');
+ const report = byId(await discover(workspace, {contacts, metadata: await undeclared(), asking: 'payer'}));
+
+ // The store-wide figure survives, because a reader of the report wants to know what the
+ // pipeline is waiting on. It is a reporting line and gates nothing.
+ const store = await discover(workspace, {contacts, metadata: await undeclared(), asking: 'payer'});
+ assert.deepEqual(store.contactStore.outstandingAxes, ['payer']);
+
+ // A. Recognized by identity, owes us the payer answer, and blocked on its own record -
+ // not by a global set, but because a party we are waiting on is AWAITING_REPLY.
+ const a = report['unevidenced-candidate'];
+ assert.equal(a.contact.conclusion, 'MATCHED');
+ assert.equal(a.contact.posture, 'AWAITING_REPLY');
+ assert.deepEqual(a.contact.outstandingAxes, ['payer'], "A carries its own outstanding axis");
+ assert.equal(a.verdict, 'IGNORE');
+ assert.equal(a.rule, 3, 'the same question is not put to the same party twice');
+
+ // B. A different party, checked against the store by its own identifiers and excluded.
+ // It owes us nothing, so nothing about A may hold it.
+ const b = report['unchecked-contact-repo'];
+ assert.equal(b.contact.conclusion, 'NO_MATCH');
+ assert.equal(b.contact.posture, 'NEVER_CONTACTED');
+ assert.deepEqual(b.contact.outstandingAxes, [], 'a party the store does not hold owes nothing');
+ assert.equal(b.verdict, 'READY_FOR_REVIEW');
+ assert.equal(b.rule, 17, "A's open question does not block an independent party");
+
+ // And the general form: a third party's open question, on somebody who owns nothing in
+ // this workspace at all, changes no verdict anywhere.
+ const base = await discover(workspace, {contacts: await indexedStore(), metadata: await undeclared(), asking: 'payer'});
+ const elsewhere = readContactStore(JSON.stringify({
+  ...JSON.parse(await load('v3-contacts-indexed.json')),
+  contacts: [
+   ...JSON.parse(await load('v3-contacts-indexed.json')).contacts,
+   contact('payer-elsewhere-shape', {github_logins: ['example-elsewhere-org']}, payerQuestionOpen)
+  ]
+ }), 'store with an unrelated open payer question');
+ const after = await discover(workspace, {contacts: elsewhere, metadata: await undeclared(), asking: 'payer'});
+ assert.deepEqual(base.contactStore.outstandingAxes, []);
+ assert.deepEqual(after.contactStore.outstandingAxes, ['payer']);
+ assert.deepEqual(
+  after.prospects.map(p => [p.id, p.verdict, p.rule]),
+  base.prospects.map(p => [p.id, p.verdict, p.rule]),
+  "a stranger's open question is not an event in anybody else's file"
+ );
+});
+
+// 7b. Scoped is not switched off. The guard still fires for the party that owes the
+// answer, at both layers, if a posture fold ever lets such a contact reach the rule.
+test('the same-axis guard still stops a party that owes the answer it is about to be asked', () => {
+ const owing = {
+  posture: 'NEVER_CONTACTED', reason: 'fixture', contactIds: ['payer-question-open-shape'],
+  nearMatches: [], outstandingAxes: ['payer']
+ };
+ const strong = contact => ({
+  contact,
+  metadata: {...emptyEntry(), activity: 'ACTIVE', public_contact_route: 'GITHUB_ISSUE'},
+  assets: {assetCount: 2, unsupportedFormats: []},
+  evidence: {pairCount: 1, enKeyCount: 100, untranslatedKeys: 0, localeCompleteness: 1,
+   highConfidenceFindings: 40, intentionalRiskFindings: 0, incompleteLocaleFindings: 0, noiseRatio: 0},
+  asking: 'payer'
+ });
+ const free = {posture: 'NEVER_CONTACTED', reason: 'fixture', contactIds: [], nearMatches: [], outstandingAxes: []};
+
+ assert.deepEqual(
+  [decide(strong(owing), DEFAULT_PROSPECT_THRESHOLDS).rule, decide(strong(free), DEFAULT_PROSPECT_THRESHOLDS).rule],
+  [16, 17],
+  'rule 16 is scoped to the party, not removed'
+ );
+
+ // A different question is a different question, even for the party we are waiting on.
+ assert.equal(decide({...strong(owing), asking: 'workflow'}, DEFAULT_PROSPECT_THRESHOLDS).rule, 17);
+
+ // The queue layer says the same thing in its own lane.
+ const laneFacts = contact => ({
+  prospect: {verdict: 'READY_FOR_REVIEW', rule: 17, reason: 'fixture', contact,
+   evidence: {highConfidenceFindings: 40}},
+  value: {value: 'HIGH', rule: 6, reason: 'fixture'},
+  identity: {state: 'UNIQUE', reason: 'fixture'},
+  focus: 'payer',
+  duplicateOf: null
+ });
+ assert.equal(decideLane(laneFacts(owing)).lane, 6);
+ assert.equal(decideLane(laneFacts(owing)).name, 'RESERVE');
+ assert.ok(decideLane(laneFacts(owing)).release, 'a held candidate records what would release it');
+ assert.equal(decideLane(laneFacts(free)).name, 'READY_FOR_REVIEW');
 });
 
 // 8. The mistake that would have read a ticket robot as a person who answered.

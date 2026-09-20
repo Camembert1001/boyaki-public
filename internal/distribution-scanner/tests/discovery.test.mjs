@@ -197,38 +197,52 @@ test('DO_NOT_CONTACT can never be a top candidate', async () => {
  assert.equal(decideLane(strongest).name, 'IGNORE');
 });
 
-// 6 and 7. While one contact owes us the payer answer, no second stranger is queued for
-// the same question - and the candidates are kept rather than thrown away.
-test('an outstanding answer on an axis holds new candidates without discarding them', async () => {
+// 6 and 7. RESERVE is a real lane, and it holds for reasons that belong to the candidate
+// being held: it duplicates a party already in the queue, the public evidence argues
+// against it, or no axis is open. What it is not is a global pause - one contact owing us
+// the payer answer does not stop a different party from being read.
+test('candidates are held for their own reasons, not for another party open question', async () => {
  const held = await run({}, 'v3-contacts-payer-open.json');
+ // Somebody does owe us the payer answer, and the report says so.
  assert.deepEqual(held.hypothesis.outstandingAxes, ['payer']);
  assert.equal(held.hypothesis.focusAxis, 'payer');
- assert.equal(held.summary.READY_FOR_REVIEW, 0, 'no second payer question is queued');
+ assert.deepEqual(held.contactStore.outstandingAxes, ['payer']);
 
- // Every candidate that would otherwise be proposed is in RESERVE, with its evidence and
- // the condition that would release it.
+ // That party is not any of these candidates, so the queue is not frozen behind it.
+ assert.ok(held.summary.READY_FOR_REVIEW > 0, 'an independent party is still worth reading');
+ const alpha = byId(held)['paid-studio-alpha'];
+ assert.equal(alpha.lane, 'READY_FOR_REVIEW');
+ assert.equal(alpha.laneRule, 11);
+ assert.equal(alpha.v2.contactPosture, 'NEVER_CONTACTED');
+ assert.deepEqual(alpha.v2.contactOutstandingAxes, [], 'this party owes us nothing');
+ assert.equal(alpha.validationValue.value, 'HIGH');
+ assert.ok(alpha.validationValue.axes.payer.evidence.length >= 2);
+
+ // Nothing anywhere is held by lane 3 or lane 6 on a question that is somebody else's.
+ assert.equal(held.candidates.some(candidate => [3, 6].includes(candidate.laneRule)), false,
+  'the same-axis hold is scoped to the party that owes the answer');
+
+ // The holds that remain are the ones that are about the candidate itself, and each still
+ // records what would release it.
  const reserved = held.candidates.filter(candidate => candidate.lane === 'RESERVE');
- assert.equal(reserved.length, 6);
+ assert.deepEqual(reserved.map(candidate => [candidate.id, candidate.laneRule]), [
+  ['paid-studio-alpha-tools', 7],   // the same declared owner as a stronger candidate
+  ['volunteer-fan-translation', 10] // the public evidence argues against asking this one
+ ]);
  for (const candidate of reserved) {
   assert.ok(candidate.release, candidate.id + ' must say what would release it');
  }
- const alpha = byId(held)['paid-studio-alpha'];
- assert.equal(alpha.lane, 'RESERVE');
- assert.equal(alpha.laneRule, 3);
- assert.match(alpha.release, /payer/);
- // Held, not degraded: the evidence that made it a candidate is still there.
- assert.equal(alpha.validationValue.value, 'HIGH');
- assert.ok(alpha.validationValue.axes.payer.evidence.length >= 2);
 
  // Exploration is not what stops: the same candidates are still discovered and evaluated.
  assert.equal(held.candidateCount, 10);
  assert.equal(held.v2Summary.IGNORE + held.v2Summary.HUMAN_REVIEW + held.v2Summary.READY_FOR_REVIEW, 10);
 
- // Asking a different question releases them, because it is a different question.
+ // And asking a different question changes nothing about any of this, because none of it
+ // ever depended on the store-wide axis.
  const other = await run({asking: 'workflow'}, 'v3-contacts-payer-open.json');
  assert.equal(other.hypothesis.focusAxis, 'workflow');
  assert.ok(other.summary.READY_FOR_REVIEW + other.summary.RESERVE > 0);
- assert.equal(other.candidates.some(candidate => candidate.laneRule === 3), false);
+ assert.equal(other.candidates.some(candidate => [3, 6].includes(candidate.laneRule)), false);
 });
 
 // 16. Nothing from the contact store crosses into the report.

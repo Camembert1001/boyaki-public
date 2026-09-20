@@ -280,17 +280,39 @@ test('contact postures are folded from contact-state rather than re-decided here
  assert.deepEqual(nearMatches(['ready-candidate'], contacts), [], 'common words are not identity evidence');
 });
 
-// Waiting on the same question from somebody else is a reason to hold, not to ask again.
-test('a validation question already outstanding holds new candidates back', async () => {
+// Waiting on an answer from one party is a reason not to ask *that party* again. It is
+// not a reason to hold anybody else: a second, independently checked party answering the
+// same question is an independent sample, and that is what the axis is short of.
+test('an outstanding answer is scoped to the party that owes it', async () => {
  const {contacts} = await loadFixtures();
+
+ // Store-wide: a reporting figure, and that is all it is.
  assert.deepEqual(outstandingAxes(contacts), ['payer']);
 
- const held = byId(await run({asking: 'payer'}));
- assert.equal(held['ready-candidate'].verdict, 'HUMAN_REVIEW');
- assert.equal(held['ready-candidate'].rule, 16);
- assert.match(held['ready-candidate'].reason, /already outstanding/);
+ // The party that owes the answer carries it on its own record...
+ const owes = resolvePosture(contacts, ['payer-question-open-shape'], []);
+ assert.equal(owes.posture, 'AWAITING_REPLY');
+ assert.deepEqual(owes.outstandingAxes, ['payer']);
 
- // A different question is not held by this one.
+ // ...and a party the store was consulted about and did not hold owes nothing.
+ const stranger = resolvePosture(contacts, [], []);
+ assert.equal(stranger.posture, 'NEVER_CONTACTED');
+ assert.deepEqual(stranger.outstandingAxes, []);
+
+ // Through the pipeline, asking the very question that is outstanding elsewhere:
+ // ready-candidate is a different party and is not held by somebody else's silence.
+ const asked = byId(await run({asking: 'payer'}));
+ assert.equal(asked['ready-candidate'].verdict, 'READY_FOR_REVIEW');
+ assert.equal(asked['ready-candidate'].rule, 17);
+ assert.deepEqual(asked['ready-candidate'].contact.outstandingAxes, []);
+
+ // The parties we are actually mid-conversation with are still stopped, on their own
+ // records, before any of this - which is where that protection belongs.
+ assert.equal(asked['already-contacted'].verdict, 'IGNORE');
+ assert.equal(asked['already-contacted'].rule, 3);
+ assert.equal(asked['opted-out'].verdict, 'IGNORE');
+
+ // And a different question changes nothing, because it never depended on the axis.
  const free = byId(await run({asking: 'workflow'}));
  assert.equal(free['ready-candidate'].verdict, 'READY_FOR_REVIEW');
 });

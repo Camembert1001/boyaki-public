@@ -27,8 +27,8 @@ Options:
                            Without it no prospect can be shown as never contacted.
   --metadata <file>        External prospect metadata (${'yn0-prospect-metadata-v1'})
   --asking <axis>          Validation axis this round would ask about
-                           (${VALIDATION_AXES.join(' | ')}); holds candidates while the
-                           same question is already outstanding elsewhere
+                           (${VALIDATION_AXES.join(' | ')}); holds a candidate whose own
+                           matched contacts already owe us that answer
   --verdict <VERDICT>      Report only ${VERDICTS.join(' | ')}
   --format <text|json>     Output format on stdout (default: text)
   --out <file>             Also write the JSON report to <file>
