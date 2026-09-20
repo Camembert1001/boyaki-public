@@ -1,4 +1,4 @@
-import { client } from './canonical-api.js?v=20260920-consolidated-v1';
+import { client } from './canonical-api.js?v=20260920-consolidated-v2';
 export async function loadOwnedPosts(){
   const box=document.querySelector('#own-posts');if(!box)return;
   const result=await client.listMine(),posts=(result.posts||[]).filter(p=>p.status==='active');box.replaceChildren();
