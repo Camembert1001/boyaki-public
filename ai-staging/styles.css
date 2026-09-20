@@ -30,3 +30,5 @@
 .site-footer{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;padding-top:8px;padding-bottom:28px}
 .footer-link{appearance:none;border:0;background:transparent;color:#6b7280;font:inherit;font-size:12px;text-decoration:underline;text-underline-offset:3px;padding:4px;cursor:pointer}
 .footer-link:hover{color:#111827}
+
+html[data-boyaki-auth-state="in"] [data-auth-register-link]{display:none!important}
