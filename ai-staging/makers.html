@@ -7,10 +7,10 @@
 
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <meta name="theme-color" content="#111827" />
-  <meta name="description" content="BOYAKI Maker Space — Solution RoomでVoiceとMakerが問題を詰め、Solution Logを残す場所。" />
+  <meta name="description" content="BOYAKI Maker — Solution RoomでVoiceとMakerが問題を詰め、Solution Logを残す場所。" />
   <meta name="robots" content="noindex,nofollow" />
   <link rel="stylesheet" href="./styles.css" />
-  <title>Maker Space — BOYAKI</title>
+  <title>Maker — BOYAKI</title>
   <style>
     .solution-room-list{display:grid;gap:12px;margin-top:16px}
     .solution-room-card h3{margin:6px 0 8px;line-height:1.45}
@@ -29,37 +29,37 @@
 
   <main class="shell maker-space">
     <section class="card hero maker-hero">
-      <p class="eyebrow">BOYAKI Maker Space</p>
+      <p class="eyebrow">BOYAKI Maker</p>
       <h1>解決を、Productまで育てる場所。</h1>
-      <p class="lead">BOYAKIスレッドで話したMakerがVoiceをSolution Roomへ招待し、一緒に解決を詰めます。CaseからProductを作るとMaker Spaceに残り、必要なら元のBOYAKIスレッドへ商品として掲載できます。</p>
+      <p class="lead">話し合いで解く価値が見えたら、MakerがVoiceを「一緒に解決」へ招待します。解決をまとめてProductにし、元の困りごとへ掲載できます。</p>
       <div class="principles-grid">
-        <div><strong>Thread → Invite → Room</strong><span>スレッドで話したVoiceをMakerが招待し、解決を具体化する段階へ切り替える。</span></div>
-        <div><strong>Voice + Maker</strong><span>困りごとの文脈と、解決を作る力を同じRoomに集める。</span></div>
-        <div><strong>Solution Log</strong><span>Room内のやり取りを時系列で残し、後から復元できるようにする。</span></div>
-        <div><strong>Case → Product → Thread</strong><span>成果をProduct化してMaker Spaceに残し、元スレッドへ掲載してVoiceへ戻す。</span></div>
+        <div><strong>話し合う</strong><span>困りごとの背景と、何なら試せるかを確認する。</span></div>
+        <div><strong>一緒に解決</strong><span>必要なVoiceとMakerだけで、解決を具体化する。</span></div>
+        <div><strong>解決をまとめる</strong><span>話し合いから得た解決を「解決メモ」として残す。</span></div>
+        <div><strong>Productにする</strong><span>必要ならProductを作り、元の困りごとへ掲載してVoiceへ届ける。</span></div>
       </div>
     </section>
 
     <section class="card">
-      <p class="eyebrow">Solution Rooms</p>
-      <h2>Solution Room</h2>
-      <p class="hint">RoomはBOYAKIスレッドから作成され、元の困りごとと1対1で紐づきます。ここでは進行中のRoomを一覧できます。</p>
-      <div id="solution-room-list" class="solution-room-list" aria-label="Solution Rooms"></div>
+      <p class="eyebrow">一緒に解決</p>
+      <h2>進行中の解決</h2>
+      <p class="hint">話し合いから「一緒に解決」へ進んだ困りごとを一覧できます。</p>
+      <div id="solution-room-list" class="solution-room-list" aria-label="進行中の解決"></div>
       <div id="room-status" class="hint" role="status" aria-live="polite"></div>
     </section>
 
     <section class="card">
-      <p class="eyebrow">Products</p>
-      <h2>Maker Products</h2>
-      <p class="hint">Solution Caseから公開したProductの正本です。必要なProductだけ、元のBOYAKIスレッドへ掲載できます。</p>
+      <p class="eyebrow">Product</p>
+      <h2>作ったProduct</h2>
+      <p class="hint">解決メモから作ったProductです。必要なProductだけ、元の困りごとへ掲載できます。</p>
       <div id="maker-products-list" class="stack"><p class="hint">プロダクトを読み込んでいます…</p></div>
       <div id="maker-products-status" class="hint" role="status" aria-live="polite"></div>
     </section>
 
     <section class="card identity-card">
-      <p class="eyebrow">Room identity</p>
+      <p class="eyebrow">参加者</p>
       <h2>この活動を誰の履歴として残すか</h2>
-      <p class="hint">BOYAKI AccountをSolution Roomの本人identityとして使います。Contribution Historyへ接続する本流も同じAccount IDです。</p>
+      <p class="hint">このAccount IDで参加した解決やProductを、自分の履歴として残します。</p>
       <code id="device-id">loading…</code>
     </section>
   </main>
