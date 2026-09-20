@@ -1,4 +1,4 @@
-import { client } from './canonical-api.js?v=20260920-consolidated-v1';
+import { client } from './canonical-api.js?v=20260920-consolidated-v2';
 
 const $=s=>document.querySelector(s);
 const room=String(new URLSearchParams(location.search).get('room')||'').trim();
