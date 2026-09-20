@@ -1,4 +1,4 @@
-import { client } from './canonical-api.js?v=20260920-consolidated-v1';
+import { client } from './canonical-api.js?v=20260920-consolidated-v2';
 
 const box=document.querySelector('[data-contribution-role="voice"]');
 const status=document.querySelector('#voice-contribution-status');
