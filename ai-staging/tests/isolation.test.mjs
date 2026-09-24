@@ -6,9 +6,10 @@ const read=p=>readFile(new URL(p,root),'utf8');
 function storage(seed={}){
  const value={...seed};Object.defineProperties(value,{getItem:{value:k=>value[k]??null},setItem:{value:(k,v)=>value[k]=String(v)},removeItem:{value:k=>delete value[k]}});return value;
 }
+const beacons=[];
 const local=storage({'boyaki-account-sk':'STAGING sentinel','boyaki-device-sk':'STAGING device','boyaki-profile-display-name':'STAGING profile'}),session=storage({'boyaki-account-sk':'STAGING session'}),calls=[];
 class XHR{open(method,url){calls.push({method,url})}addEventListener(){}}
-const context={URL,Request,XMLHttpRequest:XHR,location:{origin:'https://camembert1001.github.io',href:'https://camembert1001.github.io/boyaki-public/ai-staging/'},document:{documentElement:{dataset:{}},readyState:'loading',addEventListener(){}},navigator:{sendBeacon:()=>true},window:{localStorage:local,sessionStorage:session,fetch:async(url)=>{calls.push(url);return{status:200}}}};
+const context={URL,Request,XMLHttpRequest:XHR,location:{origin:'https://camembert1001.github.io',href:'https://camembert1001.github.io/boyaki-public/ai-staging/'},document:{documentElement:{dataset:{}},readyState:'loading',addEventListener(){}},navigator:{sendBeacon:url=>{beacons.push(url);return true}},window:{localStorage:local,sessionStorage:session,fetch:async(url)=>{calls.push(url);return{status:200}}}};
 vm.runInNewContext(await read('ai-environment.js'),context);
 const s=context.window.BOYAKI_STORAGE;
 s.local.setItem('boyaki-account-sk','AI sentinel');s.session.setItem('boyaki-account-sk','AI session');
@@ -18,6 +19,16 @@ const base='https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/';
 for(const target of [base+'boyaki-api/posts',base+'boyaki-api/account-credentials',base+'boyaki-thread-api/posts','https://uvjyponltgoytjzwkfrh.supabase.co/functions/v1/boyaki-api/posts','https://camembert1001.github.io/boyaki-public/staging/index.html','https://camembert1001.github.io/boyaki-public/ai-staging/../staging/index.html',base+'ai-staging-boyaki-api-malicious/posts'])await assert.rejects(()=>context.window.fetch(target),/network_boundary/);
 assert.equal(calls.length,0);
 await context.window.fetch(base+'boyaki-api/account-credentials/resolve?login_key_hash='+'a'.repeat(64));assert.equal(calls.length,1);
+const resolver=base+'boyaki-api/account-credentials/resolve',resolverQuery=resolver+'?login_key_hash='+'a'.repeat(64);
+for(const method of ['POST','post','PUT','PATCH','DELETE','HEAD','OPTIONS'])await assert.rejects(()=>context.window.fetch(resolverQuery,{method}),/network_boundary/,'resolver '+method+' must be blocked');
+await assert.rejects(()=>context.window.fetch(new Request(resolver,{method:'POST',body:'{}'})),/network_boundary/,'resolver Request POST must be blocked');
+assert.throws(()=>{const x=new context.XMLHttpRequest();x.open('POST',resolver)},/network_boundary/,'resolver XHR POST must be blocked');
+assert.throws(()=>{const x=new context.XMLHttpRequest();x.open('delete',resolverQuery)},/network_boundary/,'resolver XHR DELETE must be blocked');
+assert.equal(context.navigator.sendBeacon(resolver,'{}'),false,'resolver beacon must be blocked');assert.equal(beacons.length,0);
+assert.equal(calls.length,1,'blocked resolver writes must not reach transport');
+const resolverXhr=new context.XMLHttpRequest();resolverXhr.open('GET',resolverQuery);assert.equal(calls.length,2);calls.pop();
+assert.equal(context.window.BOYAKI_AI_DIAGNOSTICS.allows(resolverQuery),true);assert.equal(context.window.BOYAKI_AI_DIAGNOSTICS.allows(resolverQuery,'POST'),false);
+assert.equal(context.navigator.sendBeacon(base+'ai-staging-boyaki-api/health','{}'),true);assert.equal(beacons.length,1);
 await context.window.fetch(base+'ai-staging-boyaki-api/health');assert.equal(calls.length,2);await context.window.fetch(base+'ai-staging-commerce-api/health');assert.equal(calls.length,3);await context.window.fetch(base+'ai-staging-inbox-api/health');assert.equal(calls.length,4);
 assert.throws(()=>new context.window.WebSocket('wss://example.com'),/relay_disabled/);
 const events={},deleted=[],cached=[];let pending;
@@ -30,7 +41,7 @@ const files=await walk();for(const file of files.filter(f=>/\.(js|html)$/.test(f
 const solutionRoomSource=await read('solution-room.js');
 assert(!/SimplePool|RELAYS|pool\.publish|querySync|subscribeMany/.test(solutionRoomSource),'Solution Room must not use public relay transport');
 assert(solutionRoomSource.includes('client.listSolutionRoomMessages(room)'),'Solution Room isolated read missing');
-assert(solutionRoomSource.includes('client.createSolutionRoomMessage(room,message)'),'Solution Room isolated write missing');
+assert(solutionRoomSource.includes('client.createSolutionRoomMessage(room,text)'),'Solution Room isolated write missing');
 assert(solutionRoomSource.includes('client.deleteSolutionRoomMessage(message.id)'),'Solution Room isolated delete missing');
 const threadApiSource=await read('supabase/functions/ai-staging-boyaki-thread-api/index.ts');
 assert(threadApiSource.includes("T('boyaki_solution_room_messages')"),'Solution Room backend table missing');
@@ -73,17 +84,20 @@ assert(invitationThreadSource.includes("T('boyaki_solution_room_invitations')"),
 assert(invitationThreadSource.includes("T('boyaki_problem_statements')"),'shared Problem table missing');
 assert(!invitationThreadSource.includes("db.from('boyaki_problem_statements')"),'shared Problems must stay under AI-STAGING prefix');
 assert(invitationThreadSource.includes('shared_problem_required'),'Solution Case must be blocked before source-owner consent');
-assert(invitationThreadSource.includes("invitee_context:'source_owner'"),'source-owner invitation context missing');
+assert(invitationThreadSource.includes("inviteeContext='source_owner'")&&invitationThreadSource.includes('invitee_context:inviteeContext'),'source-owner invitation context missing');
+assert(invitationThreadSource.includes("invitation.invitee_context==='source_owner'&&shell.post.owner_account_pubkey===event.pubkey"),'source-owner consent must be bound to the invited original poster');
 assert(invitationThreadSource.includes('shared_problem_consent_required'),'explicit shared Problem consent gate missing');
 assert(invitationThreadSource.includes('source_owner_consent_required'),'non-owner must not create the first shared Problem');
 assert(invitationThreadSource.includes('room_invitation_required'),'Room write gate missing');
 assert(invitationThreadSource.includes('maker_role_required'),'Maker-only Room creation gate missing');
-const cutoverInviteSource=await read('canonical-cutover.js');
+const cutoverInviteSource=await read('canonical-cutover.js'),apiClientSource=await read('canonical-api.js');
 assert(cutoverInviteSource.includes('inviteVoiceToSolutionRoom'),'Thread -> Voice invitation UI missing');
 assert(cutoverInviteSource.includes('acceptSolutionRoomInvitation'),'Voice invitation acceptance UI missing');
 assert(cutoverInviteSource.includes('listPostProducts(post.id)'),'Thread Product publish-back rendering missing');
 assert(cutoverInviteSource.includes('inviteSourceOwnerToSolutionRoom'),'Maker -> original Voice transition invitation UI missing');
-assert(cutoverInviteSource.includes('confirm_shared_problem'),'shared Problem consent payload missing');
+assert(apiClientSource.includes('body:{problem_statement,confirm_shared_problem}'),'shared Problem consent payload missing');
+assert(cutoverInviteSource.includes('client.acceptSolutionRoomInvitation(access.my_invitation.id,textarea.value.trim(),true)'),'shared Problem consent must be sent explicitly from the consent UI');
+assert(invitationThreadSource.includes("if(body.confirm_shared_problem!==true)return json(req,400,{error:'shared_problem_consent_required'})"),'backend must reject shared Problem creation without explicit consent');
 assert(cutoverInviteSource.includes('元のBOYAKI本文は後から取り下げられます'),'source-owner consent copy missing');
 assert(cutoverInviteSource.includes('元のBOYAKI文を取り下げる'),'post-consent withdrawal UI missing');
 const onboardingSource=await read('onboarding.js');
@@ -92,7 +106,7 @@ assert(onboardingSource.includes('みんなで解く困りごと'),'human-facing
 assert(onboardingSource.includes('消せるもの / 残るもの'),'withdrawal boundary onboarding missing');
 assert(onboardingSource.includes('全部覚える必要はありません'),'progressive onboarding principle missing');
 assert(cutoverInviteSource.includes("journeyGuide(access.problem_statement?'solution':'thread')"),'Thread journey guide missing');
-assert(cutoverInviteSource.includes('役割はアカウントの属性ではなく'),'Voice/Maker contextual role explanation missing');
+assert(cutoverInviteSource.includes('この困りごとで、どちらの立場から関わるかを選びます。'),'Voice/Maker contextual role explanation missing');
 assert(cutoverInviteSource.includes('あなたのBOYAKIと、みんなで残す困りごとをここで分けます'),'shared Problem transition micro-onboarding missing');
 const solutionRoomHtml=await read('solution-room.html');
 assert(solutionRoomHtml.includes('今いる段階：一緒に解決'),'Solution Room stage explanation missing');
@@ -171,4 +185,22 @@ const marketHtml=await read('discover/index.html');
 assert(marketHtml.includes('解決する問題を探す'),'problem discovery surface missing');
 assert(marketHtml.includes('みんなで解く困りごと'),'shared-problem boundary explanation missing');
 assert(commerceSource.includes("T('boyaki_problem_statements')"),'commerce shared Problem source lookup missing');
-console.log(JSON.stringify({ok:true,checks:['local/session sentinel preserved including clear','normal APIs blocked except exact read-only shared identity resolver','Production API and path traversal denied before transport','public WebSockets blocked','worker cleanup limited to AI prefix','worker ignores API and other environments','all live HTML has early boundary and CSP','all application storage scoped','AI backend may read shared identity but cannot mutate it','AI activity remains explicitly scoped to AI-STAGING','Solution Room uses isolated API rather than public relays','Solution Room storage stays under ai_staging_*','Thread -> Room transition is canonical','Solution Cases are account-scoped and not browser-only','Demand Evidence stays under ai_staging_* and is not framed as purchase','Voice role is persisted and Voice history is account-scoped','Solution Cases freeze demand evidence while Rooms show live evidence','Product -> Order -> Entitlement commerce stays AI-STAGING-only with test payment','Thread -> invite -> Room -> Product publish-back is source-bound','Casual BOYAKI stays deletable until original Voice explicitly creates a shared Problem','After consent original text can withdraw while Problem/Demand/Solution/Product remain','Shared Problems have a dedicated demand/Product discovery market','Voice/Maker Action Inbox derives next work from current domain state','Inbox persists only lightweight seen markers, not notification copies','Human onboarding explains the complete BOYAKI lifecycle without blocking casual posting','Thread/Room/Product surfaces show contextual journey stage and transition meaning','Human UX vocabulary is constrained by HUMAN_UX.md','inactive legacy surfaces are removed from active AI-STAGING','relative assets exist'],files:files.length},null,2));
+const homeHtml=await read('index.html'),homeBody=homeHtml.slice(homeHtml.indexOf('<body'));
+assert(homeHtml.indexOf('</head>')>0&&homeHtml.indexOf('</head>')<homeHtml.indexOf('<body')&&homeHtml.includes('</body>'),'home page body missing');
+for(const marker of ['id="brand-home"','<nav>','href="./discover/"','href="./mypage.html"','id="composer"','id="raw-form"','id="raw"','id="submit-btn"','id="status"','id="problem-view"','id="feed-view"','id="refresh"','id="feed"','data-onboarding-open'])assert(homeBody.includes(marker),'home page structure missing '+marker);
+for(const script of ['./chat-first-v53.js','./onboarding.js','./canonical-api.js','./app.js','./quality-index-gate.js'])assert(homeBody.includes('src="'+script+'?'),'home page script missing '+script);
+assert(!homeHtml.includes('const campaigns='),'obsolete campaign overlay must stay removed');
+const functionsBase='https://vbqitqjhobzpdlaraglc.supabase.co/functions/v1/',clientBase={main:'ai-staging-boyaki-api',thread:'ai-staging-boyaki-thread-api',commerce:'ai-staging-commerce-api',inbox:'ai-staging-inbox-api'},clientMethodApi={initialize:clientBase.main,initializeThreads:clientBase.thread};
+for(const m of apiClientSource.matchAll(/(\w+):(?:\([^)]*\)|\w+)=>(main|thread|commerce|inbox)\(/g))clientMethodApi[m[1]]=clientBase[m[2]];
+assert.equal(clientMethodApi.listPostProducts,clientBase.commerce);assert.equal(clientMethodApi.listMyInbox,clientBase.inbox);
+async function scriptGraph(file,seen){if(seen.has(file))return;seen.add(file);if(file==='canonical-api.js')return;const text=await read(file);for(const m of text.matchAll(/import\s*(?:[^'"()]*from\s*)?\(?\s*['"](\.{1,2}\/[^'"?]+)/g))await scriptGraph(new URL(m[1],new URL(file,root)).href.slice(root.href.length),seen)}
+for(const page of files.filter(f=>f.endsWith('.html'))){
+  const html=await read(page);if(!html.includes('<html'))continue;
+  const csp=(html.match(/connect-src ([^;"]*)/)?.[1]||'').trim().split(/\s+/),seen=new Set();
+  for(const m of html.matchAll(/src="(\.{1,2}\/[^"?#]+\.js)/g))await scriptGraph(new URL(m[1],new URL(page,root)).href.slice(root.href.length),seen);
+  const usesClient=seen.has('canonical-api.js');if(usesClient&&html.includes('id="feed"'))await scriptGraph('canonical-cutover.js',seen);
+  const used=new Set();if(usesClient&&html.includes('id="feed"'))used.add(clientBase.main);
+  for(const file of seen){const text=await read(file);if(file!=='canonical-api.js')for(const m of text.matchAll(/functions\/v1\/([a-z0-9-]+(?:\/account-credentials\/resolve)?)/g))used.add(m[1]);if(usesClient)for(const m of text.matchAll(/client\.(\w+)\(/g))if(clientMethodApi[m[1]])used.add(clientMethodApi[m[1]])}
+  for(const api of used){const exact=api.includes('/')?[functionsBase+api]:[functionsBase+api+'/'];assert(exact.every(x=>csp.includes(x)),page+' CSP does not allow used API '+api)}
+}
+console.log(JSON.stringify({ok:true,checks:['local/session sentinel preserved including clear','normal APIs blocked except exact read-only shared identity resolver','shared identity resolver rejects every non-GET method on fetch/XHR/sendBeacon','Production API and path traversal denied before transport','public WebSockets blocked','worker cleanup limited to AI prefix','worker ignores API and other environments','all live HTML has early boundary and CSP','all application storage scoped','AI backend may read shared identity but cannot mutate it','AI activity remains explicitly scoped to AI-STAGING','Solution Room uses isolated API rather than public relays','Solution Room storage stays under ai_staging_*','Thread -> Room transition is canonical','Solution Cases are account-scoped and not browser-only','Demand Evidence stays under ai_staging_* and is not framed as purchase','Voice role is persisted and Voice history is account-scoped','Solution Cases freeze demand evidence while Rooms show live evidence','Product -> Order -> Entitlement commerce stays AI-STAGING-only with test payment','Thread -> invite -> Room -> Product publish-back is source-bound','Casual BOYAKI stays deletable until original Voice explicitly creates a shared Problem','After consent original text can withdraw while Problem/Demand/Solution/Product remain','Shared Problems have a dedicated demand/Product discovery market','Voice/Maker Action Inbox derives next work from current domain state','Inbox persists only lightweight seen markers, not notification copies','Human onboarding explains the complete BOYAKI lifecycle without blocking casual posting','Thread/Room/Product surfaces show contextual journey stage and transition meaning','Human UX vocabulary is constrained by HUMAN_UX.md','inactive legacy surfaces are removed from active AI-STAGING','relative assets exist','home page keeps body/nav/composer/feed/scripts','every page CSP allows the AI-STAGING APIs its scripts call'],files:files.length},null,2));

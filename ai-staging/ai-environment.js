@@ -13,18 +13,19 @@
   const functions=['ai-staging-boyaki-api','ai-staging-boyaki-thread-api','ai-staging-commerce-api','ai-staging-inbox-api','ai-staging-e2e-runner'];
   const sharedIdentityResolve=base+'boyaki-api/account-credentials/resolve';
   const root=new URL('/boyaki-public/ai-staging/',location.origin);
-  const allowed=value=>{const u=new URL(value,location.href);return (u.origin===root.origin&&u.pathname.startsWith(root.pathname))||functions.some(f=>u.href===base+f||u.href.startsWith(base+f+'/')||u.href.startsWith(base+f+'?'))||u.href===sharedIdentityResolve||u.href.startsWith(sharedIdentityResolve+'?')};
+  // The normal STAGING identity resolver is shared read-only: only GET may reach it.
+  const allowed=(value,method='GET')=>{const u=new URL(value,location.href);return (u.origin===root.origin&&u.pathname.startsWith(root.pathname))||functions.some(f=>u.href===base+f||u.href.startsWith(base+f+'/')||u.href.startsWith(base+f+'?'))||(String(method).toUpperCase()==='GET'&&(u.href===sharedIdentityResolve||u.href.startsWith(sharedIdentityResolve+'?')))};
   // Only method, URL and status. Never record credentials, bodies or headers.
   let audit;try{audit=JSON.parse(window.BOYAKI_STORAGE.session.getItem('network-audit')||'[]')}catch{audit=[]}
   const record=(url,method,status)=>{const u=new URL(url,location.href);audit.push({url:u.origin+u.pathname,method,status});audit=audit.slice(-1000);window.BOYAKI_STORAGE.session.setItem('network-audit',JSON.stringify(audit))};
   const nativeFetch=window.fetch.bind(window);
-  window.fetch=async(input,init)=>{const url=input instanceof Request?input.url:String(input),method=init?.method||(input instanceof Request?input.method:'GET');if(!allowed(url)){record(url,method,'blocked');throw new Error('ai_staging_network_boundary')}try{const r=await nativeFetch(input,init);record(url,method,r.status);return r}catch(e){record(url,method,'network-error');throw e}};
+  window.fetch=async(input,init)=>{const url=input instanceof Request?input.url:String(input),method=init?.method||(input instanceof Request?input.method:'GET');if(!allowed(url,method)){record(url,method,'blocked');throw new Error('ai_staging_network_boundary')}try{const r=await nativeFetch(input,init);record(url,method,r.status);return r}catch(e){record(url,method,'network-error');throw e}};
   const open=XMLHttpRequest.prototype.open;
-  XMLHttpRequest.prototype.open=function(method,url,...args){if(!allowed(url)){record(url,method,'blocked');throw new Error('ai_staging_network_boundary')}this.addEventListener('loadend',()=>record(url,method,this.status),{once:true});return open.call(this,method,url,...args)};
+  XMLHttpRequest.prototype.open=function(method,url,...args){if(!allowed(url,method)){record(url,method,'blocked');throw new Error('ai_staging_network_boundary')}this.addEventListener('loadend',()=>record(url,method,this.status),{once:true});return open.call(this,method,url,...args)};
   window.WebSocket=class{constructor(url){record(url,'WebSocket','blocked');throw new Error('ai_staging_public_relay_disabled')}};
   window.EventSource=class{constructor(url){record(url,'EventSource','blocked');throw new Error('ai_staging_stream_disabled')}};
   const beacon=navigator.sendBeacon.bind(navigator);
-  navigator.sendBeacon=(url,data)=>{if(!allowed(url)){record(url,'beacon','blocked');return false}record(url,'beacon','sent');return beacon(url,data)};
+  navigator.sendBeacon=(url,data)=>{if(!allowed(url,'POST')){record(url,'beacon','blocked');return false}record(url,'beacon','sent');return beacon(url,data)};
   window.BOYAKI_AI_DIAGNOSTICS=Object.freeze({network:()=>audit.map(x=>({...x})),namespace:prefix,allows:allowed});
   function banner(){
     document.querySelector('meta[name="robots"]')?.setAttribute('content','noindex,nofollow');
