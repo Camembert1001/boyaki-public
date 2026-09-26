@@ -13,6 +13,81 @@
   <link rel="manifest" href="./manifest.webmanifest" />
   <link rel="stylesheet" href="./styles.css" />
   <script>
+  (()=>{try{
+    const loggedIn=!!(window.BOYAKI_STORAGE.local.getItem('boyaki-account-sk')||window.BOYAKI_STORAGE.session.getItem('boyaki-account-sk'));
+    document.documentElement.dataset.boyakiAuthState=loggedIn?'in':'out';
+  }catch{document.documentElement.dataset.boyakiAuthState='out'}})();
+  </script>
+  <style>
+    [data-auth-register-link][hidden]{display:none!important}
+    html[data-boyaki-auth-state="out"] [data-auth-register-link]{display:inline-flex!important}
+  </style>
+  <title>BOYAKI — 困ったこと、そのまま話して。</title>
+</head>
+<body>
+  <header class="shell topbar">
+    <a class="brand" id="brand-home" href="#">BOYAKI</a>
+    <nav>
+      <a class="nav-link active" href="./">ホーム</a>
+      <a class="nav-link" href="./discover/">問題を探す</a>
+      <a class="nav-link" href="./products.html">Product</a>
+      <a class="nav-link" href="./mypage.html">マイページ</a>
+    </nav>
+  </header>
+
+  <main class="shell">
+    <section id="composer" class="card hero">
+      <p class="eyebrow">まずは公開せず、一言から。</p>
+      <h1>困ったこと、そのまま話して。</h1>
+      <div class="journey-guide" aria-label="BOYAKIの流れ">
+        <div class="journey-step is-current"><strong>ボヤく</strong><span>一言から</span></div>
+        <div class="journey-step is-future"><strong>話し合う</strong><span>困りごとを具体化</span></div>
+        <div class="journey-step is-future"><strong>一緒に解決</strong><span>必要な人と作る</span></div>
+        <div class="journey-step is-future"><strong>Product</strong><span>届ける</span></div>
+      </div>
+      <p class="hint"><strong>まずこのブラウザ内で問題を整理します。</strong><br>解決候補として残したくなったら、その時点で公開して、似たことで困っている人や作れる人を集められます。</p>
+      <form id="raw-form">
+        <label class="sr-only" for="raw">困りごと</label>
+        <div class="submit-row">
+          <input id="raw" name="raw" maxlength="180" autocomplete="off" placeholder="例：毎回同じ数字をExcelに転記するのがめんどい" required />
+          <button type="submit" id="submit-btn">話す</button>
+        </div>
+        <p class="hint">タイトル・カテゴリ・予算・仕様は不要。最初の一言だけでOK。ここではまだ公開されません。</p>
+      </form>
+      <p class="hint">今は「ボヤく」段階。公開後に話し合い、必要なときだけ一緒に解決してProductへ進みます。</p>
+      <div id="status" role="status" aria-live="polite"></div>
+    </section>
+
+    <section id="problem-view" hidden></section>
+
+    <section id="feed-view">
+      <div class="section-head">
+        <div><p class="eyebrow">公開に同意された困りごと</p><h2>新着BOYAKI</h2></div>
+        <button id="refresh">更新</button>
+      </div>
+      <div id="feed" class="stack"></div>
+    </section>
+
+  </main>
+  <footer class="shell site-footer">
+    <button type="button" class="footer-link" data-onboarding-open>BOYAKIとは？</button>
+    <a class="footer-link" href="./bug-report.html">バグ報告</a>
+  </footer>
+<div id="boyaki-alert" class="boyaki-alert" hidden role="alertdialog" aria-modal="true" aria-labelledby="boyaki-alert-title" style="position:fixed;inset:0;z-index:2147483647;display:grid;place-items:center;padding:24px;background:rgba(17,24,39,.32);backdrop-filter:blur(4px);">
+  <div class="boyaki-alert-card" style="width:min(360px,calc(100vw - 48px));background:#fff;border-radius:24px;padding:24px;text-align:center;box-shadow:0 24px 80px rgba(17,24,39,.28);">
+    <div class="boyaki-alert-icon">!</div>
+    <h2 id="boyaki-alert-title" data-alert-title>お知らせ</h2>
+    <p data-alert-message></p>
+    <button type="button" data-alert-close>OK</button>
+  </div>
+</div>
+
+
+  <script src="./chat-first-v53.js?v=20260920-consolidated-v1"></script>
+  <script src="./onboarding.js?v=20260920-consolidated-v1"></script>
+  <script type="module" src="./canonical-api.js?v=20260920-consolidated-v1"></script>
+  <script type="module" src="./app.js?v=20260920-consolidated-v1"></script>
+  <script>
   (()=>{
     window.BOYAKI_CONTEXT_GATE_VERSION='context-v2-poster-bound';
     const HIGH_RISK=/(医療|診断|治療|薬|服薬|法律|訴訟|裁判|投資|株|暗号資産|借金|融資|銃|武器|爆発|自殺|自傷|パスワード|認証情報|個人情報)/i;
