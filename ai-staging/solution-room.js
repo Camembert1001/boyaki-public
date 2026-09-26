@@ -175,6 +175,8 @@ async function loadMessages({silent=false}={}){
 }
 
 if(!viewOnly){
+  // This form writes through the isolated AI-STAGING Room API (not legacy relays); declare it so legacy-write-freeze.js lets it through.
+  window.BOYAKI_MAKERSPACE_CANONICAL_WRITE_ACTIVE=true;
   $('#room-form').addEventListener('submit',async e=>{
     e.preventDefault();if(!accessState.can_write)return;
     const input=$('#room-message'),text=input.value.trim();if(!text)return;
